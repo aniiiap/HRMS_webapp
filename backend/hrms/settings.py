@@ -5,7 +5,7 @@ Django settings for HRMS — production-oriented defaults with .env support.
 import os
 import dj_database_url
 from datetime import timedelta
-from pathlib import Path.
+from pathlib import Path
 
 from dotenv import load_dotenv
 
