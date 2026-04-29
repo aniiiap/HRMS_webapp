@@ -1,0 +1,4 @@
+# Delegated to root .gitignore
+# Keep only frontend-specific entries here.
+dist-ssr
+*.local
