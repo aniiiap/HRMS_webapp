@@ -2,6 +2,7 @@ from calendar import monthrange
 from datetime import date, timedelta
 import csv
 
+from django.core.cache import cache
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
@@ -92,6 +93,10 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         today = date.today()
         year = int(request.query_params.get("year", today.year))
         month = int(request.query_params.get("month", today.month))
+        cache_key = f"attendance:heatmap:{request.user.id}:{year}:{month}"
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
         _, last_day = monthrange(year, month)
         start = date(year, month, 1)
         end = date(year, month, last_day)
@@ -183,21 +188,21 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             )
 
         rows.sort(key=lambda r: (r["department"], r["name"]))
-        return Response(
-            {
-                "year": year,
-                "month": month,
-                "days_in_month": last_day,
-                "rows": rows,
-                "legend": {
-                    "present": "#22c55e",
-                    "absent": "#ef4444",
-                    "leave": "#8b5cf6",
-                    "weekend": "#cbd5e1",
-                    "no_record": "#f8fafc",
-                },
-            }
-        )
+        payload = {
+            "year": year,
+            "month": month,
+            "days_in_month": last_day,
+            "rows": rows,
+            "legend": {
+                "present": "#22c55e",
+                "absent": "#ef4444",
+                "leave": "#8b5cf6",
+                "weekend": "#cbd5e1",
+                "no_record": "#f8fafc",
+            },
+        }
+        cache.set(cache_key, payload, timeout=60)
+        return Response(payload)
 
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated, IsManagerOrAbove])
     def export(self, request):

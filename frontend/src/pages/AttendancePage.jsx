@@ -6,6 +6,9 @@ import { useSearchParams } from 'react-router-dom'
 import { api, messageFromError } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 
+const LAST_LOCATION_KEY = 'hrms_last_location'
+const MAX_LOCATION_AGE_MS = 5 * 60 * 1000
+
 function anomalyBadge(anomaly) {
   if (anomaly === 'late_checkin') return <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Late</span>
   if (anomaly === 'early_checkout') return <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-700">Early checkout</span>
@@ -33,6 +36,21 @@ export default function AttendancePage() {
   const q = (searchParams.get('q') || '').trim().toLowerCase()
 
   function captureLocation() {
+    const cachedRaw = localStorage.getItem(LAST_LOCATION_KEY)
+    if (cachedRaw) {
+      try {
+        const cached = JSON.parse(cachedRaw)
+        if (
+          typeof cached.latitude === 'number' &&
+          typeof cached.longitude === 'number' &&
+          Date.now() - Number(cached.ts || 0) <= MAX_LOCATION_AGE_MS
+        ) {
+          return Promise.resolve({ latitude: cached.latitude, longitude: cached.longitude })
+        }
+      } catch {
+        // Ignore invalid cached value.
+      }
+    }
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error('Geolocation is not supported on this device/browser.'))
@@ -40,13 +58,15 @@ export default function AttendancePage() {
       }
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          resolve({
+          const coords = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
-          })
+          }
+          localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ ...coords, ts: Date.now() }))
+          resolve(coords)
         },
         () => reject(new Error('Location permission is required for attendance punch.')),
-        { enableHighAccuracy: false, timeout: 6000, maximumAge: 30000 },
+        { enableHighAccuracy: false, timeout: 4000, maximumAge: 120000 },
       )
     })
   }

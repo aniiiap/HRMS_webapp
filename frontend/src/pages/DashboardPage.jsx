@@ -29,6 +29,8 @@ import { api, messageFromError } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
+const LAST_LOCATION_KEY = 'hrms_last_location'
+const MAX_LOCATION_AGE_MS = 5 * 60 * 1000
 const PIE_COLORS = ['#7c3aed', '#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#94a3b8', '#64748b']
 
 const PANEL_SCROLL = 'max-h-[min(340px,42vh)] overflow-y-auto overscroll-contain pr-1'
@@ -225,6 +227,21 @@ export default function DashboardPage() {
   const workAnniversaries = data?.work_anniversaries || []
 
   function captureLocation() {
+    const cachedRaw = localStorage.getItem(LAST_LOCATION_KEY)
+    if (cachedRaw) {
+      try {
+        const cached = JSON.parse(cachedRaw)
+        if (
+          typeof cached.latitude === 'number' &&
+          typeof cached.longitude === 'number' &&
+          Date.now() - Number(cached.ts || 0) <= MAX_LOCATION_AGE_MS
+        ) {
+          return Promise.resolve({ latitude: cached.latitude, longitude: cached.longitude })
+        }
+      } catch {
+        // Ignore invalid cached value.
+      }
+    }
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error('Geolocation is not supported on this device/browser.'))
@@ -232,13 +249,15 @@ export default function DashboardPage() {
       }
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          resolve({
+          const coords = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
-          })
+          }
+          localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ ...coords, ts: Date.now() }))
+          resolve(coords)
         },
         () => reject(new Error('Location permission is required for attendance punch.')),
-        { enableHighAccuracy: false, timeout: 6000, maximumAge: 30000 },
+        { enableHighAccuracy: false, timeout: 4000, maximumAge: 120000 },
       )
     })
   }

@@ -103,8 +103,15 @@ class AttendanceSerializer(serializers.ModelSerializer):
         today = timezone.localdate()
         if obj.check_in and not obj.check_out and obj.date <= today:
             return "missing_checkout"
-        shift_start = obj.employee.shift_start_time
-        shift_end = obj.employee.shift_end_time
+        template = getattr(obj.employee, "shift_template", None)
+        shift_start = obj.employee.shift_start_time or (template.start_time if template else None)
+        shift_end = obj.employee.shift_end_time or (template.end_time if template else None)
+        grace_minutes = obj.employee.grace_minutes
+        if grace_minutes is None and template:
+            grace_minutes = template.grace_minutes
+        early_checkout_grace_minutes = obj.employee.early_checkout_grace_minutes
+        if early_checkout_grace_minutes is None and template:
+            early_checkout_grace_minutes = template.early_checkout_grace_minutes
         if obj.check_in and obj.check_out and shift_start and shift_end:
             local_ci = timezone.localtime(obj.check_in)
             local_co = timezone.localtime(obj.check_out)
@@ -116,8 +123,8 @@ class AttendanceSerializer(serializers.ModelSerializer):
             worked_seconds = max((local_co - local_ci).total_seconds(), 0)
             if worked_seconds >= scheduled_seconds > 0:
                 return "none"
-            late_grace = timedelta(minutes=obj.employee.grace_minutes or 0)
-            early_grace = timedelta(minutes=obj.employee.early_checkout_grace_minutes or 10)
+            late_grace = timedelta(minutes=grace_minutes or 0)
+            early_grace = timedelta(minutes=early_checkout_grace_minutes or 10)
             if local_ci > start_dt + late_grace:
                 return "late_checkin"
             if local_co < end_dt - early_grace:
@@ -127,7 +134,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
         elif obj.check_in and shift_start:
             local_ci = timezone.localtime(obj.check_in)
             start_dt = timezone.make_aware(datetime.combine(obj.date, shift_start), timezone.get_current_timezone())
-            if local_ci > start_dt + timedelta(minutes=obj.employee.grace_minutes or 0):
+            if local_ci > start_dt + timedelta(minutes=grace_minutes or 0):
                 return "late_checkin"
         return "none"
 
@@ -219,6 +226,11 @@ class AttendanceCorrectionCreateSerializer(serializers.Serializer):
     def validate(self, attrs):
         attendance: Attendance = self.context["attendance"]
         request_type = attrs.get("request_type", AttendanceCorrectionType.MARK_PRESENT)
+        today = timezone.localdate()
+        if attendance.date >= today:
+            raise serializers.ValidationError(
+                {"detail": "Attendance correction requests are allowed only for past dates."}
+            )
         if not attendance.check_in:
             raise serializers.ValidationError({"detail": "Attendance without check-in cannot be regularized."})
         if AttendanceCorrectionRequest.objects.filter(attendance=attendance, status=AttendanceCorrectionStatus.PENDING).exists():

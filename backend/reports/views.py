@@ -1,6 +1,7 @@
 from calendar import monthrange
 from datetime import date
 
+from django.core.cache import cache
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from rest_framework import permissions, status
@@ -87,6 +88,12 @@ class DashboardSummaryView(APIView):
 
     def get(self, request):
         today = timezone.localdate()
+        cache_key = f"dashboard:summary:{request.user.role}:{today.isoformat()}"
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
+
+        today = timezone.localdate()
         active_employees = Employee.objects.filter(user__is_active=True, user__onboarding_pending=False)
         active_employee_ids = list(active_employees.values_list("id", flat=True))
 
@@ -163,31 +170,31 @@ class DashboardSummaryView(APIView):
         upcoming_birthdays = _upcoming_birthdays(limit=8)
         work_anniversaries = _work_anniversaries(limit=8)
 
-        return Response(
-            {
-                "employees_total": Employee.objects.count(),
-                "attendance_today": present_today,
-                "present_today": present_today,
-                "absent_today": absent_today,
-                "on_leave_today": on_leave_today,
-                "pending_leaves": LeaveRequest.objects.filter(status=LeaveStatus.PENDING).count(),
-                "payroll_month_total": PayrollRecord.objects.filter(
-                    period_year=today.year,
-                    period_month=today.month,
-                ).aggregate(total=Sum("net_salary"))["total"]
-                or 0,
-                "recent_leaves": list(
-                    LeaveRequest.objects.filter(status=LeaveStatus.PENDING)
-                    .order_by("-created_at")[:5]
-                    .values("id", "start_date", "end_date", "status", "leave_type")
-                ),
-                "department_breakdown": department_breakdown,
-                "team_performance": team_performance,
-                "recent_leave_activity": recent_leaves_list,
-                "upcoming_birthdays": upcoming_birthdays,
-                "work_anniversaries": work_anniversaries,
-            }
-        )
+        payload = {
+            "employees_total": Employee.objects.count(),
+            "attendance_today": present_today,
+            "present_today": present_today,
+            "absent_today": absent_today,
+            "on_leave_today": on_leave_today,
+            "pending_leaves": LeaveRequest.objects.filter(status=LeaveStatus.PENDING).count(),
+            "payroll_month_total": PayrollRecord.objects.filter(
+                period_year=today.year,
+                period_month=today.month,
+            ).aggregate(total=Sum("net_salary"))["total"]
+            or 0,
+            "recent_leaves": list(
+                LeaveRequest.objects.filter(status=LeaveStatus.PENDING)
+                .order_by("-created_at")[:5]
+                .values("id", "start_date", "end_date", "status", "leave_type")
+            ),
+            "department_breakdown": department_breakdown,
+            "team_performance": team_performance,
+            "recent_leave_activity": recent_leaves_list,
+            "upcoming_birthdays": upcoming_birthdays,
+            "work_anniversaries": work_anniversaries,
+        }
+        cache.set(cache_key, payload, timeout=45)
+        return Response(payload)
 
 
 class EmployeeDashboardView(APIView):
@@ -195,42 +202,47 @@ class EmployeeDashboardView(APIView):
 
     def get(self, request):
         user = request.user
+        today = timezone.localdate()
+        cache_key = f"dashboard:me:{user.id}:{today.isoformat()}"
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
+
         profile = getattr(user, "employee_profile", None)
         if not profile:
             return Response({"error": "No employee profile."}, status=status.HTTP_400_BAD_REQUEST)
-        today = timezone.localdate()
         month_start = today.replace(day=1)
         att_qs = Attendance.objects.filter(employee=profile, date__gte=month_start)
         leave_qs = LeaveRequest.objects.filter(employee=profile)
         payroll_last = (
             PayrollRecord.objects.filter(employee=profile).order_by("-period_year", "-period_month").first()
         )
-        return Response(
-            {
-                "attendance_days_this_month": att_qs.filter(check_in__isnull=False).count(),
-                "pending_my_leaves": leave_qs.filter(status=LeaveStatus.PENDING).count(),
-                "last_payslip": (
-                    {
-                        "period_year": payroll_last.period_year,
-                        "period_month": payroll_last.period_month,
-                        "net_salary": str(payroll_last.net_salary),
-                    }
-                    if payroll_last
-                    else None
-                ),
-                "profile": {
-                    "employee_code": profile.employee_code,
-                    "department": profile.department,
-                    "designation": profile.designation,
-                    "phone": profile.phone,
-                    "address": profile.address,
-                    "date_of_joining": profile.date_of_joining,
-                    "date_of_birth": profile.date_of_birth,
-                    "manager_id": profile.manager_id,
-                    "profile_image": profile.profile_image.url if profile.profile_image else None,
-                },
-            }
-        )
+        payload = {
+            "attendance_days_this_month": att_qs.filter(check_in__isnull=False).count(),
+            "pending_my_leaves": leave_qs.filter(status=LeaveStatus.PENDING).count(),
+            "last_payslip": (
+                {
+                    "period_year": payroll_last.period_year,
+                    "period_month": payroll_last.period_month,
+                    "net_salary": str(payroll_last.net_salary),
+                }
+                if payroll_last
+                else None
+            ),
+            "profile": {
+                "employee_code": profile.employee_code,
+                "department": profile.department,
+                "designation": profile.designation,
+                "phone": profile.phone,
+                "address": profile.address,
+                "date_of_joining": profile.date_of_joining,
+                "date_of_birth": profile.date_of_birth,
+                "manager_id": profile.manager_id,
+                "profile_image": profile.profile_image.url if profile.profile_image else None,
+            },
+        }
+        cache.set(cache_key, payload, timeout=30)
+        return Response(payload)
 
 
 class AttendanceReportView(APIView):
