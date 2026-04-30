@@ -110,7 +110,11 @@ def invite_resend_view(request):
     user.onboarding_pending = True
     user.is_active = False
     user.save(update_fields=["onboarding_pending", "is_active"])
-    _invite, invite_url, ok, detail = issue_and_send_invite(user, created_by=request.user)
+    _invite, invite_url, ok, detail = issue_and_send_invite(
+        user,
+        created_by=request.user,
+        frontend_origin=request.headers.get("Origin"),
+    )
     payload = {"message": "Invite resent." if ok else "Invite created but email failed to send.", "email_status": detail}
     if settings.DEBUG:
         payload["invite_url"] = invite_url

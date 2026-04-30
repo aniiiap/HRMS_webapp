@@ -84,7 +84,11 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         ser.is_valid(raise_exception=True)
         emp = ser.save()
         data = EmployeeSerializer(emp, context={"request": request}).data
-        _invite, invite_url, ok, detail = issue_and_send_invite(emp.user, created_by=request.user)
+        _invite, invite_url, ok, detail = issue_and_send_invite(
+            emp.user,
+            created_by=request.user,
+            frontend_origin=request.headers.get("Origin"),
+        )
         data["invite_sent"] = ok
         data["message"] = "Employee created and invite email sent." if ok else "Employee created but invite email failed."
         data["email_status"] = detail
