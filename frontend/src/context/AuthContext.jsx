@@ -5,15 +5,21 @@ const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  // Only block UI when we must validate an existing access token (logged-out users see login immediately).
+  const [loading, setLoading] = useState(() => Boolean(tokenStore.getAccess()))
 
   useEffect(() => {
     async function init() {
+      if (!tokenStore.getAccess()) {
+        setLoading(false)
+        return
+      }
       try {
-        if (tokenStore.getAccess()) {
-          const { data } = await api.get('/api/auth/me/')
-          setUser(data)
-        }
+        const { data } = await api.get('/api/auth/me/')
+        setUser(data)
+      } catch {
+        tokenStore.clear()
+        setUser(null)
       } finally {
         setLoading(false)
       }

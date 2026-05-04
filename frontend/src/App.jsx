@@ -1,22 +1,32 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import RoleRoute from './components/RoleRoute'
+import RoutePageFallback from './components/RoutePageFallback'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
-import ActivateAccountPage from './pages/ActivateAccountPage'
-import DashboardPage from './pages/DashboardPage'
-import EmployeesPage from './pages/EmployeesPage'
-import AttendancePage from './pages/AttendancePage'
-import LeavesPage from './pages/LeavesPage'
-import PayrollPage from './pages/PayrollPage'
-import ReportsPage from './pages/ReportsPage'
-import ProfilePage from './pages/ProfilePage'
+
+const ActivateAccountPage = lazy(() => import('./pages/ActivateAccountPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const EmployeesPage = lazy(() => import('./pages/EmployeesPage'))
+const AttendancePage = lazy(() => import('./pages/AttendancePage'))
+const LeavesPage = lazy(() => import('./pages/LeavesPage'))
+const PayrollPage = lazy(() => import('./pages/PayrollPage'))
+const ReportsPage = lazy(() => import('./pages/ReportsPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/activate-account" element={<ActivateAccountPage />} />
+      <Route
+        path="/activate-account"
+        element={
+          <Suspense fallback={<RoutePageFallback />}>
+            <ActivateAccountPage />
+          </Suspense>
+        }
+      />
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/" element={<DashboardPage />} />

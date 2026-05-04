@@ -14,12 +14,13 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { api } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import RoutePageFallback from './RoutePageFallback'
 
 const allGeneral = [
   { to: '/', label: 'Overview', icon: LayoutDashboard, iconFx: 'icon-fx-bounce' },
@@ -129,15 +130,14 @@ export default function Layout() {
 
   const Sidebar = (
     <div className="flex h-full min-h-0 flex-col border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950">
-      <div className="shrink-0 px-5 py-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-lg font-bold text-white shadow-lg shadow-brand-500/25">
-            H
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">HR Core</h1>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">People Platform</p>
-          </div>
+      <div className="shrink-0 px-3 pb-1 pt-2 md:px-4 md:pb-1.5 md:pt-2.5">
+        {/* Full row width matches previous icon + “HR Core” + tagline footprint */}
+        <div className="flex w-full min-w-0 items-center">
+          <img
+            src="/illustrations/image-removebg-preview%20(1).png"
+            alt="HR Core"
+            className="block h-auto w-full max-h-[5.25rem] object-contain object-left sm:max-h-[5.75rem]"
+          />
         </div>
       </div>
 
@@ -170,7 +170,16 @@ export default function Layout() {
         </div>
       </nav>
 
-      <div className="shrink-0 border-t border-slate-100 p-3 dark:border-slate-800">
+      <div className="shrink-0 space-y-2 border-t border-slate-100 p-3 dark:border-slate-800">
+        <button
+          type="button"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden"
+          onClick={toggle}
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+        </button>
         <button
           type="button"
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -237,7 +246,7 @@ export default function Layout() {
             <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
               <button
                 type="button"
-                className="hidden rounded-xl p-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 sm:block"
+                className="rounded-xl p-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                 onClick={toggle}
                 aria-label="Toggle theme"
               >
@@ -331,7 +340,9 @@ export default function Layout() {
 
           <section className="relative z-0 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
             <div className="mx-auto w-full max-w-[1600px] animate-fade-up px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-7">
-              <Outlet />
+              <Suspense fallback={<RoutePageFallback />}>
+                <Outlet />
+              </Suspense>
             </div>
           </section>
         </main>

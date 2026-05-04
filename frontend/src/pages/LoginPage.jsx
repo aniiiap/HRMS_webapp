@@ -1,12 +1,12 @@
 import { Eye, EyeOff, Moon, Sun } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { messageFromError } from '../api/client'
+import { messageFromError, tokenStore } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { login, user, loading: authLoading } = useAuth()
   const { theme, toggle } = useTheme()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -16,6 +16,12 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const redirectTo = location.state?.from?.pathname || '/'
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(redirectTo, { replace: true })
+    }
+  }, [authLoading, user, navigate, redirectTo])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -31,6 +37,17 @@ export default function LoginPage() {
     }
   }
 
+  if (authLoading && tokenStore.getAccess()) {
+    return (
+      <div className="relative grid min-h-screen place-items-center bg-gradient-to-b from-slate-100 to-slate-200/80 p-4 dark:from-slate-950 dark:to-slate-900">
+        <div className="flex flex-col items-center gap-3 text-slate-600 dark:text-slate-400">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+          <p className="text-sm font-medium">Opening your workspace…</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-100 to-slate-200/80 p-4 dark:from-slate-950 dark:to-slate-900">
       <div className="pointer-events-none absolute -left-20 top-20 h-72 w-72 animate-float-slow animate-pulse-soft rounded-full bg-brand-200/50 blur-3xl dark:bg-brand-900/20" />
@@ -38,7 +55,7 @@ export default function LoginPage() {
       <button
         type="button"
         onClick={toggle}
-        className="absolute right-4 top-4 rounded-xl border border-slate-200 bg-white/90 p-2.5 text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:bg-slate-800"
+        className="fixed right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))] z-50 rounded-xl border border-slate-200 bg-white/90 p-2.5 text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:bg-slate-800"
         aria-label="Toggle theme"
       >
         {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
