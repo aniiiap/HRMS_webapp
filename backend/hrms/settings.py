@@ -91,7 +91,7 @@ if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.parse(
             DATABASE_URL,
-            conn_max_age=int(os.getenv("DB_CONN_MAX_AGE", "60")),
+            conn_max_age=0 if DEBUG else int(os.getenv("DB_CONN_MAX_AGE", "60")),
         )
     }
 else:
@@ -103,7 +103,7 @@ else:
             "PASSWORD": os.getenv("DB_PASSWORD", ""),
             "HOST": os.getenv("DB_HOST", "localhost"),
             "PORT": os.getenv("DB_PORT", "5432"),
-            "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+            "CONN_MAX_AGE": 0 if DEBUG else int(os.getenv("DB_CONN_MAX_AGE", "60")),
         }
     }
 

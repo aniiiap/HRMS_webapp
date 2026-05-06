@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    CompanyAnnouncementViewSet,
     LoginView,
     MeView,
     NotificationViewSet,
@@ -16,6 +17,7 @@ from .views import (
 router = DefaultRouter()
 router.register("users", UserViewSet, basename="user")
 router.register("notifications", NotificationViewSet, basename="notification")
+router.register("announcements", CompanyAnnouncementViewSet, basename="announcement")
 
 urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),

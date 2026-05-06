@@ -112,3 +112,46 @@ class AppNotification(models.Model):
 
     def __str__(self):
         return f"{self.user.email}: {self.title}"
+
+
+class CompanyAnnouncement(models.Model):
+    class Priority(models.TextChoices):
+        NORMAL = "normal", "Normal"
+        IMPORTANT = "important", "Important"
+        CRITICAL = "critical", "Critical"
+
+    class TargetAudience(models.TextChoices):
+        ALL = "all", "All employees"
+        DEPARTMENT = "department", "Department"
+        ROLE = "role", "Role"
+
+    title = models.CharField(max_length=180)
+    message = models.TextField(max_length=2000)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="announcements_created",
+    )
+    is_active = models.BooleanField(default=True)
+    priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.NORMAL)
+    target_audience = models.CharField(
+        max_length=20,
+        choices=TargetAudience.choices,
+        default=TargetAudience.ALL,
+    )
+    target_value = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Department name for department target, or role key for role target.",
+    )
+    expires_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-published_at"]
+
+    def __str__(self):
+        return self.title

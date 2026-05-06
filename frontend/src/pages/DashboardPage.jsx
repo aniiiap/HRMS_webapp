@@ -137,7 +137,7 @@ function DepartmentDonut({ deptData, isDark }) {
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="relative mx-auto aspect-square w-full max-w-[220px] sm:max-w-[240px]">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={220} minHeight={220}>
           <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
             <Pie
               data={deptData}
@@ -417,7 +417,7 @@ export default function DashboardPage() {
                 Team attendance load
               </SectionTitle>
               <div className="h-[260px] w-full min-h-0 sm:h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={260} minHeight={220}>
                   <LineChart data={teamData} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: axisColor }} stroke={axisColor} />
                     <YAxis tick={{ fontSize: 11, fill: axisColor }} stroke={axisColor} allowDecimals={false} width={40} />

@@ -59,10 +59,12 @@ api.interceptors.response.use(
 export function messageFromError(err) {
   if (axios.isAxiosError(err)) {
     const d = err.response?.data || {}
+    if (typeof d === 'string') return d
     if (d.error) return String(d.error)
     if (d.detail) return String(d.detail)
+    if (Array.isArray(d) && d.length) return String(d[0])
     const parts = []
-    for (const [key, val] of Object.entries(d)) {
+    for (const [key, val] of Object.entries(typeof d === 'object' && d !== null ? d : {})) {
       if (key === 'detail') continue
       if (Array.isArray(val) && val.length) parts.push(`${key}: ${val[0]}`)
       else if (typeof val === 'string') parts.push(`${key}: ${val}`)

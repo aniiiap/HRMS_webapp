@@ -6,6 +6,7 @@ import {
   IndianRupee,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   Menu,
   Moon,
   Search,
@@ -31,6 +32,7 @@ const allGeneral = [
 
 const allMore = [
   { to: '/leaves', label: 'Leaves', icon: Briefcase, iconFx: 'icon-fx-tilt' },
+  { to: '/announcements', label: 'Announcements', icon: Megaphone, iconFx: 'icon-fx-rise' },
   { to: '/reports', label: 'Reports', icon: FileBarChart2, iconFx: 'icon-fx-rise' },
 ]
 
@@ -44,6 +46,8 @@ export default function Layout() {
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [notifLoading, setNotifLoading] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [announcementModal, setAnnouncementModal] = useState(null)
   const didMount = useRef(false)
   const notifRef = useRef(null)
 
@@ -63,6 +67,7 @@ export default function Layout() {
     return true
   })
   const more = allMore.filter((item) => {
+    if (item.to === '/announcements') return ['admin', 'hr', 'manager'].includes(user?.role)
     if (item.to === '/reports') return canViewReports
     return true
   })
@@ -72,6 +77,7 @@ export default function Layout() {
     try {
       const { data } = await api.get('/api/notifications/')
       const rows = Array.isArray(data) ? data : data.results || []
+      setUnreadCount(rows.length)
       setNotifications(
         rows.slice(0, 12).map((n) => ({
           id: n.id,
@@ -82,11 +88,20 @@ export default function Layout() {
         })),
       )
     } catch {
+      setUnreadCount(0)
       setNotifications([])
     } finally {
       setNotifLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!user?.id) {
+      setUnreadCount(0)
+      return
+    }
+    void loadNotifications()
+  }, [user?.id])
 
   useEffect(() => {
     const q = new URLSearchParams(location.search).get('q') || ''
@@ -120,6 +135,31 @@ export default function Layout() {
     document.addEventListener('mousedown', onDocClick)
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [notifOpen])
+
+  useEffect(() => {
+    if (user?.role !== 'employee') {
+      setAnnouncementModal(null)
+      return
+    }
+    let mounted = true
+    async function loadLatestAnnouncement() {
+      try {
+        const { data } = await api.get('/api/announcements/')
+        const rows = Array.isArray(data) ? data : data.results || []
+        const latest = rows.find((r) => r.is_active !== false && r.created_by_id !== user?.id)
+        if (!latest || !mounted) return
+        const seenKey = `hrms_announcement_seen_${user?.id || 'u'}_${latest.id}`
+        const seen = sessionStorage.getItem(seenKey) === '1'
+        if (!seen) setAnnouncementModal(latest)
+      } catch {
+        // Ignore announcement load errors; this should never block layout.
+      }
+    }
+    void loadLatestAnnouncement()
+    return () => {
+      mounted = false
+    }
+  }, [user?.id, user?.role])
 
   const linkClass = ({ isActive }) =>
     `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
@@ -197,6 +237,63 @@ export default function Layout() {
 
   return (
     <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[#f4f6f9] text-slate-800 dark:bg-slate-950 dark:text-slate-100">
+      {announcementModal && (
+        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-[1px]">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="rounded-xl bg-brand-50 p-2 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                  <Megaphone size={16} />
+                </div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Announcement</p>
+              </div>
+              <button
+                type="button"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                onClick={() => {
+                  const seenKey = `hrms_announcement_seen_${user?.id || 'u'}_${announcementModal.id}`
+                  sessionStorage.setItem(seenKey, '1')
+                  setAnnouncementModal(null)
+                }}
+                aria-label="Close announcement"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white">{announcementModal.title}</h3>
+              <span
+                className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                  announcementModal.priority === 'critical'
+                    ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+                    : announcementModal.priority === 'important'
+                      ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                }`}
+              >
+                {announcementModal.priority || 'normal'}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{announcementModal.message}</p>
+            <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
+              {announcementModal.created_by_name ? `By ${announcementModal.created_by_name} · ` : ''}
+              {announcementModal.published_at ? dayjs(announcementModal.published_at).format('MMM D, YYYY HH:mm') : ''}
+            </p>
+            <button
+              type="button"
+              className="btn-primary mt-4 w-full"
+              onClick={() => {
+                const seenKey = `hrms_announcement_seen_${user?.id || 'u'}_${announcementModal.id}`
+                sessionStorage.setItem(seenKey, '1')
+                setAnnouncementModal(null)
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       {mobileOpen && (
         <button
           type="button"
@@ -263,7 +360,9 @@ export default function Layout() {
                 }}
               >
                 <Bell size={20} />
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-500 ring-2 ring-white dark:ring-slate-950" />
+                {unreadCount > 0 && (
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-500 ring-2 ring-white dark:ring-slate-950" />
+                )}
               </button>
               {notifOpen && (
                 <div className="absolute right-0 z-[120] mt-2 w-[330px] max-w-[90vw] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
@@ -275,6 +374,7 @@ export default function Layout() {
                         className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400"
                         onClick={async () => {
                           await api.post('/api/notifications/mark-all-read/')
+                          setUnreadCount(0)
                           setNotifications([])
                         }}
                       >

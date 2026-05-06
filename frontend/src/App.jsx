@@ -10,6 +10,7 @@ const ActivateAccountPage = lazy(() => import('./pages/ActivateAccountPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'))
 const AttendancePage = lazy(() => import('./pages/AttendancePage'))
+const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage'))
 const LeavesPage = lazy(() => import('./pages/LeavesPage'))
 const PayrollPage = lazy(() => import('./pages/PayrollPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
@@ -32,6 +33,9 @@ export default function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/employees" element={<EmployeesPage />} />
           <Route path="/attendance" element={<AttendancePage />} />
+          <Route element={<RoleRoute allowedRoles={['admin', 'hr', 'manager']} />}>
+            <Route path="/announcements" element={<AnnouncementsPage />} />
+          </Route>
           <Route path="/leaves" element={<LeavesPage />} />
           <Route element={<RoleRoute allowedRoles={['admin', 'hr']} />}>
             <Route path="/payroll" element={<PayrollPage />} />

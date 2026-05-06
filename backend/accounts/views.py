@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.db.models import Q
+from django.utils import timezone
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
@@ -13,12 +15,15 @@ from .invite_service import issue_and_send_invite
 from .permissions import IsAdminOrHR
 from .serializers import (
     AppNotificationSerializer,
+    CompanyAnnouncementSerializer,
     CustomTokenObtainPairSerializer,
     InviteAcceptSerializer,
     InviteResendSerializer,
     UserCreateSerializer,
     UserSerializer,
 )
+from .models import CompanyAnnouncement
+from .permissions import IsManagerOrAbove
 
 User = get_user_model()
 
@@ -62,7 +67,46 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return self.request.user.app_notifications.all()
+        # Notification tray should show only unread items.
+        # "Clear" marks all as read, so they should not reappear on reload.
+        return self.request.user.app_notifications.filter(is_read=False)
+
+
+class CompanyAnnouncementViewSet(viewsets.ModelViewSet):
+    serializer_class = CompanyAnnouncementSerializer
+    queryset = CompanyAnnouncement.objects.all()
+
+    def get_permissions(self):
+        if self.request.method in ("GET", "HEAD", "OPTIONS"):
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), IsManagerOrAbove()]
+
+    def get_queryset(self):
+        qs = CompanyAnnouncement.objects.select_related("created_by").all()
+        if self.request.user.is_superuser or self.request.user.role in ("admin", "hr", "manager"):
+            return qs
+        employee = getattr(self.request.user, "employee_profile", None)
+        now = timezone.now()
+        audience_filter = Q(target_audience=CompanyAnnouncement.TargetAudience.ALL)
+        if employee and employee.department:
+            audience_filter |= Q(
+                target_audience=CompanyAnnouncement.TargetAudience.DEPARTMENT,
+                target_value__iexact=employee.department.strip(),
+            )
+        audience_filter |= Q(
+            target_audience=CompanyAnnouncement.TargetAudience.ROLE,
+            target_value=self.request.user.role,
+        )
+        return qs.filter(
+            is_active=True,
+        ).filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gt=now)
+        ).filter(
+            audience_filter
+        ).exclude(created_by=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
 
 class MeView(generics.RetrieveUpdateAPIView):

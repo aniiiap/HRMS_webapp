@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from .models import User
+from .models import CompanyAnnouncement, User
 
 
 @admin.register(User)
@@ -29,3 +29,19 @@ class UserAdmin(DjangoUserAdmin):
             },
         ),
     )
+
+
+@admin.register(CompanyAnnouncement)
+class CompanyAnnouncementAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "priority",
+        "target_audience",
+        "target_value",
+        "is_active",
+        "expires_at",
+        "published_at",
+        "created_by",
+    )
+    search_fields = ("title", "message", "created_by__email", "created_by__first_name", "created_by__last_name")
+    list_filter = ("priority", "target_audience", "is_active", "published_at", "expires_at")

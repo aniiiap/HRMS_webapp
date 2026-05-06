@@ -154,6 +154,22 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 leave_map.setdefault(eid, set()).add(cur.day)
                 cur += timedelta(days=1)
 
+        approved_anomaly_qs = AttendanceCorrectionRequest.objects.filter(
+            attendance__employee_id__in=employee_ids,
+            attendance__date__gte=start,
+            attendance__date__lte=end,
+            status=AttendanceCorrectionStatus.APPROVED,
+        ).exclude(
+            request_type=AttendanceCorrectionType.MARK_LEAVE
+        ).values(
+            "attendance__employee_id",
+            "attendance__date",
+        )
+        approved_anomaly_map = {}
+        for row in approved_anomaly_qs:
+            eid = row["attendance__employee_id"]
+            approved_anomaly_map.setdefault(eid, set()).add(row["attendance__date"].day)
+
         rows = []
         for e in employees:
             eid = e.id
@@ -173,6 +189,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     continue
                 if d in leave_map.get(eid, set()):
                     day_status[str(d)] = "leave"
+                    continue
+                if d in approved_anomaly_map.get(eid, set()):
+                    day_status[str(d)] = "anomaly"
                     continue
                 day_status[str(d)] = att_map.get(eid, {}).get(d, "no_record")
             rows.append(
@@ -197,6 +216,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 "present": "#22c55e",
                 "absent": "#ef4444",
                 "leave": "#8b5cf6",
+                "anomaly": "#f59e0b",
                 "weekend": "#cbd5e1",
                 "no_record": "#f8fafc",
             },
