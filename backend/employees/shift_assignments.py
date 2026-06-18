@@ -8,7 +8,7 @@ from .models import Employee, ShiftTemplate, ShiftTemplateAssignment
 def apply_shift_template_to_employee(employee: Employee, template: ShiftTemplate | None) -> None:
     if not template:
         employee.shift_template = None
-        employee.save(update_fields=["shift_template", "updated_at"])
+        employee.save(update_fields=["shift_template"])
         return
     employee.shift_template = template
     employee.shift_start_time = template.start_time
@@ -22,7 +22,6 @@ def apply_shift_template_to_employee(employee: Employee, template: ShiftTemplate
             "shift_end_time",
             "grace_minutes",
             "early_checkout_grace_minutes",
-            "updated_at",
         ]
     )
 

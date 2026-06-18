@@ -89,6 +89,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError(
                 {"error": "This account is inactive. Please contact your administrator."}
             )
+        if hasattr(user, 'organization') and user.organization and not user.organization.is_active:
+            raise serializers.ValidationError(
+                {"error": "Your organization's account has been deactivated. Please contact platform support."}
+            )
         if not user.check_password(password):
             raise serializers.ValidationError(
                 {
