@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "leave_management",
     "payroll",
     "reports",
+    "saas_platform",
 ]
 
 if _clean_env("CLOUDINARY_CLOUD_NAME") and _clean_env("CLOUDINARY_API_KEY") and _clean_env("CLOUDINARY_API_SECRET"):
@@ -162,6 +163,7 @@ REST_FRAMEWORK = {
         "anon": os.getenv("THROTTLE_ANON", "120/hour"),
         "user": os.getenv("THROTTLE_USER", "1200/hour"),
         "auth_login": os.getenv("THROTTLE_AUTH_LOGIN", "10/min"),
+        "auth_password_reset": os.getenv("THROTTLE_AUTH_PASSWORD_RESET", "5/hour"),
         "attendance_punch": os.getenv("THROTTLE_ATTENDANCE_PUNCH", "20/min"),
         "attendance_correction_request": os.getenv("THROTTLE_ATTENDANCE_CORRECTION_REQUEST", "12/hour"),
         "attendance_correction_review": os.getenv("THROTTLE_ATTENDANCE_CORRECTION_REVIEW", "60/hour"),

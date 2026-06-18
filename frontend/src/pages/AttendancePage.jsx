@@ -1,9 +1,12 @@
 import dayjs from 'dayjs'
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Download, Pencil, Save, Search, X } from 'lucide-react'
+import { Check, Download, Pencil, Save, Search, X } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { api, messageFromError } from '../api/client'
+import AttendanceRulesPanel from '../components/attendance/AttendanceRulesPanel'
+import AttendanceLogsPanel from '../components/attendance/AttendanceLogsPanel'
+import Pagination from '../components/Pagination'
 import { useAuth } from '../context/AuthContext'
 
 const LAST_LOCATION_KEY = 'hrms_last_location'
@@ -17,8 +20,32 @@ function anomalyBadge(anomaly) {
   return <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">OK</span>
 }
 
+function formatApprovalTime(value) {
+  return value ? dayjs(value).format('hh:mm A') : '--'
+}
+
+function employeeInitials(name) {
+  return (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+function DualTimeCell({ actual, requested, showRequested }) {
+  return (
+    <div className="space-y-0.5 text-xs leading-tight">
+      <div className="font-medium text-slate-800 dark:text-slate-200">{formatApprovalTime(actual)}</div>
+      {showRequested && requested && (
+        <div className="font-semibold text-brand-600 dark:text-brand-400">{formatApprovalTime(requested)}</div>
+      )}
+    </div>
+  )
+}
+
 export default function AttendancePage() {
-  const { isManagerPlus } = useAuth()
+  const { isManagerPlus, isPrivileged } = useAuth()
   const [activeTab, setActiveTab] = useState('overview')
   const [rows, setRows] = useState([])
   const [heatmap, setHeatmap] = useState(null)
@@ -30,10 +57,29 @@ export default function AttendancePage() {
   const [corrections, setCorrections] = useState([])
   const [requestTypes, setRequestTypes] = useState({})
   const [exactTimes, setExactTimes] = useState({})
+  const [leaveRules, setLeaveRules] = useState([])
+  const [leaveForms, setLeaveForms] = useState({})
+  const [reasons, setReasons] = useState({})
   const [approvalOpen, setApprovalOpen] = useState({})
   const [brokenHeatmapProfiles, setBrokenHeatmapProfiles] = useState({})
+  const [brokenApprovalProfiles, setBrokenApprovalProfiles] = useState({})
+  const [approvalSearch, setApprovalSearch] = useState('')
+  const [approvalFilter, setApprovalFilter] = useState('pending')
+  const [selectedApprovalIds, setSelectedApprovalIds] = useState([])
+  const [approvalPage, setApprovalPage] = useState(1)
+  const [approvalPageSize, setApprovalPageSize] = useState(10)
+  const [editingApproval, setEditingApproval] = useState(null)
+  const [editApprovalForm, setEditApprovalForm] = useState({ check_in: '', check_out: '' })
+  const [approvalBusy, setApprovalBusy] = useState(false)
   const [searchParams] = useSearchParams()
   const q = (searchParams.get('q') || '').trim().toLowerCase()
+  const requestWindowDays = 3
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    const valid = ['overview', 'logs', 'approvals', ...(isPrivileged ? ['rules'] : [])]
+    if (tab && valid.includes(tab)) setActiveTab(tab)
+  }, [searchParams, isPrivileged])
 
   function captureLocation() {
     const cachedRaw = localStorage.getItem(LAST_LOCATION_KEY)
@@ -74,14 +120,16 @@ export default function AttendancePage() {
   async function load() {
     try {
       if (isManagerPlus) {
-        const [{ data: heat }, { data: logData }, { data: corrData }] = await Promise.all([
+        const [{ data: heat }, { data: logData }, { data: corrData }, { data: rulesData }] = await Promise.all([
           api.get('/api/attendance/heatmap/', { params: { year, month } }),
           api.get('/api/attendance/', { params: { ordering: '-date' } }),
           api.get('/api/attendance/correction_requests/'),
+          api.get('/api/leave-rules/'),
         ])
         setHeatmap(heat)
         setLogs(Array.isArray(logData) ? logData : logData.results || [])
         setCorrections(Array.isArray(corrData) ? corrData : corrData.results || [])
+        setLeaveRules(Array.isArray(rulesData) ? rulesData : rulesData.results || [])
       } else {
         const { data } = await api.get('/api/attendance/', { params: { ordering: '-date' } })
         setRows(Array.isArray(data) ? data : data.results || [])
@@ -150,37 +198,183 @@ export default function AttendancePage() {
     }
   }
 
+  function defaultExactTimes(row) {
+    return {
+      check_in: row.check_in ? dayjs(row.check_in).format('YYYY-MM-DDTHH:mm') : `${row.date}T09:00`,
+      check_out: row.check_out ? dayjs(row.check_out).format('YYYY-MM-DDTHH:mm') : `${row.date}T18:00`,
+    }
+  }
+
+  function openApprovalPanel(row) {
+    setApprovalOpen((prev) => ({ ...prev, [row.id]: true }))
+    setRequestTypes((prev) => ({ ...prev, [row.id]: '' }))
+    setExactTimes((prev) => ({ ...prev, [row.id]: defaultExactTimes(row) }))
+    setLeaveForms((prev) => ({
+      ...prev,
+      [row.id]: { start_date: row.date, end_date: row.date, leave_type: leaveRules[0]?.code || 'paid_leave', reason: '' },
+    }))
+    setReasons((prev) => ({ ...prev, [row.id]: '' }))
+  }
+
+  function setApprovalType(row, type) {
+    setRequestTypes((prev) => ({ ...prev, [row.id]: type }))
+    if (type === 'mark_exact_time') {
+      setExactTimes((prev) => ({ ...prev, [row.id]: prev[row.id] || defaultExactTimes(row) }))
+    }
+  }
+
   async function requestCorrection(row) {
     const requestType = requestTypes[row.id] || 'mark_present'
+    const payload = { request_type: requestType, reason: reasons[row.id] || '' }
+
+    if (requestType === 'mark_exact_time') {
+      const times = exactTimes[row.id] || {}
+      if (!times.check_in || !times.check_out) {
+        toast.error('Enter both clock-in and clock-out times.')
+        return
+      }
+      payload.requested_check_in = dayjs(times.check_in).toISOString()
+      payload.requested_check_out = dayjs(times.check_out).toISOString()
+      if (!payload.reason) {
+        payload.reason = 'Requesting attendance regularization with exact clock-in and clock-out times.'
+      }
+    } else if (requestType === 'mark_leave') {
+      const leave = leaveForms[row.id] || {}
+      if (!leave.start_date || !leave.end_date || !leave.leave_type) {
+        toast.error('Fill leave start date, end date, and leave type.')
+        return
+      }
+      if (!leave.reason?.trim()) {
+        toast.error('Please provide a reason for leave.')
+        return
+      }
+      payload.leave_start_date = leave.start_date
+      payload.leave_end_date = leave.end_date
+      payload.leave_type = leave.leave_type
+      payload.reason = leave.reason.trim()
+    } else if (!payload.reason) {
+      payload.reason = 'Checked in but forgot to check out. Please regularize attendance.'
+    }
+
     try {
-      await api.post(`/api/attendance/${row.id}/request_correction/`, {
-        request_type: requestType,
-        requested_check_out: requestType === 'mark_exact_time' ? exactTimes[row.id] || null : null,
-        reason:
-          requestType === 'mark_leave'
-            ? 'Requesting leave conversion for this day.'
-            : requestType === 'mark_exact_time'
-              ? 'Submitting exact check-out time for attendance regularization.'
-            : 'Checked in but forgot to check out. Please regularize attendance.',
-      })
+      await api.post(`/api/attendance/${row.id}/request_correction/`, payload)
       toast.success('Approval request sent to admin.')
+      setApprovalOpen((prev) => ({ ...prev, [row.id]: false }))
       await load()
     } catch (err) {
       toast.error(messageFromError(err))
     }
   }
 
-  async function reviewCorrection(correctionId, status) {
+  async function reviewCorrection(correctionId, status, extra = {}) {
     try {
       await api.post('/api/attendance/review_correction/', {
         correction_id: correctionId,
         status,
+        ...extra,
       })
       toast.success(`Correction ${status}.`)
+      setSelectedApprovalIds((prev) => prev.filter((id) => id !== correctionId))
+      setEditingApproval(null)
       await load()
     } catch (err) {
       toast.error(messageFromError(err))
     }
+  }
+
+  async function bulkReviewCorrection(status) {
+    if (!selectedApprovalIds.length) {
+      toast.error('Select at least one row.')
+      return
+    }
+    setApprovalBusy(true)
+    try {
+      await Promise.all(
+        selectedApprovalIds.map((id) => api.post('/api/attendance/review_correction/', { correction_id: id, status })),
+      )
+      toast.success(`Bulk ${status} completed.`)
+      setSelectedApprovalIds([])
+      await load()
+    } catch (err) {
+      toast.error(messageFromError(err))
+    } finally {
+      setApprovalBusy(false)
+    }
+  }
+
+  function csvEscape(cell) {
+    const text = String(cell ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ')
+    return `"${text}"`
+  }
+
+  function formatExportDate(value) {
+    if (!value) return ''
+    const d = dayjs(value)
+    // Leading tab keeps Excel from auto-formatting as a narrow date serial (####).
+    return d.isValid() ? `\t${d.format('DD-MMM-YYYY')}` : `\t${String(value)}`
+  }
+
+  function formatExportDateTime(value) {
+    if (!value) return ''
+    const d = dayjs(value)
+    return d.isValid() ? `\t${d.format('DD-MMM-YYYY hh:mm A')}` : `\t${String(value)}`
+  }
+
+  function exportApprovalsCsv(rows) {
+    const header = ['ID', 'Employee', 'Department', 'Manager', 'Date', 'In (actual)', 'In (requested)', 'Out (actual)', 'Out (requested)', 'Work duration', 'Type', 'Status', 'Reason']
+    const lines = rows.map((c) => [
+      c.employee_code,
+      c.employee_name,
+      c.department,
+      c.manager_name,
+      formatExportDate(c.attendance_date),
+      formatExportDateTime(c.actual_check_in),
+      formatExportDateTime(c.requested_check_in),
+      formatExportDateTime(c.actual_check_out),
+      formatExportDateTime(c.requested_check_out),
+      c.requested_work_duration || c.actual_work_duration || '',
+      (c.request_type || '').replaceAll('_', ' '),
+      c.status,
+      c.reason || '',
+    ])
+    const csv = `\uFEFF${[header, ...lines].map((row) => row.map(csvEscape).join(',')).join('\n')}`
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `attendance_approvals_${dayjs().format('YYYY-MM-DD')}.csv`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.URL.revokeObjectURL(url)
+  }
+
+  function openEditApproval(row) {
+    setEditingApproval(row)
+    setEditApprovalForm({
+      check_in: row.requested_check_in
+        ? dayjs(row.requested_check_in).format('YYYY-MM-DDTHH:mm')
+        : row.actual_check_in
+          ? dayjs(row.actual_check_in).format('YYYY-MM-DDTHH:mm')
+          : '',
+      check_out: row.requested_check_out
+        ? dayjs(row.requested_check_out).format('YYYY-MM-DDTHH:mm')
+        : row.actual_check_out
+          ? dayjs(row.actual_check_out).format('YYYY-MM-DDTHH:mm')
+          : '',
+    })
+  }
+
+  async function saveEditAndApprove() {
+    if (!editingApproval) return
+    if (!editApprovalForm.check_in || !editApprovalForm.check_out) {
+      toast.error('Enter both in and out times.')
+      return
+    }
+    await reviewCorrection(editingApproval.id, 'approved', {
+      requested_check_in: dayjs(editApprovalForm.check_in).toISOString(),
+      requested_check_out: dayjs(editApprovalForm.check_out).toISOString(),
+    })
   }
 
   const today = useMemo(() => rows.find((r) => r.date === dayjs().format('YYYY-MM-DD')), [rows])
@@ -202,22 +396,58 @@ export default function AttendancePage() {
     return base.filter((r) => `${r.employee_name || ''} ${r.date || ''} ${r.notes || ''}`.toLowerCase().includes(q))
   }, [logs, month, q, year])
 
+  const filteredApprovals = useMemo(() => {
+    let list = corrections
+    if (approvalFilter !== 'all') {
+      list = list.filter((c) => c.status === approvalFilter)
+    }
+    const term = approvalSearch.trim().toLowerCase()
+    if (term) {
+      list = list.filter((c) => {
+        const hay = `${c.employee_code || ''} ${c.employee_name || ''} ${c.department || ''} ${c.manager_name || ''} ${c.attendance_date || ''} ${c.request_type || ''}`.toLowerCase()
+        return hay.includes(term)
+      })
+    }
+    return list
+  }, [corrections, approvalFilter, approvalSearch])
+
+  const approvalTotalPages = Math.max(Math.ceil(filteredApprovals.length / approvalPageSize), 1)
+
+  const visibleApprovals = useMemo(
+    () => filteredApprovals.slice((approvalPage - 1) * approvalPageSize, approvalPage * approvalPageSize),
+    [filteredApprovals, approvalPage, approvalPageSize],
+  )
+
+  const pendingApprovalIds = useMemo(
+    () => visibleApprovals.filter((c) => c.status === 'pending').map((c) => c.id),
+    [visibleApprovals],
+  )
+
+  const isCorrectionExpired = (rowDate) => {
+    const daysAgo = dayjs().startOf('day').diff(dayjs(rowDate).startOf('day'), 'day')
+    return daysAgo > requestWindowDays
+  }
+
   const cellClass = (status) => {
     if (status === 'present') return 'bg-emerald-500/95 ring-1 ring-emerald-300/60 dark:ring-emerald-400/20'
     if (status === 'absent') return 'bg-rose-500/95 ring-1 ring-rose-300/60 dark:ring-rose-400/20'
     if (status === 'leave') return 'bg-blue-500/95 ring-1 ring-blue-300/60 dark:ring-blue-400/20'
+    if (status === 'wfh') return 'bg-lime-500/95 ring-1 ring-lime-300/60 dark:ring-lime-400/20'
     if (status === 'anomaly') return 'bg-amber-500/95 ring-1 ring-amber-300/60 dark:ring-amber-400/20'
     if (status === 'weekend') return 'bg-slate-300 ring-1 ring-slate-300/80 dark:bg-slate-600 dark:ring-slate-500/60'
     return 'bg-slate-100 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700'
   }
 
-  const cellLabel = (status) => {
+  const cellLabel = (status, days, day) => {
+    const code = days?.[`${day}_code`]
+    if (code) return code
     if (status === 'present') return 'P'
     if (status === 'absent') return 'A'
     if (status === 'leave') return 'L'
-    if (status === 'anomaly') return 'A'
-    if (status === 'weekend') return 'W'
-    return 'N'
+    if (status === 'wfh') return 'WFH'
+    if (status === 'anomaly') return 'AN'
+    if (status === 'weekend') return 'WO'
+    return 'NA'
   }
 
   if (isManagerPlus) {
@@ -247,11 +477,22 @@ export default function AttendancePage() {
               { id: 'overview', label: 'Attendance' },
               { id: 'logs', label: 'Logs' },
               { id: 'approvals', label: 'Approvals' },
+              ...(isPrivileged ? [{ id: 'rules', label: 'Rules' }] : []),
             ].map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id)
+                  if (tab.id === 'rules') {
+                    window.history.replaceState(null, '', '?tab=rules')
+                  } else if (searchParams.get('tab')) {
+                    const params = new URLSearchParams(searchParams)
+                    params.delete('tab')
+                    const qs = params.toString()
+                    window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
+                  }
+                }}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                   activeTab === tab.id
                     ? 'bg-white text-brand-700 shadow-sm dark:bg-slate-800 dark:text-brand-300'
@@ -317,7 +558,7 @@ export default function AttendancePage() {
                             className={`flex h-6 items-center justify-center rounded-md text-[10px] font-bold transition hover:scale-105 ${cellClass(status)} ${status === 'weekend' || status === 'no_record' ? 'text-slate-700 dark:text-slate-200' : 'text-white'}`}
                             title={`${r.name} - ${dayjs(`${year}-${month}-${day}`).format('MMM D')}: ${status}`}
                           >
-                            {cellLabel(status)}
+                            {cellLabel(status, r.days, day)}
                           </div>
                         )
                       })}
@@ -329,60 +570,270 @@ export default function AttendancePage() {
           )}
 
           {activeTab === 'logs' && (
-            <div className="overflow-x-auto p-4">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-left text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
-                  <tr>
-                    <th className="px-3 py-2">Employee</th>
-                    <th className="px-3 py-2">Date</th>
-                    <th className="px-3 py-2">Shift</th>
-                    <th className="px-3 py-2">Clock in</th>
-                    <th className="px-3 py-2">Clock out</th>
-                    <th className="px-3 py-2">Anomaly</th>
-                    <th className="px-3 py-2">Work duration</th>
-                    <th className="px-3 py-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLogs.slice(0, 80).map((r) => (
-                    <tr key={r.id} className="border-t border-slate-100 dark:border-slate-800">
-                      <td className="px-3 py-2">{r.employee_name}</td>
-                      <td className="px-3 py-2">{r.date}</td>
-                      <td className="px-3 py-2 text-xs">{r.shift_template_name || `${r.shift_start_time || '--:--'} to ${r.shift_end_time || '--:--'}`}</td>
-                      <td className="px-3 py-2">{editing?.id === r.id ? <input type="datetime-local" className="rounded border border-slate-300 px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-900" value={editing.check_in || ''} onChange={(e) => setEditing({ ...editing, check_in: e.target.value })} /> : (r.check_in ? dayjs(r.check_in).format('YYYY-MM-DD HH:mm') : '-')}</td>
-                      <td className="px-3 py-2">{editing?.id === r.id ? <input type="datetime-local" className="rounded border border-slate-300 px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-900" value={editing.check_out || ''} onChange={(e) => setEditing({ ...editing, check_out: e.target.value })} /> : (r.check_out ? dayjs(r.check_out).format('YYYY-MM-DD HH:mm') : '-')}</td>
-                      <td className="px-3 py-2">{anomalyBadge(r.anomaly)}</td>
-                      <td className="px-3 py-2">{r.work_duration || '-'}</td>
-                      <td className="px-3 py-2">{editing?.id === r.id ? <div className="flex gap-1"><button className="btn-secondary !px-2 !py-1" onClick={() => void saveLogEdit()}><Save size={14} /></button><button className="btn-secondary !px-2 !py-1" onClick={() => setEditing(null)}><X size={14} /></button></div> : <button className="btn-secondary !px-2 !py-1" onClick={() => setEditing({ id: r.id, check_in: r.check_in ? dayjs(r.check_in).format('YYYY-MM-DDTHH:mm') : '', check_out: r.check_out ? dayjs(r.check_out).format('YYYY-MM-DDTHH:mm') : '', notes: r.notes || '' })}><Pencil size={14} /></button>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <AttendanceLogsPanel
+              heatmap={heatmap}
+              year={year}
+              month={month}
+              setYear={setYear}
+              setMonth={setMonth}
+              onExport={() => void exportSheet()}
+              brokenProfiles={brokenHeatmapProfiles}
+              setBrokenProfiles={setBrokenHeatmapProfiles}
+            />
           )}
 
           {activeTab === 'approvals' && (
             <div className="p-4">
-              <div className="mb-3 text-sm font-semibold">Attendance correction approvals</div>
-              <div className="space-y-2">
-                {corrections.filter((c) => c.status === 'pending').slice(0, 12).map((c) => (
-                  <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800/60">
-                    <div>
-                      <p className="font-medium text-slate-900 dark:text-white">{c.employee_name} - {c.attendance_date}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{(c.request_type || 'manual_review').replace('_', ' ')} | {c.reason || 'No reason provided'}</p>
+              <h3 className="mb-4 text-base font-semibold text-slate-900 dark:text-white">Attendance Approvals</h3>
+
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <div className="relative min-w-[220px] flex-1">
+                  <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="search"
+                    placeholder="Search employees..."
+                    className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+                    value={approvalSearch}
+                    onChange={(e) => setApprovalSearch(e.target.value)}
+                  />
+                </div>
+                <div className="flex shrink-0 gap-1 rounded-lg border border-slate-200 bg-slate-50/50 p-1 dark:border-slate-700 dark:bg-slate-900/50">
+                  {[{ id: 'pending', label: 'Pending' }, { id: 'approved', label: 'Approved' }, { id: 'rejected', label: 'Rejected' }, { id: 'all', label: 'All' }].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => { setApprovalFilter(t.id); setApprovalPage(1) }}
+                      className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                        approvalFilter === t.id ? 'bg-white text-brand-700 shadow-sm dark:bg-slate-800 dark:text-brand-300' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  disabled={approvalBusy || !selectedApprovalIds.length}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white hover:bg-emerald-700 disabled:opacity-50"
+                  onClick={() => void bulkReviewCorrection('approved')}
+                >
+                  Bulk approve
+                </button>
+                <button
+                  type="button"
+                  disabled={approvalBusy || !selectedApprovalIds.length}
+                  className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white hover:bg-rose-700 disabled:opacity-50"
+                  onClick={() => void bulkReviewCorrection('rejected')}
+                >
+                  Bulk reject
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-600 dark:text-slate-200"
+                  onClick={() => exportApprovalsCsv(filteredApprovals)}
+                >
+                  <Download size={14} />
+                  Export
+                </button>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                <table className="min-w-[1100px] w-full text-sm">
+                  <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    <tr>
+                      <th className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          checked={pendingApprovalIds.length > 0 && pendingApprovalIds.every((id) => selectedApprovalIds.includes(id))}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedApprovalIds(pendingApprovalIds)
+                            else setSelectedApprovalIds((prev) => prev.filter((id) => !pendingApprovalIds.includes(id)))
+                          }}
+                        />
+                      </th>
+                      <th className="px-3 py-3">ID</th>
+                      <th className="px-3 py-3">Employee name</th>
+                      <th className="px-3 py-3">Department</th>
+                      <th className="px-3 py-3">Employee manager</th>
+                      <th className="px-3 py-3">In time</th>
+                      <th className="px-3 py-3">Out time</th>
+                      <th className="px-3 py-3">Work duration</th>
+                      <th className="px-3 py-3">Date</th>
+                      <th className="px-3 py-3">Type</th>
+                      <th className="px-3 py-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleApprovals.map((c) => {
+                      const showRequestedTimes = c.request_type === 'mark_exact_time' || c.request_type === 'mark_present'
+                      const isPending = c.status === 'pending'
+                      return (
+                        <tr key={c.id} className="border-t border-slate-100 dark:border-slate-800">
+                          <td className="px-3 py-3">
+                            {isPending && (
+                              <input
+                                type="checkbox"
+                                checked={selectedApprovalIds.includes(c.id)}
+                                onChange={(e) => {
+                                  setSelectedApprovalIds((prev) => (
+                                    e.target.checked ? [...prev, c.id] : prev.filter((id) => id !== c.id)
+                                  ))
+                                }}
+                              />
+                            )}
+                          </td>
+                          <td className="px-3 py-3 font-medium text-slate-700 dark:text-slate-200">{c.employee_code}</td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-2">
+                              {c.profile_image && !brokenApprovalProfiles[c.id] ? (
+                                <img
+                                  src={c.profile_image}
+                                  alt={c.employee_name}
+                                  className="h-8 w-8 rounded-full object-cover"
+                                  onError={() => setBrokenApprovalProfiles((prev) => ({ ...prev, [c.id]: true }))}
+                                />
+                              ) : (
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
+                                  {employeeInitials(c.employee_name)}
+                                </div>
+                              )}
+                              <span className="font-medium text-slate-900 dark:text-white">{c.employee_name}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-slate-600 dark:text-slate-300">{c.department || '—'}</td>
+                          <td className="px-3 py-3 text-slate-600 dark:text-slate-300">{c.manager_name || '—'}</td>
+                          <td className="px-3 py-3">
+                            {c.request_type === 'mark_leave' ? (
+                              <span className="text-xs text-slate-500">Leave request</span>
+                            ) : (
+                              <DualTimeCell
+                                actual={c.actual_check_in}
+                                requested={c.requested_check_in}
+                                showRequested={showRequestedTimes}
+                              />
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            {c.request_type === 'mark_leave' ? (
+                              <span className="text-xs font-medium text-brand-600">
+                                {c.leave_start_date} → {c.leave_end_date}
+                              </span>
+                            ) : (
+                              <DualTimeCell
+                                actual={c.actual_check_out}
+                                requested={c.requested_check_out}
+                                showRequested={showRequestedTimes}
+                              />
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-slate-700 dark:text-slate-200">
+                            {c.requested_work_duration || c.actual_work_duration || '—'}
+                          </td>
+                          <td className="px-3 py-3 text-slate-600 dark:text-slate-300">{c.attendance_date}</td>
+                          <td className="px-3 py-3">
+                            <span className="capitalize text-xs text-slate-500">{(c.request_type || '').replaceAll('_', ' ')}</span>
+                            {!isPending && (
+                              <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                {c.status}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            {isPending ? (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  title="Approve"
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+                                  onClick={() => void reviewCorrection(c.id, 'approved')}
+                                >
+                                  <Check size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Reject"
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-rose-600 text-white hover:bg-rose-700"
+                                  onClick={() => void reviewCorrection(c.id, 'rejected')}
+                                >
+                                  <X size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Edit & approve"
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white hover:bg-brand-700"
+                                  onClick={() => openEditApproval(c)}
+                                >
+                                  <Pencil size={15} />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                    {visibleApprovals.length === 0 && (
+                      <tr>
+                        <td colSpan={11} className="px-4 py-10 text-center text-sm text-slate-500">
+                          No approval requests found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination
+                page={approvalPage}
+                totalPages={approvalTotalPages}
+                total={filteredApprovals.length}
+                pageSize={approvalPageSize}
+                onPageChange={setApprovalPage}
+                onPageSizeChange={(size) => { setApprovalPageSize(size); setApprovalPage(1) }}
+              />
+
+              {editingApproval && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                  <div className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-slate-900 dark:text-white">Edit & approve — {editingApproval.employee_name}</h4>
+                      <button type="button" className="text-slate-500" onClick={() => setEditingApproval(null)}>
+                        <X size={18} />
+                      </button>
                     </div>
-                    <div className="flex gap-2">
-                      <button className="btn-secondary !px-3 !py-1.5" onClick={() => void reviewCorrection(c.id, 'approved')}>Approve</button>
-                      <button className="btn-secondary !px-3 !py-1.5" onClick={() => void reviewCorrection(c.id, 'rejected')}>Reject</button>
+                    <p className="text-xs text-slate-500">{editingApproval.attendance_date} · {(editingApproval.request_type || '').replaceAll('_', ' ')}</p>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                      In time
+                      <input
+                        type="datetime-local"
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950"
+                        value={editApprovalForm.check_in}
+                        onChange={(e) => setEditApprovalForm({ ...editApprovalForm, check_in: e.target.value })}
+                      />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                      Out time
+                      <input
+                        type="datetime-local"
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950"
+                        value={editApprovalForm.check_out}
+                        onChange={(e) => setEditApprovalForm({ ...editApprovalForm, check_out: e.target.value })}
+                      />
+                    </label>
+                    <div className="flex justify-end gap-2">
+                      <button type="button" className="btn-secondary" onClick={() => setEditingApproval(null)}>Cancel</button>
+                      <button type="button" className="btn-primary inline-flex items-center gap-2" onClick={() => void saveEditAndApprove()}>
+                        <Save size={14} />
+                        Approve
+                      </button>
                     </div>
                   </div>
-                ))}
-                {corrections.filter((c) => c.status === 'pending').length === 0 && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">No pending approvals.</p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
+
+          {activeTab === 'rules' && isPrivileged && <AttendanceRulesPanel />}
         </div>
       </div>
     )
@@ -413,48 +864,249 @@ export default function AttendancePage() {
             </tr>
           </thead>
           <tbody>
-            {filteredRows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100">
-                <td className="px-4 py-3">{r.date}</td>
-                <td className="px-4 py-3 text-xs">{r.shift_template_name || `${r.shift_start_time || '--:--'} to ${r.shift_end_time || '--:--'}`}</td>
-                <td className="px-4 py-3">{r.check_in ? dayjs(r.check_in).format('HH:mm') : '-'}</td>
-                <td className="px-4 py-3">{r.check_out ? dayjs(r.check_out).format('HH:mm') : '-'}</td>
-                <td className="px-4 py-3">{anomalyBadge(r.anomaly)}</td>
-                <td className="px-4 py-3">{r.work_duration || '-'}</td>
-                <td className="px-4 py-3">
-                  {r.anomaly !== 'none' && dayjs(r.date).isBefore(dayjs(), 'day') ? (
-                    approvalOpen[r.id] ? (
-                      <div className="flex flex-wrap gap-1">
-                        <select className="rounded-lg border border-slate-300 px-2 py-1 text-xs" value={requestTypes[r.id] || 'mark_present'} onChange={(e) => setRequestTypes({ ...requestTypes, [r.id]: e.target.value })}>
-                          <option value="mark_present">Mark as present</option>
-                          <option value="mark_exact_time">Mark exact time</option>
-                          <option value="mark_leave">Mark as leave</option>
-                          <option value="manual_review">Manual review</option>
-                        </select>
-                        {(requestTypes[r.id] || 'mark_present') === 'mark_exact_time' && (
-                          <input
-                            type="datetime-local"
-                            className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
-                            value={exactTimes[r.id] || ''}
-                            onChange={(e) => setExactTimes({ ...exactTimes, [r.id]: e.target.value })}
-                          />
-                        )}
-                        <button className="btn-secondary !px-3 !py-1.5" onClick={() => void requestCorrection(r)}>Send request</button>
-                      </div>
-                    ) : (
-                      <button
-                        className="btn-secondary !px-3 !py-1.5"
-                        onClick={() => setApprovalOpen({ ...approvalOpen, [r.id]: true })}
-                      >
-                        Get approval
-                      </button>
-                    )
-                  ) : (
-                    <span className="text-xs text-slate-400">-</span>
+            {filteredRows.map((r) => {
+              const canRequest = (r.anomaly !== 'none' || (!r.check_in && !r.check_out)) && dayjs(r.date).isBefore(dayjs(), 'day')
+              const selectedType = requestTypes[r.id] || ''
+
+              return (
+                <Fragment key={r.id}>
+                  <tr className="border-t border-slate-100">
+                    <td className="px-4 py-3">{r.date}</td>
+                    <td className="px-4 py-3 text-xs">{r.shift_template_name || `${r.shift_start_time || '--:--'} to ${r.shift_end_time || '--:--'}`}</td>
+                    <td className="px-4 py-3">{r.check_in ? dayjs(r.check_in).format('HH:mm') : '-'}</td>
+                    <td className="px-4 py-3">{r.check_out ? dayjs(r.check_out).format('HH:mm') : '-'}</td>
+                    <td className="px-4 py-3">{anomalyBadge(r.anomaly)}</td>
+                    <td className="px-4 py-3">{r.work_duration || '-'}</td>
+                    <td className="px-4 py-3 align-top">
+                      {!canRequest ? (
+                        <span className="text-xs text-slate-400">-</span>
+                      ) : r.correction_request_status === 'pending' ? (
+                        <span className="inline-flex rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700">
+                          Requested for approval
+                        </span>
+                      ) : isCorrectionExpired(r.date) ? (
+                        <span
+                          className="inline-flex cursor-help rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
+                          title="You can request approval only within 3 days from the attendance date."
+                        >
+                          Request expired
+                        </span>
+                      ) : !approvalOpen[r.id] ? (
+                        <button type="button" className="btn-secondary !px-3 !py-1.5" onClick={() => openApprovalPanel(r)}>
+                          Get approval
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                          onClick={() => setApprovalOpen({ ...approvalOpen, [r.id]: false })}
+                        >
+                          Close
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+
+                  {approvalOpen[r.id] && canRequest && r.correction_request_status !== 'pending' && !isCorrectionExpired(r.date) && (
+                    <tr className="border-t border-slate-100 bg-slate-50/80 dark:bg-slate-900/40">
+                      <td colSpan={7} className="px-4 py-4">
+                        <div className="mx-auto max-w-2xl space-y-3">
+                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Request approval for {r.date}</p>
+
+                          {!selectedType && (
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { id: 'mark_exact_time', label: 'Mark exact time' },
+                                { id: 'mark_leave', label: 'Mark as leave' },
+                                { id: 'mark_present', label: 'Mark as present' },
+                                { id: 'manual_review', label: 'Manual review' },
+                              ].map((opt) => (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-brand-400 hover:text-brand-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                                  onClick={() => setApprovalType(r, opt.id)}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500"
+                                onClick={() => setApprovalOpen({ ...approvalOpen, [r.id]: false })}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          )}
+
+                          {selectedType === 'mark_exact_time' && (
+                            <form
+                              className="space-y-3 rounded-xl border border-brand-200 bg-white p-4 shadow-sm dark:border-brand-900/50 dark:bg-stone-900"
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                void requestCorrection(r)
+                              }}
+                            >
+                              <p className="text-sm font-semibold text-brand-800 dark:text-brand-200">Edit clock-in & clock-out</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                Update the times below, then click Apply to send your request to admin.
+                              </p>
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Clock in
+                                  <input
+                                    required
+                                    type="datetime-local"
+                                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950"
+                                    value={exactTimes[r.id]?.check_in || ''}
+                                    onChange={(e) => setExactTimes({
+                                      ...exactTimes,
+                                      [r.id]: { ...(exactTimes[r.id] || defaultExactTimes(r)), check_in: e.target.value },
+                                    })}
+                                  />
+                                </label>
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Clock out
+                                  <input
+                                    required
+                                    type="datetime-local"
+                                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950"
+                                    value={exactTimes[r.id]?.check_out || ''}
+                                    onChange={(e) => setExactTimes({
+                                      ...exactTimes,
+                                      [r.id]: { ...(exactTimes[r.id] || defaultExactTimes(r)), check_out: e.target.value },
+                                    })}
+                                  />
+                                </label>
+                              </div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                Note for admin (optional)
+                                <input
+                                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950"
+                                  value={reasons[r.id] || ''}
+                                  onChange={(e) => setReasons({ ...reasons, [r.id]: e.target.value })}
+                                  placeholder="e.g. forgot to punch out"
+                                />
+                              </label>
+                              <div className="flex flex-wrap gap-2">
+                                <button type="submit" className="btn-primary !px-4 !py-2 text-sm">
+                                  Apply
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-secondary !px-4 !py-2 text-sm"
+                                  onClick={() => setRequestTypes({ ...requestTypes, [r.id]: '' })}
+                                >
+                                  Back
+                                </button>
+                              </div>
+                            </form>
+                          )}
+
+                          {selectedType === 'mark_leave' && (
+                            <form
+                              className="space-y-3 rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900 dark:bg-slate-900"
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                void requestCorrection(r)
+                              }}
+                            >
+                              <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">Apply for leave</p>
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Start date
+                                  <input
+                                    required
+                                    type="date"
+                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950"
+                                    value={leaveForms[r.id]?.start_date || r.date}
+                                    onChange={(e) => setLeaveForms({
+                                      ...leaveForms,
+                                      [r.id]: { ...(leaveForms[r.id] || {}), start_date: e.target.value },
+                                    })}
+                                  />
+                                </label>
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  End date
+                                  <input
+                                    required
+                                    type="date"
+                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950"
+                                    value={leaveForms[r.id]?.end_date || r.date}
+                                    onChange={(e) => setLeaveForms({
+                                      ...leaveForms,
+                                      [r.id]: { ...(leaveForms[r.id] || {}), end_date: e.target.value },
+                                    })}
+                                  />
+                                </label>
+                              </div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                Leave type
+                                <select
+                                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950"
+                                  value={leaveForms[r.id]?.leave_type || leaveRules[0]?.code || 'paid_leave'}
+                                  onChange={(e) => setLeaveForms({
+                                    ...leaveForms,
+                                    [r.id]: { ...(leaveForms[r.id] || {}), leave_type: e.target.value },
+                                  })}
+                                >
+                                  {leaveRules.map((rule) => (
+                                    <option key={rule.id} value={rule.code}>{rule.name}</option>
+                                  ))}
+                                  {leaveRules.length === 0 && <option value="paid_leave">Paid Leave</option>}
+                                </select>
+                              </label>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                Reason
+                                <textarea
+                                  required
+                                  rows={2}
+                                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950"
+                                  placeholder="Why do you need this leave?"
+                                  value={leaveForms[r.id]?.reason || ''}
+                                  onChange={(e) => setLeaveForms({
+                                    ...leaveForms,
+                                    [r.id]: { ...(leaveForms[r.id] || {}), reason: e.target.value },
+                                  })}
+                                />
+                              </label>
+                              <div className="flex flex-wrap gap-2">
+                                <button type="submit" className="btn-primary !px-4 !py-2 text-sm">Apply leave</button>
+                                <button type="button" className="btn-secondary !px-4 !py-2 text-sm" onClick={() => setRequestTypes({ ...requestTypes, [r.id]: '' })}>Back</button>
+                              </div>
+                            </form>
+                          )}
+
+                          {(selectedType === 'mark_present' || selectedType === 'manual_review') && (
+                            <form
+                              className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                void requestCorrection(r)
+                              }}
+                            >
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                Reason (optional)
+                                <input
+                                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950"
+                                  value={reasons[r.id] || ''}
+                                  onChange={(e) => setReasons({ ...reasons, [r.id]: e.target.value })}
+                                />
+                              </label>
+                              <div className="flex flex-wrap gap-2">
+                                <button type="submit" className="btn-primary !px-4 !py-2 text-sm">Apply</button>
+                                <button type="button" className="btn-secondary !px-4 !py-2 text-sm" onClick={() => setRequestTypes({ ...requestTypes, [r.id]: '' })}>Back</button>
+                              </div>
+                            </form>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
                   )}
-                </td>
-              </tr>
-            ))}
+                </Fragment>
+              )
+            })}
             {filteredRows.length === 0 && <tr><td className="px-4 py-8 text-center text-slate-500" colSpan="7">No attendance logs yet.</td></tr>}
           </tbody>
         </table>

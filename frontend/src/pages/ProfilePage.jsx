@@ -168,7 +168,7 @@ export default function ProfilePage() {
           {profile?.profile_image && !profileImageBroken ? (
             <img src={profile.profile_image} alt="Profile" className="h-14 w-14 rounded-full object-cover" onError={() => setProfileImageBroken(true)} />
           ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-indigo-700 text-lg font-bold text-white">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-800 text-lg font-bold text-white shadow-md shadow-brand-600/25">
               {initials}
             </div>
           )}

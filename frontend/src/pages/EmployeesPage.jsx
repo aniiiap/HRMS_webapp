@@ -1,27 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Check, LocateFixed, MailPlus, MapPin, Pencil, Power, Trash2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api, messageFromError } from '../api/client'
+import PageHeader from '../components/ui/PageHeader'
 import { useAuth } from '../context/AuthContext'
+import { useConfirm } from '../context/ConfirmContext'
 import { useSearchParams } from 'react-router-dom'
 
 export default function EmployeesPage() {
   const { isPrivileged } = useAuth()
+  const confirm = useConfirm()
   const [searchParams] = useSearchParams()
   const [rows, setRows] = useState([])
   const [templates, setTemplates] = useState([])
-  const [selectedTemplateId, setSelectedTemplateId] = useState('')
-  const [selectedIds, setSelectedIds] = useState([])
-  const [editingTemplateId, setEditingTemplateId] = useState(null)
   const [activeTab, setActiveTab] = useState('employees')
-  const [templateForm, setTemplateForm] = useState({
-    name: '',
-    start_time: '',
-    end_time: '',
-    grace_minutes: '',
-    early_checkout_grace_minutes: 10,
-    is_night_shift: false,
-  })
   const [error, setError] = useState('')
   const [form, setForm] = useState({
     email: '',
@@ -103,8 +96,6 @@ export default function EmployeesPage() {
       return hay.includes(q)
     })
   }, [rows, searchParams])
-  const allVisibleSelected = employeeRows.length > 0 && employeeRows.every((r) => selectedIds.includes(r.id))
-
   async function onboard(e) {
     e.preventDefault()
     setError('')
@@ -190,9 +181,12 @@ export default function EmployeesPage() {
   }
 
   async function deleteEmployee(row) {
-    const ok = window.confirm(
-      `Delete ${row.first_name || ''} ${row.last_name || ''} (${row.employee_code}) permanently?\n\nThis will remove both the employee profile and login account.`
-    )
+    const ok = await confirm({
+      title: 'Delete employee permanently?',
+      message: `Delete ${row.first_name || ''} ${row.last_name || ''} (${row.employee_code})?\n\nThis will remove both the employee profile and login account.`,
+      confirmLabel: 'Delete',
+      destructive: true,
+    })
     if (!ok) return
     setError('')
     setBusyId(row.id)
@@ -223,84 +217,6 @@ export default function EmployeesPage() {
       toast.error(m)
     } finally {
       setBusyId(null)
-    }
-  }
-
-  async function applyShiftTemplate() {
-    if (!selectedTemplateId || selectedIds.length === 0) {
-      toast.error('Select a template and at least one employee.')
-      return
-    }
-    try {
-      const { data } = await api.post('/api/employees/apply-shift-template/', {
-        template_id: Number(selectedTemplateId),
-        employee_ids: selectedIds,
-      })
-      toast.success(data?.message || 'Shift template applied.')
-      setSelectedIds([])
-      await load()
-    } catch (err) {
-      toast.error(messageFromError(err))
-    }
-  }
-
-  async function createTemplate(e) {
-    e.preventDefault()
-    try {
-      await api.post('/api/employees/shift-templates/', {
-        ...templateForm,
-        grace_minutes: templateForm.grace_minutes === '' ? 0 : Number(templateForm.grace_minutes),
-        early_checkout_grace_minutes: templateForm.early_checkout_grace_minutes === '' ? 10 : Number(templateForm.early_checkout_grace_minutes),
-      })
-      toast.success('Shift template created.')
-      setTemplateForm({
-        name: '',
-        start_time: '',
-        end_time: '',
-        grace_minutes: '',
-        early_checkout_grace_minutes: 10,
-        is_night_shift: false,
-      })
-      await load()
-    } catch (err) {
-      toast.error(messageFromError(err))
-    }
-  }
-
-  async function saveTemplateEdit() {
-    if (!editingTemplateId) return
-    try {
-      await api.patch(`/api/employees/shift-templates/${editingTemplateId}/`, {
-        ...templateForm,
-        grace_minutes: templateForm.grace_minutes === '' ? 0 : Number(templateForm.grace_minutes),
-        early_checkout_grace_minutes: templateForm.early_checkout_grace_minutes === '' ? 10 : Number(templateForm.early_checkout_grace_minutes),
-      })
-      toast.success('Shift template updated.')
-      setEditingTemplateId(null)
-      setTemplateForm({
-        name: '',
-        start_time: '10:00',
-        end_time: '19:00',
-        grace_minutes: 15,
-        early_checkout_grace_minutes: 10,
-        is_night_shift: false,
-      })
-      await load()
-    } catch (err) {
-      toast.error(messageFromError(err))
-    }
-  }
-
-  async function deleteTemplate(templateId) {
-    const ok = window.confirm('Delete this shift template?')
-    if (!ok) return
-    try {
-      await api.delete(`/api/employees/shift-templates/${templateId}/`)
-      toast.success('Shift template deleted.')
-      if (selectedTemplateId === String(templateId)) setSelectedTemplateId('')
-      await load()
-    } catch (err) {
-      toast.error(messageFromError(err))
     }
   }
 
@@ -358,16 +274,27 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Employees</h2>
-      {error && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+    <div className="space-y-5">
+      <PageHeader
+        title="Employees"
+        subtitle="Manage your team, onboarding, and office location. Configure shift rules under Attendance → Rules."
+        badge="People"
+        action={
+          <div className="rounded-2xl border border-brand-200/80 bg-brand-50 px-5 py-3 text-center dark:border-brand-800 dark:bg-brand-950/40">
+            <p className="text-3xl font-bold tabular-nums text-brand-700 dark:text-brand-300">{rows.length}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+              {rows.length === 1 ? 'Employee' : 'Employees'}
+            </p>
+          </div>
+        }
+      />
+      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">{error}</div>}
       {isPrivileged && (
-        <div className="card overflow-hidden border border-slate-200/80 dark:border-slate-700">
-          <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50/90 px-3 py-2 dark:border-slate-700 dark:bg-slate-900/70">
+        <div className="card overflow-hidden">
+          <div className="flex flex-wrap items-center gap-1 border-b border-warm-200 bg-warm-50/90 px-3 py-2 dark:border-stone-700 dark:bg-stone-900/70">
             {[
               { id: 'employees', label: 'Employees' },
               { id: 'onboard', label: 'Onboard' },
-              { id: 'shifts', label: 'Shift templates' },
               { id: 'location', label: 'Location setup' },
             ].map((tab) => (
               <button
@@ -428,88 +355,6 @@ export default function EmployeesPage() {
           </label>
           <button className="btn-primary">Onboard</button>
         </form>
-      )}
-
-      {isPrivileged && activeTab === 'shifts' && (
-        <div className="card grid gap-3 p-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-800">Apply shift template (bulk)</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <select className="rounded-xl border border-slate-300 px-3 py-2" value={selectedTemplateId} onChange={(e) => setSelectedTemplateId(e.target.value)}>
-                <option value="">Select template</option>
-                {templates.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.start_time} - {t.end_time})</option>)}
-              </select>
-              <button type="button" className="btn-secondary" onClick={() => void applyShiftTemplate()}>Apply to selected ({selectedIds.length})</button>
-            </div>
-            <div className="space-y-1">
-              {templates.map((t) => (
-                <div key={t.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs">
-                  <span className="truncate">{t.name} ({t.start_time}-{t.end_time})</span>
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      className="rounded-md border border-slate-300 px-2 py-0.5"
-                      onClick={() => {
-                        setEditingTemplateId(t.id)
-                        setTemplateForm({
-                          name: t.name,
-                          start_time: t.start_time?.slice(0, 5) || '10:00',
-                          end_time: t.end_time?.slice(0, 5) || '19:00',
-                          grace_minutes: t.grace_minutes ?? 0,
-                          early_checkout_grace_minutes: t.early_checkout_grace_minutes ?? 10,
-                          is_night_shift: !!t.is_night_shift,
-                        })
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button type="button" className="rounded-md border border-red-200 px-2 py-0.5 text-red-700" onClick={() => void deleteTemplate(t.id)}>
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <form className="space-y-2" onSubmit={createTemplate}>
-            <p className="text-sm font-semibold text-slate-800">{editingTemplateId ? 'Edit shift template' : 'Create custom shift template'}</p>
-            <div className="grid grid-cols-2 gap-2">
-              <input className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Template name" value={templateForm.name} onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })} required />
-              <input type="number" min="0" max="180" className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Late buffer mins" value={templateForm.grace_minutes} onChange={(e) => setTemplateForm({ ...templateForm, grace_minutes: e.target.value })} />
-              <input type="number" min="0" max="180" className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Early grace mins" value={templateForm.early_checkout_grace_minutes} onChange={(e) => setTemplateForm({ ...templateForm, early_checkout_grace_minutes: e.target.value })} />
-              <input type="time" className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Start time" value={templateForm.start_time} onChange={(e) => setTemplateForm({ ...templateForm, start_time: e.target.value })} />
-              <input type="time" className="rounded-xl border border-slate-300 px-3 py-2" placeholder="End time" value={templateForm.end_time} onChange={(e) => setTemplateForm({ ...templateForm, end_time: e.target.value })} />
-            </div>
-            <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-              <input type="checkbox" checked={templateForm.is_night_shift} onChange={(e) => setTemplateForm({ ...templateForm, is_night_shift: e.target.checked })} />
-              Night shift
-            </label>
-            <div className="flex gap-2">
-              <button className="btn-primary" onClick={(e) => { if (editingTemplateId) { e.preventDefault(); void saveTemplateEdit() } }}>
-                {editingTemplateId ? 'Update template' : 'Save template'}
-              </button>
-              {editingTemplateId && (
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setEditingTemplateId(null)
-                    setTemplateForm({
-                      name: '',
-                      start_time: '',
-                      end_time: '',
-                      grace_minutes: '',
-                      early_checkout_grace_minutes: 10,
-                      is_night_shift: false,
-                    })
-                  }}
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
       )}
 
       {isPrivileged && activeTab === 'location' && (
@@ -604,23 +449,6 @@ export default function EmployeesPage() {
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left text-slate-600">
             <tr>
-              {isPrivileged && (
-                <th className="px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={allVisibleSelected}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        const visibleIds = employeeRows.map((r) => r.id)
-                        setSelectedIds(Array.from(new Set([...selectedIds, ...visibleIds])))
-                      } else {
-                        const visible = new Set(employeeRows.map((r) => r.id))
-                        setSelectedIds(selectedIds.filter((id) => !visible.has(id)))
-                      }
-                    }}
-                  />
-                </th>
-              )}
               <th className="px-4 py-3">Code</th>
               <th className="px-4 py-3">Name</th>
               <th className="px-6 py-3">Email</th>
@@ -637,21 +465,6 @@ export default function EmployeesPage() {
           <tbody>
             {employeeRows.map((r) => (
               <tr key={r.id} className="border-t border-slate-100 align-top">
-                {isPrivileged && (
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(r.id)}
-                      onChange={(e) => {
-                        setSelectedIds(
-                          e.target.checked
-                            ? [...selectedIds, r.id]
-                            : selectedIds.filter((id) => id !== r.id)
-                        )
-                      }}
-                    />
-                  </td>
-                )}
                 <td className="px-4 py-3 font-mono text-xs">{r.employee_code}</td>
                 <td className="px-4 py-3 pr-8">
                   <div className="flex items-center gap-2">
@@ -663,11 +476,13 @@ export default function EmployeesPage() {
                         onError={() => setBrokenProfileIds((prev) => ({ ...prev, [r.id]: true }))}
                       />
                     ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-indigo-100 text-[11px] font-bold text-brand-700">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-200 text-[11px] font-bold text-brand-800">
                         {`${r.first_name || ''} ${r.last_name || ''}`.trim().split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || r.email?.[0]?.toUpperCase() || '?'}
                       </div>
                     )}
-                    <span>{r.first_name} {r.last_name}</span>
+                    <Link to={`/employees/${r.id}`} className="font-medium text-slate-900 hover:text-brand-600 dark:text-slate-100">
+                      {r.first_name} {r.last_name}
+                    </Link>
                   </div>
                 </td>
                 <td className="px-6 py-3">{r.email}</td>
@@ -776,6 +591,15 @@ export default function EmployeesPage() {
                           <Pencil size={14} />
                         </button>
                       )}
+                      {editingId !== r.id && (
+                        <Link
+                          to={`/employees/${r.id}?tab=compensation`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700"
+                          title="Payroll"
+                        >
+                          ₹
+                        </Link>
+                      )}
                       <button
                         type="button"
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700"
@@ -819,6 +643,7 @@ export default function EmployeesPage() {
         </table>
       </div>
       )}
+
     </div>
   )
 }

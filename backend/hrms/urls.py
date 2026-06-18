@@ -11,6 +11,7 @@ urlpatterns = [
     path("api/", include("leave_management.urls")),
     path("api/", include("payroll.urls")),
     path("api/reports/", include("reports.urls")),
+    path("api/platform/", include("saas_platform.urls")),
 ]
 
 if settings.DEBUG:

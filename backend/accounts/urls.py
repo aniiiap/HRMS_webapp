@@ -12,6 +12,8 @@ from .views import (
     invite_resend_view,
     notifications_mark_all_read_view,
     logout_view,
+    password_reset_confirm_view,
+    password_reset_request_view,
 )
 
 router = DefaultRouter()
@@ -26,6 +28,8 @@ urlpatterns = [
     path("auth/me/", MeView.as_view(), name="me"),
     path("auth/invite/accept/", invite_accept_view, name="invite-accept"),
     path("auth/invite/resend/", invite_resend_view, name="invite-resend"),
+    path("auth/password-reset/request/", password_reset_request_view, name="password-reset-request"),
+    path("auth/password-reset/confirm/", password_reset_confirm_view, name="password-reset-confirm"),
     path("notifications/mark-all-read/", notifications_mark_all_read_view, name="notifications-mark-all-read"),
     path("", include(router.urls)),
 ]

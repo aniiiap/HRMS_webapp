@@ -39,7 +39,11 @@ class AttendanceCorrectionType(models.TextChoices):
 class AttendanceCorrectionRequest(models.Model):
     attendance = models.ForeignKey(Attendance, on_delete=models.CASCADE, related_name="correction_requests")
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="attendance_corrections")
+    requested_check_in = models.DateTimeField(null=True, blank=True)
     requested_check_out = models.DateTimeField(null=True, blank=True)
+    leave_start_date = models.DateField(null=True, blank=True)
+    leave_end_date = models.DateField(null=True, blank=True)
+    leave_type = models.CharField(max_length=20, blank=True, default="")
     request_type = models.CharField(
         max_length=20,
         choices=AttendanceCorrectionType.choices,

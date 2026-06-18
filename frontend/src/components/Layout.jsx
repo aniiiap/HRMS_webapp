@@ -1,6 +1,7 @@
 import {
   Bell,
   Briefcase,
+  Building2,
   CalendarDays,
   FileBarChart2,
   IndianRupee,
@@ -9,30 +10,33 @@ import {
   Megaphone,
   Menu,
   Moon,
-  Search,
   Settings,
   Sun,
   Users,
   X,
 } from 'lucide-react'
-import { Suspense, useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
+import { Suspense, useEffect, useRef, useState } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import useAnnouncementPopup from '../hooks/useAnnouncementPopup'
+import AnnouncementPopup from './AnnouncementPopup'
+import GlobalSearch from './GlobalSearch'
 import RoutePageFallback from './RoutePageFallback'
 
 const allGeneral = [
   { to: '/', label: 'Overview', icon: LayoutDashboard, iconFx: 'icon-fx-bounce' },
-  { to: '/payroll', label: 'Payroll', icon: IndianRupee, iconFx: 'icon-fx-swing' },
+  { to: '/payroll', label: 'Payroll', employeeLabel: 'Payslips', icon: IndianRupee, iconFx: 'icon-fx-swing' },
   { to: '/employees', label: 'Employees', icon: Users, iconFx: 'icon-fx-pop' },
   { to: '/attendance', label: 'Attendance', icon: CalendarDays, iconFx: 'icon-fx-nudge' },
+  { to: '/announcements', label: 'Announcements', icon: Megaphone, iconFx: 'icon-fx-rise' },
 ]
 
 const allMore = [
   { to: '/leaves', label: 'Leaves', icon: Briefcase, iconFx: 'icon-fx-tilt' },
-  { to: '/announcements', label: 'Announcements', icon: Megaphone, iconFx: 'icon-fx-rise' },
+  { to: '/organizations', label: 'Organizations', icon: Building2, iconFx: 'icon-fx-pop' },
   { to: '/reports', label: 'Reports', icon: FileBarChart2, iconFx: 'icon-fx-rise' },
 ]
 
@@ -40,15 +44,12 @@ export default function Layout() {
   const { user, logout } = useAuth()
   const { theme, toggle } = useTheme()
   const navigate = useNavigate()
-  const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [globalSearch, setGlobalSearch] = useState('')
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [notifLoading, setNotifLoading] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
-  const [announcementModal, setAnnouncementModal] = useState(null)
-  const didMount = useRef(false)
+  const { announcement: announcementModal, dismiss: dismissAnnouncementModal } = useAnnouncementPopup(user?.id)
   const notifRef = useRef(null)
 
   const initials =
@@ -59,21 +60,20 @@ export default function Layout() {
     `${user?.first_name || ''} ${user?.last_name || ''}`.trim() ||
     user?.email?.split('@')?.[0] ||
     (user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Account')
-  const canViewPayroll = ['admin', 'hr'].includes(user?.role)
+  const canViewPayrollAdmin = ['admin', 'hr'].includes(user?.role)
   const canViewReports = ['admin', 'hr', 'manager'].includes(user?.role)
   const general = allGeneral.filter((item) => {
-    if (item.to === '/payroll') return canViewPayroll
     if (item.to === '/employees') return ['admin', 'hr', 'manager'].includes(user?.role)
     return true
   })
   const more = allMore.filter((item) => {
-    if (item.to === '/announcements') return ['admin', 'hr', 'manager'].includes(user?.role)
+    if (item.to === '/organizations') return canViewPayrollAdmin && !user?.is_superuser
     if (item.to === '/reports') return canViewReports
     return true
   })
 
-  async function loadNotifications() {
-    setNotifLoading(true)
+  async function loadNotifications({ silent = false } = {}) {
+    if (!silent) setNotifLoading(true)
     try {
       const { data } = await api.get('/api/notifications/')
       const rows = Array.isArray(data) ? data : data.results || []
@@ -87,43 +87,15 @@ export default function Layout() {
           created_at: n.created_at,
         })),
       )
+      return rows
     } catch {
       setUnreadCount(0)
       setNotifications([])
+      return []
     } finally {
-      setNotifLoading(false)
+      if (!silent) setNotifLoading(false)
     }
   }
-
-  useEffect(() => {
-    if (!user?.id) {
-      setUnreadCount(0)
-      return
-    }
-    void loadNotifications()
-  }, [user?.id])
-
-  useEffect(() => {
-    const q = new URLSearchParams(location.search).get('q') || ''
-    setGlobalSearch(q)
-  }, [location.pathname, location.search])
-
-  useEffect(() => {
-    if (!didMount.current) {
-      didMount.current = true
-      return
-    }
-    const t = setTimeout(() => {
-      const q = globalSearch.trim()
-      const params = new URLSearchParams(location.search)
-      if (q.length >= 2) params.set('q', q)
-      else params.delete('q')
-      const nextSearch = params.toString()
-      const next = `${location.pathname}${nextSearch ? `?${nextSearch}` : ''}`
-      if (`${location.pathname}${location.search}` !== next) navigate(next, { replace: true })
-    }, 300)
-    return () => clearTimeout(t)
-  }, [globalSearch, navigate, location.pathname, location.search])
 
   useEffect(() => {
     if (!notifOpen) return
@@ -137,39 +109,22 @@ export default function Layout() {
   }, [notifOpen])
 
   useEffect(() => {
-    if (user?.role !== 'employee') {
-      setAnnouncementModal(null)
+    if (!user?.id) {
+      setUnreadCount(0)
       return
     }
-    let mounted = true
-    async function loadLatestAnnouncement() {
-      try {
-        const { data } = await api.get('/api/announcements/')
-        const rows = Array.isArray(data) ? data : data.results || []
-        const latest = rows.find((r) => r.is_active !== false && r.created_by_id !== user?.id)
-        if (!latest || !mounted) return
-        const seenKey = `hrms_announcement_seen_${user?.id || 'u'}_${latest.id}`
-        const seen = sessionStorage.getItem(seenKey) === '1'
-        if (!seen) setAnnouncementModal(latest)
-      } catch {
-        // Ignore announcement load errors; this should never block layout.
-      }
-    }
-    void loadLatestAnnouncement()
-    return () => {
-      mounted = false
-    }
-  }, [user?.id, user?.role])
+    void loadNotifications()
+  }, [user?.id])
 
   const linkClass = ({ isActive }) =>
-    `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+    `flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200 ${
       isActive
-        ? 'bg-brand-50 text-brand-700 shadow-sm dark:bg-brand-950/70 dark:text-brand-300 dark:shadow-none'
-        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/90 dark:hover:text-white'
+        ? 'nav-active pl-4'
+        : 'text-stone-600 hover:bg-warm-100/90 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-800/80 dark:hover:text-stone-100'
     }`
 
   const Sidebar = (
-    <div className="flex h-full min-h-0 flex-col border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950">
+    <div className="flex h-full min-h-0 flex-col border-r border-warm-200/90 bg-gradient-to-b from-white via-surface-card to-warm-50/80 dark:border-stone-800 dark:from-stone-950 dark:via-stone-950 dark:to-stone-900">
       <div className="shrink-0 px-3 pb-1 pt-2 md:px-4 md:pb-1.5 md:pt-2.5">
         {/* Full row width matches previous icon + “HR Core” + tagline footprint */}
         <div className="flex w-full min-w-0 items-center">
@@ -183,37 +138,37 @@ export default function Layout() {
 
       <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-3 pb-2">
         <div>
-          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">General</p>
+          <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">General</p>
           <div className="space-y-0.5">
             {general.map((item) => (
               <NavLink key={item.to} to={item.to} className={linkClass} onClick={() => setMobileOpen(false)}>
                 <span className={`inline-flex ${item.iconFx}`}>
                   <item.icon size={18} strokeWidth={2} />
                 </span>
-                {item.label}
+                {user?.role === 'employee' && item.employeeLabel ? item.employeeLabel : item.label}
               </NavLink>
             ))}
           </div>
         </div>
         <div>
-          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Management</p>
+          <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">Management</p>
           <div className="space-y-0.5">
             {more.map((item) => (
               <NavLink key={item.to} to={item.to} className={linkClass} onClick={() => setMobileOpen(false)}>
                 <span className={`inline-flex ${item.iconFx}`}>
                   <item.icon size={18} strokeWidth={2} />
                 </span>
-                {item.label}
+                {user?.role === 'employee' && item.employeeLabel ? item.employeeLabel : item.label}
               </NavLink>
             ))}
           </div>
         </div>
       </nav>
 
-      <div className="shrink-0 space-y-2 border-t border-slate-100 p-3 dark:border-slate-800">
+      <div className="shrink-0 space-y-2 border-t border-warm-200/80 p-3 dark:border-stone-800">
         <button
           type="button"
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-warm-200 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-warm-100 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800 md:hidden"
           onClick={toggle}
           aria-label="Toggle theme"
         >
@@ -222,7 +177,7 @@ export default function Layout() {
         </button>
         <button
           type="button"
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-warm-200 py-2.5 text-sm font-semibold text-stone-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-stone-700 dark:text-stone-300 dark:hover:border-rose-900 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
           onClick={async () => {
             await logout()
             navigate('/login', { replace: true })
@@ -236,68 +191,19 @@ export default function Layout() {
   )
 
   return (
-    <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[#f4f6f9] text-slate-800 dark:bg-slate-950 dark:text-slate-100">
-      {announcementModal && (
-        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-[1px]">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <div className="rounded-xl bg-brand-50 p-2 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
-                  <Megaphone size={16} />
-                </div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">Announcement</p>
-              </div>
-              <button
-                type="button"
-                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                onClick={() => {
-                  const seenKey = `hrms_announcement_seen_${user?.id || 'u'}_${announcementModal.id}`
-                  sessionStorage.setItem(seenKey, '1')
-                  setAnnouncementModal(null)
-                }}
-                aria-label="Close announcement"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="mt-1 flex items-center justify-between gap-2">
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white">{announcementModal.title}</h3>
-              <span
-                className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                  announcementModal.priority === 'critical'
-                    ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
-                    : announcementModal.priority === 'important'
-                      ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                }`}
-              >
-                {announcementModal.priority || 'normal'}
-              </span>
-            </div>
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{announcementModal.message}</p>
-            <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
-              {announcementModal.created_by_name ? `By ${announcementModal.created_by_name} · ` : ''}
-              {announcementModal.published_at ? dayjs(announcementModal.published_at).format('MMM D, YYYY HH:mm') : ''}
-            </p>
-            <button
-              type="button"
-              className="btn-primary mt-4 w-full"
-              onClick={() => {
-                const seenKey = `hrms_announcement_seen_${user?.id || 'u'}_${announcementModal.id}`
-                sessionStorage.setItem(seenKey, '1')
-                setAnnouncementModal(null)
-              }}
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
+    <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-surface text-stone-800 dark:bg-stone-950 dark:text-stone-100">
+      <AnnouncementPopup
+        announcement={announcementModal}
+        onDismiss={async (item) => {
+          await dismissAnnouncementModal(item)
+          await loadNotifications({ silent: true })
+        }}
+      />
 
       {mobileOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-[2px] dark:bg-black/60 md:hidden"
+          className="fixed inset-0 z-40 bg-stone-900/55 backdrop-blur-sm dark:bg-black/65 md:hidden motion-safe:animate-fade-in"
           aria-label="Close menu"
           onClick={() => setMobileOpen(false)}
         />
@@ -305,7 +211,7 @@ export default function Layout() {
 
       <div className="flex min-h-0 flex-1">
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex w-[min(100%,260px)] flex-col bg-white shadow-2xl transition-transform duration-200 dark:bg-slate-950 dark:shadow-black/40 md:static md:z-0 md:w-56 md:min-w-[14rem] md:max-w-[14rem] md:shadow-none ${
+          className={`fixed inset-y-0 left-0 z-50 flex w-[min(100%,272px)] flex-col bg-surface-card shadow-2xl transition-transform duration-300 ease-out dark:bg-stone-950 dark:shadow-black/50 md:static md:z-0 md:w-[14.5rem] md:min-w-[14.5rem] md:max-w-[14.5rem] md:shadow-none ${
             mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
           }`}
         >
@@ -320,7 +226,7 @@ export default function Layout() {
         </aside>
 
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="relative z-[80] flex shrink-0 flex-wrap items-center gap-3 border-b border-slate-200/90 bg-white/95 px-4 py-3.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90 md:gap-4 md:px-6 lg:px-8">
+          <header className="relative z-[80] flex shrink-0 flex-wrap items-center gap-3 border-b border-warm-200/80 bg-white/80 px-4 py-3.5 shadow-sm backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/85 md:gap-4 md:px-6 lg:px-8">
             <button
               type="button"
               className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 md:hidden"
@@ -329,16 +235,7 @@ export default function Layout() {
               <Menu size={22} />
             </button>
 
-            <div className="relative min-w-0 flex-1 md:max-w-xl">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                type="search"
-                placeholder="Search people, payroll, reports…"
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none ring-brand-500/20 placeholder:text-slate-400 focus:border-brand-300 focus:bg-white focus:ring-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-500 dark:focus:bg-slate-900"
-              />
-            </div>
+            <GlobalSearch />
 
             <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
               <button
@@ -400,11 +297,12 @@ export default function Layout() {
                         className="cursor-pointer rounded-xl border border-slate-100 bg-slate-50 p-2.5 transition hover:border-brand-200 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-800/60"
                         onClick={() => {
                           const t = String(n.type || '').toLowerCase()
-                          if (t.includes('attendance')) navigate('/attendance')
+                          if (t.includes('announcement')) navigate('/announcements')
+                          else if (t.includes('attendance')) navigate('/attendance')
                           else if (t.includes('leave')) navigate('/leaves')
                           else if (t.includes('payroll')) navigate('/payroll')
                           else if (t.includes('report')) navigate('/reports')
-                          else navigate('/')
+                          else navigate('/announcements')
                           setNotifOpen(false)
                         }}
                       >
@@ -426,8 +324,8 @@ export default function Layout() {
               >
                 <Settings size={20} />
               </button>
-              <div className="ml-1 flex items-center gap-2 rounded-xl border border-slate-200 bg-white py-1 pl-1 pr-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-bold text-white">
+              <div className="ml-1 flex items-center gap-2 rounded-xl border border-warm-200/90 bg-white/90 py-1 pl-1 pr-3 shadow-soft dark:border-stone-700 dark:bg-stone-900/90">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 text-xs font-bold text-white shadow-md shadow-brand-600/30">
                   {initials}
                 </div>
                 <div className="hidden min-w-0 text-left sm:block">
@@ -438,8 +336,9 @@ export default function Layout() {
             </div>
           </header>
 
-          <section className="relative z-0 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
-            <div className="mx-auto w-full max-w-[1600px] animate-fade-up px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-7">
+          <section className="relative z-0 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-mesh-light scrollbar-thin dark:bg-mesh-dark">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-brand-500/[0.04] to-transparent dark:from-brand-400/[0.06]" aria-hidden />
+            <div className="relative mx-auto w-full max-w-[1600px] motion-safe:animate-fade-up px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-7">
               <Suspense fallback={<RoutePageFallback />}>
                 <Outlet />
               </Suspense>

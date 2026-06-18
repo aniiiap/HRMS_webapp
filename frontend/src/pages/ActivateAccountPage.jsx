@@ -42,9 +42,9 @@ export default function ActivateAccountPage() {
   return (
     <div className="grid min-h-screen place-items-center bg-slate-100 p-4 dark:bg-slate-950">
       <form onSubmit={submit} className="card w-full max-w-md space-y-4 p-6 sm:p-8">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Activate your account</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create your account</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Set your password to complete first-time login to HR Core.
+          Set your password using the link from your invite email. You can then sign in to your company admin dashboard.
         </p>
         {error && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
         {success && <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">{success}</div>}
@@ -65,7 +65,7 @@ export default function ActivateAccountPage() {
           required
         />
         <button className="btn-primary w-full" disabled={loading}>
-          {loading ? 'Setting password...' : 'Set password'}
+          {loading ? 'Creating account...' : 'Create account & continue'}
         </button>
         <p className="text-center text-xs text-slate-500 dark:text-slate-400">
           Already activated? <Link to="/login" className="font-semibold text-brand-600 dark:text-brand-400">Sign in</Link>

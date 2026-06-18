@@ -31,6 +31,12 @@ export function AuthProvider({ children }) {
     const { data } = await api.post('/api/auth/login/', { email, password })
     tokenStore.set(data.access, data.refresh)
     setUser(data.user)
+    return data.user
+  }
+
+  const defaultHome = (u) => {
+    if (u?.is_superuser && !u?.organization_id) return '/platform'
+    return '/'
   }
 
   const logout = async () => {
@@ -51,6 +57,9 @@ export function AuthProvider({ children }) {
     logout,
     isManagerPlus: ['admin', 'hr', 'manager'].includes(user?.role),
     isPrivileged: ['admin', 'hr'].includes(user?.role),
+    isPlatformAdmin: Boolean(user?.is_superuser),
+    isOrganizationUser: Boolean(user?.organization_id),
+    defaultHome: user ? defaultHome(user) : '/',
   }), [user, loading])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

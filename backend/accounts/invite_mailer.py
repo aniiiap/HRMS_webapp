@@ -4,26 +4,58 @@ from urllib import error, request
 from django.conf import settings
 
 
-def send_invite_email(*, to_email: str, full_name: str, invite_url: str) -> tuple[bool, str]:
-    api_key = settings.RESEND_API_KEY
-    from_email = settings.RESEND_FROM_EMAIL
-    if not api_key or not from_email:
-        return False, "Resend is not configured."
-
-    subject = "Set your HR Core account password"
-    html = f"""
+def _invite_email_html(*, full_name: str, invite_url: str, headline: str, body_html: str) -> str:
+    return f"""
     <div style="font-family: Inter, Arial, sans-serif; line-height: 1.6; color: #0f172a;">
-      <h2 style="margin-bottom: 12px;">Welcome to HR Core</h2>
+      <h2 style="margin-bottom: 12px;">{headline}</h2>
       <p>Hi {full_name or "there"},</p>
-      <p>Your account has been created by HR/Admin. Click the button below to set your password and activate your account.</p>
+      {body_html}
       <p style="margin: 24px 0;">
-        <a href="{invite_url}" style="background:#7c3aed;color:white;padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:600;">Set password</a>
+        <a href="{invite_url}" style="background:#7c3aed;color:white;padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:600;">Create your account</a>
       </p>
       <p>If the button does not work, use this link:</p>
       <p><a href="{invite_url}">{invite_url}</a></p>
       <p>This link expires in 24 hours.</p>
     </div>
     """
+
+
+def send_invite_email(
+    *,
+    to_email: str,
+    full_name: str,
+    invite_url: str,
+    invite_kind: str = "employee",
+    organization_name: str | None = None,
+) -> tuple[bool, str]:
+    api_key = settings.RESEND_API_KEY
+    from_email = settings.RESEND_FROM_EMAIL
+    if not api_key or not from_email:
+        return False, "Resend is not configured."
+
+    if invite_kind == "org_admin":
+        org_label = organization_name or "your company"
+        subject = f"Set up your {org_label} admin account on HR Core"
+        body = (
+            f"<p>Your company <strong>{org_label}</strong> has been added to HR Core. "
+            "Use the button below to create your Organization Admin password and sign in to your company dashboard.</p>"
+            "<p>After activation you can onboard employees, run payroll, manage attendance, and more.</p>"
+        )
+        headline = "Welcome — set up your company admin"
+    else:
+        subject = "Set your HR Core account password"
+        body = (
+            "<p>Your account has been created by HR/Admin. "
+            "Click the button below to set your password and activate your account.</p>"
+        )
+        headline = "Welcome to HR Core"
+
+    html = _invite_email_html(
+        full_name=full_name,
+        invite_url=invite_url,
+        headline=headline,
+        body_html=body,
+    )
     payload = {
         "from": from_email,
         "to": [to_email],

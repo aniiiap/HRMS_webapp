@@ -13,23 +13,67 @@ from accounts.invite_service import issue_and_send_invite
 from accounts.models import UserRole
 from accounts.permissions import IsAdminOrHR, IsManagerOrAbove
 
-from .models import Employee, EmployeeDocument, OfficeLocationSettings
+from .models import Employee, EmployeeDocument, OfficeLocationSettings, Organization, ShiftTemplate, ShiftTemplateAssignment
 from .serializers import (
     ApplyShiftTemplateSerializer,
     EmployeeDocumentSerializer,
     EmployeeOnboardSerializer,
     EmployeeSerializer,
     EmployeeWriteSerializer,
+    OrganizationSerializer,
+    ShiftTemplateAssignmentSerializer,
     ShiftTemplateSerializer,
+    ShiftTemplateSetPrimarySerializer,
+    ShiftTemplateUnassignSerializer,
     OfficeLocationSettingsSerializer,
 )
-from .models import ShiftTemplate
+from .shift_assignments import promote_primary_shift_assignment, set_primary_shift_assignment
+from .org_scope import (
+    filter_by_employee_org,
+    filter_by_organization,
+    filter_employees_by_org,
+    is_platform_admin,
+    organization_id_from_request,
+    user_organization_id,
+)
+
+
+class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
+    """Company workspace: view own organization only. Use /api/platform/ for tenant management."""
+
+    queryset = Organization.objects.all()
+    serializer_class = OrganizationSerializer
+    ordering = ["name"]
+    search_fields = ["name", "slug"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if not user.is_authenticated:
+            return qs.none()
+        if is_platform_admin(user):
+            return qs.none()
+        oid = user_organization_id(user)
+        if oid:
+            return qs.filter(pk=oid, is_active=True)
+        return qs.none()
+
+    def get_permissions(self):
+        return [permissions.IsAuthenticated(), IsManagerOrAbove()]
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.select_related("user", "manager").all()
     filterset_fields = ["department", "designation", "manager"]
-    search_fields = ["employee_code", "user__email", "user__first_name", "user__last_name", "department"]
+    search_fields = [
+        "employee_code",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+        "department",
+        "designation",
+        "phone",
+    ]
     ordering_fields = ["employee_code", "date_of_joining", "id"]
 
     def get_queryset(self):
@@ -42,7 +86,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             UserRole.HR,
             UserRole.MANAGER,
         ):
-            return qs
+            org_id = organization_id_from_request(self.request)
+            return filter_employees_by_org(qs, org_id)
         profile = getattr(user, "employee_profile", None)
         if profile:
             return qs.filter(pk=profile.pk)
@@ -64,6 +109,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             "set_active",
             "shift_templates",
             "apply_shift_template",
+            "shift_template_assignments",
+            "unassign_shift_template",
+            "set_primary_shift_template",
+            "set_default_shift_template",
             "update_shift_template",
             "delete_shift_template",
             "location_settings",
@@ -159,53 +208,189 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get", "post"], permission_classes=[permissions.IsAuthenticated, IsAdminOrHR], url_path="shift-templates")
     def shift_templates(self, request):
+        org_id = organization_id_from_request(request)
         if request.method.lower() == "get":
-            rows = ShiftTemplate.objects.filter(is_active=True)
-            if not rows.exists():
+            rows = filter_by_organization(ShiftTemplate.objects.filter(is_active=True), org_id)
+            if not rows.exists() and org_id:
                 ShiftTemplate.objects.bulk_create(
                     [
-                        ShiftTemplate(name="Day Shift", start_time=time(10, 0), end_time=time(19, 0), grace_minutes=15),
-                        ShiftTemplate(name="Night Shift", start_time=time(21, 0), end_time=time(6, 0), grace_minutes=10, early_checkout_grace_minutes=10, is_night_shift=True),
+                        ShiftTemplate(
+                            organization_id=org_id,
+                            name="Day Shift",
+                            start_time=time(10, 0),
+                            end_time=time(19, 0),
+                            grace_minutes=15,
+                        ),
+                        ShiftTemplate(
+                            organization_id=org_id,
+                            name="Night Shift",
+                            start_time=time(21, 0),
+                            end_time=time(6, 0),
+                            grace_minutes=10,
+                            early_checkout_grace_minutes=10,
+                            is_night_shift=True,
+                        ),
                     ]
                 )
-                rows = ShiftTemplate.objects.filter(is_active=True)
+                rows = filter_by_organization(ShiftTemplate.objects.filter(is_active=True), org_id)
             return Response(ShiftTemplateSerializer(rows, many=True).data, status=status.HTTP_200_OK)
-        ser = ShiftTemplateSerializer(data=request.data)
+        ser = ShiftTemplateSerializer(data=request.data, context={"organization_id": org_id})
         ser.is_valid(raise_exception=True)
-        tpl = ser.save()
+        tpl = ser.save(organization_id=org_id)
+        if tpl.is_company_default:
+            ShiftTemplate.objects.filter(organization_id=org_id, is_company_default=True).exclude(pk=tpl.pk).update(
+                is_company_default=False
+            )
         return Response(ShiftTemplateSerializer(tpl).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated, IsAdminOrHR], url_path="apply-shift-template")
     def apply_shift_template(self, request):
         ser = ApplyShiftTemplateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        template = ShiftTemplate.objects.filter(pk=ser.validated_data["template_id"], is_active=True).first()
-        if not template:
-            return Response({"error": "Shift template not found."}, status=status.HTTP_404_NOT_FOUND)
-        employee_ids = ser.validated_data["employee_ids"]
-        updated = Employee.objects.filter(pk__in=employee_ids).update(
-            shift_template=template,
-            shift_start_time=template.start_time,
-            shift_end_time=template.end_time,
-            grace_minutes=template.grace_minutes,
-            early_checkout_grace_minutes=template.early_checkout_grace_minutes,
+        org_id = organization_id_from_request(request)
+        template_ids = ser.validated_data["resolved_template_ids"]
+        templates = list(
+            filter_by_organization(
+                ShiftTemplate.objects.filter(pk__in=template_ids, is_active=True),
+                org_id,
+            )
         )
+        if len(templates) != len(set(template_ids)):
+            return Response({"error": "One or more shift templates were not found."}, status=status.HTTP_404_NOT_FOUND)
+        template_by_id = {t.id: t for t in templates}
+        ordered_templates = [template_by_id[tid] for tid in template_ids]
+        primary_template_id = ser.validated_data.get("primary_template_id")
+        employees = list(
+            filter_employees_by_org(
+                Employee.objects.filter(pk__in=ser.validated_data["employee_ids"]),
+                org_id,
+            )
+        )
+        if not employees:
+            return Response({"error": "No matching employees found."}, status=status.HTTP_400_BAD_REQUEST)
+        assignment_count = 0
+        for emp in employees:
+            for template in ordered_templates:
+                ShiftTemplateAssignment.objects.get_or_create(employee=emp, shift_template=template)
+                assignment_count += 1
+            if primary_template_id:
+                set_primary_shift_assignment(emp, template_by_id[primary_template_id])
+            elif not ShiftTemplateAssignment.objects.filter(employee=emp, is_primary=True).exists():
+                set_primary_shift_assignment(emp, ordered_templates[0])
         return Response(
             {
-                "message": f"Shift template '{template.name}' applied.",
-                "employees_updated": updated,
+                "message": f"Assigned {len(ordered_templates)} rule(s) to {len(employees)} employee(s).",
+                "assignments_created": assignment_count,
             },
             status=status.HTTP_200_OK,
         )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[permissions.IsAuthenticated, IsAdminOrHR],
+        url_path="shift-template-assignments",
+    )
+    def shift_template_assignments(self, request):
+        qs = ShiftTemplateAssignment.objects.select_related(
+            "employee",
+            "employee__user",
+            "shift_template",
+        ).all()
+        org_id = organization_id_from_request(request)
+        qs = filter_by_employee_org(qs, org_id)
+        return Response(ShiftTemplateAssignmentSerializer(qs, many=True).data)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[permissions.IsAuthenticated, IsAdminOrHR],
+        url_path="unassign-shift-template",
+    )
+    def unassign_shift_template(self, request):
+        ser = ShiftTemplateUnassignSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        org_id = organization_id_from_request(request)
+        qs = ShiftTemplateAssignment.objects.filter(employee_id=ser.validated_data["employee_id"])
+        qs = filter_by_employee_org(qs, org_id)
+        template_id = ser.validated_data.get("template_id")
+        if template_id:
+            qs = qs.filter(shift_template_id=template_id)
+        assignment = qs.select_related("employee", "shift_template").first()
+        if not assignment:
+            return Response({"error": "No assignment found."}, status=status.HTTP_404_NOT_FOUND)
+        was_primary = assignment.is_primary
+        employee = assignment.employee
+        assignment.delete()
+        if was_primary:
+            promote_primary_shift_assignment(employee)
+        return Response({"message": "Assignment removed."}, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[permissions.IsAuthenticated, IsAdminOrHR],
+        url_path="set-primary-shift-template",
+    )
+    def set_primary_shift_template(self, request):
+        ser = ShiftTemplateSetPrimarySerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        org_id = organization_id_from_request(request)
+        assignment = (
+            filter_by_employee_org(
+                ShiftTemplateAssignment.objects.filter(
+                    employee_id=ser.validated_data["employee_id"],
+                    shift_template_id=ser.validated_data["template_id"],
+                ),
+                org_id,
+            )
+            .select_related("employee", "shift_template")
+            .first()
+        )
+        if not assignment:
+            return Response({"error": "Assignment not found."}, status=status.HTTP_404_NOT_FOUND)
+        set_primary_shift_assignment(assignment.employee, assignment.shift_template)
+        assignment.refresh_from_db()
+        return Response(ShiftTemplateAssignmentSerializer(assignment).data)
 
     @action(detail=False, methods=["patch"], permission_classes=[permissions.IsAuthenticated, IsAdminOrHR], url_path=r"shift-templates/(?P<template_id>[^/.]+)")
     def update_shift_template(self, request, template_id=None):
         template = ShiftTemplate.objects.filter(pk=template_id).first()
         if not template:
             return Response({"error": "Shift template not found."}, status=status.HTTP_404_NOT_FOUND)
-        ser = ShiftTemplateSerializer(template, data=request.data, partial=True)
+        ser = ShiftTemplateSerializer(
+            template,
+            data=request.data,
+            partial=True,
+            context={"organization_id": template.organization_id},
+        )
         ser.is_valid(raise_exception=True)
-        ser.save()
+        tpl = ser.save()
+        if tpl.is_company_default and tpl.organization_id:
+            ShiftTemplate.objects.filter(
+                organization_id=tpl.organization_id,
+                is_company_default=True,
+            ).exclude(pk=tpl.pk).update(is_company_default=False)
+        return Response(ShiftTemplateSerializer(tpl).data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[permissions.IsAuthenticated, IsAdminOrHR],
+        url_path=r"shift-templates/(?P<template_id>[^/.]+)/set-default",
+    )
+    def set_default_shift_template(self, request, template_id=None):
+        org_id = organization_id_from_request(request)
+        template = filter_by_organization(ShiftTemplate.objects.filter(pk=template_id, is_active=True), org_id).first()
+        if not template:
+            return Response({"error": "Shift template not found."}, status=status.HTTP_404_NOT_FOUND)
+        template.is_company_default = True
+        template.save(update_fields=["is_company_default", "updated_at"])
+        if template.organization_id:
+            ShiftTemplate.objects.filter(
+                organization_id=template.organization_id,
+                is_company_default=True,
+            ).exclude(pk=template.pk).update(is_company_default=False)
         return Response(ShiftTemplateSerializer(template).data, status=status.HTTP_200_OK)
 
     @update_shift_template.mapping.delete
@@ -230,7 +415,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get", "patch"], permission_classes=[permissions.IsAuthenticated, IsAdminOrHR], url_path="location-settings")
     def location_settings(self, request):
-        settings_obj, _ = OfficeLocationSettings.objects.get_or_create(pk=1)
+        org_id = organization_id_from_request(request)
+        if not org_id:
+            return Response({"error": "Organization context required."}, status=status.HTTP_400_BAD_REQUEST)
+        settings_obj, _ = OfficeLocationSettings.objects.get_or_create(organization_id=org_id)
         if request.method.lower() == "get":
             return Response(OfficeLocationSettingsSerializer(settings_obj).data, status=status.HTTP_200_OK)
         ser = OfficeLocationSettingsSerializer(settings_obj, data=request.data, partial=True)
@@ -459,7 +647,8 @@ class EmployeeDocumentViewSet(viewsets.ModelViewSet):
             UserRole.HR,
             UserRole.MANAGER,
         ):
-            return qs
+            org_id = organization_id_from_request(self.request)
+            return filter_by_employee_org(qs, org_id)
         profile = getattr(user, "employee_profile", None)
         if profile:
             return qs.filter(employee=profile)

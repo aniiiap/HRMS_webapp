@@ -53,6 +53,14 @@ class User(AbstractUser):
         default=False,
         help_text="True until employee completes invite-based password setup.",
     )
+    organization = models.ForeignKey(
+        "employees.Organization",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users",
+        help_text="Company tenant for Admin/HR without an employee profile.",
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []
@@ -99,6 +107,34 @@ class InviteToken(models.Model):
         return self.used_at is None and self.expires_at > timezone.now()
 
 
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="password_reset_tokens")
+    token = models.CharField(max_length=80, unique=True, db_index=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"PasswordReset<{self.user.email}>"
+
+    @classmethod
+    def create_for_user(cls, user, *, lifetime_hours=1):
+        cls.objects.filter(user=user, used_at__isnull=True).delete()
+        token = secrets.token_urlsafe(32)
+        return cls.objects.create(
+            user=user,
+            token=token,
+            expires_at=timezone.now() + timedelta(hours=lifetime_hours),
+        )
+
+    @property
+    def is_valid(self):
+        return self.used_at is None and self.expires_at > timezone.now()
+
+
 class AppNotification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="app_notifications")
     title = models.CharField(max_length=180)
@@ -115,6 +151,14 @@ class AppNotification(models.Model):
 
 
 class CompanyAnnouncement(models.Model):
+    organization = models.ForeignKey(
+        "employees.Organization",
+        on_delete=models.CASCADE,
+        related_name="announcements",
+        null=True,
+        blank=True,
+    )
+
     class Priority(models.TextChoices):
         NORMAL = "normal", "Normal"
         IMPORTANT = "important", "Important"
@@ -124,6 +168,7 @@ class CompanyAnnouncement(models.Model):
         ALL = "all", "All employees"
         DEPARTMENT = "department", "Department"
         ROLE = "role", "Role"
+        EMPLOYEES = "employees", "Selected employees"
 
     title = models.CharField(max_length=180)
     message = models.TextField(max_length=2000)
@@ -147,6 +192,30 @@ class CompanyAnnouncement(models.Model):
         help_text="Department name for department target, or role key for role target.",
     )
     expires_at = models.DateTimeField(null=True, blank=True)
+    publish_on = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date employees start seeing this announcement. Defaults to today.",
+    )
+    notified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When in-app notifications were first sent.",
+    )
+    send_email = models.BooleanField(
+        default=False,
+        help_text="Also email recipients (requires Resend configuration).",
+    )
+    send_sms = models.BooleanField(
+        default=False,
+        help_text="Also SMS recipients with a phone on file (requires paid SMS provider).",
+    )
+    target_employees = models.ManyToManyField(
+        "employees.Employee",
+        blank=True,
+        related_name="targeted_announcements",
+        help_text="When target_audience is employees, only these employees receive the announcement.",
+    )
     published_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -155,3 +224,23 @@ class CompanyAnnouncement(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class AnnouncementDismissal(models.Model):
+    """Tracks one-time popup dismiss per user per announcement."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="announcement_dismissals")
+    announcement = models.ForeignKey(
+        CompanyAnnouncement,
+        on_delete=models.CASCADE,
+        related_name="dismissals",
+    )
+    dismissed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "announcement"],
+                name="uniq_announcement_dismissal_per_user",
+            ),
+        ]
