@@ -58,6 +58,7 @@ if _clean_env("CLOUDINARY_CLOUD_NAME") and _clean_env("CLOUDINARY_API_KEY") and 
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
