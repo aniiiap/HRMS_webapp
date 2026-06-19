@@ -1,4 +1,4 @@
-﻿import { Check, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import FieldHint from './FieldHint'
 import { ACCRUAL_FREQUENCY_OPTIONS, MONTH_OPTIONS } from './leaveRuleForm'
 
@@ -225,7 +225,7 @@ export default function LeaveRuleEditForm({
         </button>
         <button type="submit" className="btn-primary inline-flex items-center gap-1 !py-1.5 !text-sm" disabled={saving}>
           <Check className="h-3.5 w-3.5" />
-          {saving ? 'Savingâ€¦' : 'Save'}
+          {saving ? 'Saving...' : 'Save'}
         </button>
       </div>
     </form>

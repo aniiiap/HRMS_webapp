@@ -1,4 +1,4 @@
-﻿import { Check, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import {
   ATTENDANCE_DEVICE_OPTIONS,
   WEEK_PATTERN_PRESETS,
@@ -65,12 +65,12 @@ export default function AttendanceRuleEditForm({
     >
       <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-3 py-2 dark:border-slate-700">
         <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-          {isNew ? 'Create attendance rule' : `Edit â€” ${rule?.name || form.name}`}
+          {isNew ? 'Create attendance rule' : `Edit - ${rule?.name || form.name}`}
         </h3>
         <div className="flex gap-1">
           <button type="submit" className="btn-primary !px-2.5 !py-1 !text-sm" disabled={saving}>
             <Check className="mr-1 inline h-3 w-3" />
-            {saving ? 'Savingâ€¦' : 'Save'}
+            {saving ? 'Saving...' : 'Save'}
           </button>
           <button type="button" className="btn-secondary !px-2 !py-1 !text-sm" onClick={onCancel}>
             <X className="h-3 w-3" />
@@ -109,7 +109,7 @@ export default function AttendanceRuleEditForm({
             </label>
             <label className="block">
               <span className="text-xs text-slate-500">Description</span>
-              <textarea className="input-field mt-1 min-h-[56px] !py-1.5 !text-sm" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Describe when this rule appliesâ€¦" />
+              <textarea className="input-field mt-1 min-h-[56px] !py-1.5 !text-sm" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Describe when this rule applies..." />
             </label>
 
             <SectionBar title="Shift timings" />

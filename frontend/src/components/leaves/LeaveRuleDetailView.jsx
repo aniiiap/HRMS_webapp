@@ -1,4 +1,4 @@
-﻿import { Pencil } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import FieldHint from './FieldHint'
 import {
   accrualFrequencyLabel,
@@ -40,7 +40,7 @@ function FieldRow({ label, hintKey, value, multiline }) {
       {multiline ? (
         <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">{value}</p>
       ) : (
-        <p className="text-sm font-medium text-slate-900 dark:text-white">{value || 'â€”'}</p>
+        <p className="text-sm font-medium text-slate-900 dark:text-white">{value || '-'}</p>
       )}
     </div>
   )
@@ -85,12 +85,12 @@ export default function LeaveRuleDetailView({ rule, detailTab, setDetailTab, onE
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-1 scrollbar-thin">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-1 scrollbar-thin">
         {detailTab === 'general' && (
           <>
             <FieldRow label="Name" hintKey="name" value={rule.name} />
             <FieldRow label="Description" hintKey="description" value={rule.description} multiline />
-            <FieldRow label="Leave short name" hintKey="short_name" value={rule.short_name || 'â€”'} />
+            <FieldRow label="Leave short name" hintKey="short_name" value={rule.short_name || '-'} />
 
             <Section title="Leaves count">
               <Setting label="Leaves allowed in a year" hintKey="annual_quota" value={quotaDisplay(rule)} />
@@ -109,7 +109,7 @@ export default function LeaveRuleDetailView({ rule, detailTab, setDetailTab, onE
               <Setting label="Allowed under probation" hintKey="allowed_under_probation" value={yesNo(rule.allowed_under_probation)} />
               <Setting label="Allowed under notice period" hintKey="allowed_under_notice" value={yesNo(rule.allowed_under_notice)} />
               {!isLop && (
-                <Setting label="Probation quota (per year)" hintKey="probation_quota" value={rule.probation_quota ?? 'â€”'} />
+                <Setting label="Probation quota (per year)" hintKey="probation_quota" value={rule.probation_quota ?? '-'} />
               )}
             </Section>
 
@@ -126,8 +126,8 @@ export default function LeaveRuleDetailView({ rule, detailTab, setDetailTab, onE
         {detailTab === 'advanced' && (
           <>
             <Section title="Leaves count">
-              <Setting label="Max. leaves allowed in a month" hintKey="max_per_month" value={isLop ? 'â€”' : (rule.max_per_month ?? 'â€”')} />
-              <Setting label="Continuous leaves allowed" hintKey="continuous_allowed" value={isLop ? 'â€”' : (rule.continuous_allowed ?? 'â€”')} />
+              <Setting label="Max. leaves allowed in a month" hintKey="max_per_month" value={isLop ? '-' : (rule.max_per_month ?? '-')} />
+              <Setting label="Continuous leaves allowed" hintKey="continuous_allowed" value={isLop ? '-' : (rule.continuous_allowed ?? '-')} />
             </Section>
 
             <Section title="Applicability">
@@ -147,7 +147,7 @@ export default function LeaveRuleDetailView({ rule, detailTab, setDetailTab, onE
         <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-slate-100 py-2 text-xs dark:border-slate-800">
           <span className="text-slate-500">{rule.employee_count || 0} employees assigned</span>
           <button type="button" className="text-sm font-semibold text-brand-600 hover:underline" onClick={onAssign}>
-            Assign to employees â†’
+            Assign to employees &rarr;
           </button>
         </div>
       </div>
