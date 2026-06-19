@@ -39,10 +39,8 @@ const PIE_COLORS = ['#0d9488', '#14b8a6', '#2dd4bf', '#5eead4', '#f59e0b', '#787
 const WORK_ANNIVERSARY_CARD = 'flex min-h-[200px] flex-col sm:min-h-[220px]'
 
 /** Bottom row panels — equal height (leave + birthdays). */
-const DASHBOARD_BOTTOM_CARD = 'flex h-full min-h-[240px] flex-col sm:min-h-[260px]'
-
-/** Today's company activity — taller center panel. */
-const COMPANY_ACTIVITY_CARD = 'flex min-h-[260px] flex-col sm:min-h-[280px]'
+const DASHBOARD_BOTTOM_CARD = 'flex h-full min-h-[240px] max-h-[380px] flex-col sm:min-h-[260px] sm:max-h-[450px]'
+const COMPANY_ACTIVITY_CARD = 'flex min-h-[260px] max-h-[380px] flex-col sm:min-h-[280px] sm:max-h-[450px]'
 
 const DAILY_QUOTES = [
   'Great teams are built one consistent day at a time.',
@@ -166,7 +164,7 @@ function TeamPulsePanel({ pulse }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ul className="relative min-h-0 flex-1 space-y-0 overflow-y-auto overscroll-contain pr-1">
+      <ul className="relative min-h-0 flex-1 space-y-0 overflow-y-auto pr-1">
         <div className="absolute bottom-2 left-[15px] top-2 w-px bg-gradient-to-b from-brand-300 via-brand-200 to-transparent dark:from-brand-700 dark:via-brand-900" />
         {events.map((event, index) => {
           const meta = PULSE_EVENT_META[event.type] || PULSE_EVENT_META.check_in
@@ -598,7 +596,7 @@ export default function DashboardPage() {
                 No work anniversaries coming up.
               </div>
             ) : (
-          <ul className="max-h-[168px] min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain pr-0.5 sm:max-h-[180px]">
+          <ul className="max-h-[168px] min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-0.5 sm:max-h-[180px]">
             {workAnniversaries.map((w) => (
               <li
                 key={`${w.employee_code}-${w.next_anniversary}`}
@@ -689,7 +687,7 @@ export default function DashboardPage() {
                         No recent leave requests.
                       </div>
                     ) : (
-                  <ul className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain pr-0.5">
+                  <ul className="min-h-0 flex-1 space-y-2.5 overflow-y-auto pr-0.5">
                     {recentLeaves.map((row) => (
                       <li
                         key={row.id}
@@ -732,7 +730,7 @@ export default function DashboardPage() {
                         Add date of birth on employee profiles to see birthdays here.
                       </div>
                     ) : (
-                  <ul className="relative min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-0.5">
+                  <ul className="relative min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5">
                     {upcomingBirthdays.map((b) => (
                       <li
                         key={b.employee_code}
