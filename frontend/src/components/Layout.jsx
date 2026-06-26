@@ -14,6 +14,7 @@ import {
   Sun,
   Users,
   X,
+  FileText
 } from 'lucide-react'
 import dayjs from 'dayjs'
 import { Suspense, useEffect, useRef, useState } from 'react'
@@ -32,6 +33,7 @@ const allGeneral = [
   { to: '/employees', label: 'Employees', icon: Users, iconFx: 'icon-fx-pop' },
   { to: '/attendance', label: 'Attendance', icon: CalendarDays, iconFx: 'icon-fx-nudge' },
   { to: '/announcements', label: 'Announcements', icon: Megaphone, iconFx: 'icon-fx-rise' },
+  { to: '/letters', label: 'Letters & Docs', icon: FileText, iconFx: 'icon-fx-tilt' },
 ]
 
 const allMore = [

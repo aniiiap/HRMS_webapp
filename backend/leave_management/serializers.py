@@ -39,6 +39,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             "leave_type_name",
             "start_date",
             "end_date",
+            "half_day",
             "reason",
             "status",
             "reviewed_by",

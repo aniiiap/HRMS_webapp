@@ -272,3 +272,9 @@ a:hover .icon-fx-rise { animation: iconRise 320ms ease-out; }
     transform: none;
   }
 }
+
+/* React Quill SVG Override */
+.ql-toolbar svg {
+  width: 18px !important;
+  height: 18px !important;
+}

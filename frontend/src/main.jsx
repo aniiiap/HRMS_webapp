@@ -9,16 +9,14 @@ import { ThemeProvider } from './context/ThemeContext'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <ConfirmProvider>
-            <App />
-          </ConfirmProvider>
-          <AppToaster />
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
-  </React.StrictMode>,
+  <BrowserRouter>
+    <ThemeProvider>
+      <AuthProvider>
+        <ConfirmProvider>
+          <App />
+        </ConfirmProvider>
+        <AppToaster />
+      </AuthProvider>
+    </ThemeProvider>
+  </BrowserRouter>
 )

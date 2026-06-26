@@ -52,6 +52,11 @@ class LeaveRequest(models.Model):
     leave_type = models.CharField(max_length=32, default=LeaveType.PAID)
     start_date = models.DateField()
     end_date = models.DateField()
+    half_day = models.CharField(
+        max_length=20,
+        choices=[("none", "None"), ("first_half", "First Half"), ("second_half", "Second Half")],
+        default="none"
+    )
     reason = models.TextField(blank=True)
     status = models.CharField(
         max_length=20,

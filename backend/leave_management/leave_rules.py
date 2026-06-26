@@ -190,10 +190,14 @@ def leave_days_in_year(employee, leave_type_code, year, precalculated_usages=Non
         status=LeaveStatus.APPROVED,
         leave_type__in=legacy_codes,
         start_date__year=year,
-    ).only("start_date", "end_date")
+    ).only("start_date", "end_date", "half_day")
     total = 0
     for row in rows:
-        total += (row.end_date - row.start_date).days + 1
+        days = (row.end_date - row.start_date).days + 1
+        if row.half_day in ("first_half", "second_half"):
+            total += 0.5
+        else:
+            total += days
     return total
 
 
@@ -229,12 +233,7 @@ def employee_has_rule(employee, rule):
                 return True
         return False
 
-    assigned = LeaveTypeRuleAssignment.objects.filter(employee=employee, rule=rule).exists()
-    if assigned:
-        return True
-    # If employee has any assignments, only assigned rules apply; otherwise all active org rules.
-    has_any = LeaveTypeRuleAssignment.objects.filter(employee=employee).exists()
-    return not has_any
+    return LeaveTypeRuleAssignment.objects.filter(employee=employee, rule=rule).exists()
 
 
 def _base_annual_quota(rule, is_on_probation=False):

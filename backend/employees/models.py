@@ -28,7 +28,9 @@ class Organization(models.Model):
         help_text="Optional cap for subscription enforcement (future).",
     )
     created_at = models.DateTimeField(auto_now_add=True)
-
+    
+    # For letter templates
+    signature_image = models.ImageField(upload_to="organization_signatures/", null=True, blank=True)
     class Meta:
         ordering = ["name"]
 

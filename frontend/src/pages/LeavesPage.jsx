@@ -13,7 +13,7 @@ export default function LeavesPage() {
   const [rows, setRows] = useState([])
   const [balances, setBalances] = useState([])
   const [error, setError] = useState('')
-  const [form, setForm] = useState({ leave_type: 'paid_leave', start_date: '', end_date: '', reason: '' })
+  const [form, setForm] = useState({ leave_type: 'paid_leave', start_date: '', end_date: '', half_day: 'none', reason: '' })
   const [activeTab, setActiveTab] = useState('requests')
   const [requestFilter, setRequestFilter] = useState('pending')
   const [requestPage, setRequestPage] = useState(1)
@@ -58,7 +58,7 @@ export default function LeavesPage() {
     e.preventDefault()
     try {
       await api.post('/api/leaves/', form)
-      setForm({ leave_type: applicableRules[0]?.code || 'paid_leave', start_date: '', end_date: '', reason: '' })
+      setForm({ leave_type: applicableRules[0]?.code || 'paid_leave', start_date: '', end_date: '', half_day: 'none', reason: '' })
       toast.success('Leave request submitted.')
       await load()
     } catch (err) {
@@ -148,8 +148,19 @@ export default function LeavesPage() {
               ))}
               {applicableRules.length === 0 && <option value="paid_leave">Paid Leave</option>}
             </select>
-            <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} required />
-            <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} required />
+            <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.start_date} onChange={(e) => {
+              const start_date = e.target.value;
+              setForm(f => ({ ...f, start_date, end_date: f.half_day !== 'none' ? start_date : (f.end_date < start_date ? start_date : f.end_date) }))
+            }} required />
+            <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.end_date} min={form.start_date} disabled={form.half_day !== 'none'} onChange={(e) => setForm({ ...form, end_date: e.target.value })} required />
+            <select className="rounded-xl border border-slate-300 px-3 py-2" value={form.half_day} onChange={(e) => {
+              const half_day = e.target.value;
+              setForm(f => ({ ...f, half_day, end_date: half_day !== 'none' && f.start_date ? f.start_date : f.end_date }))
+            }}>
+              <option value="none">Full Day</option>
+              <option value="first_half">First Half</option>
+              <option value="second_half">Second Half</option>
+            </select>
             <input className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Reason" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
             <button className="btn-primary">Apply</button>
           </form>
@@ -199,7 +210,11 @@ export default function LeavesPage() {
                     <td className="px-4 py-3">{r.leave_type_name || leaveLabel(r.leave_type)}</td>
                     <td className="px-4 py-3 text-xs">{r.policy_name || 'Unassigned'}</td>
                     <td className="px-4 py-3">{dayjs(r.start_date).format('DD MMM YYYY')} to {dayjs(r.end_date).format('DD MMM YYYY')}</td>
-                    <td className="px-4 py-3">{dayjs(r.end_date).diff(dayjs(r.start_date), 'day') + 1}</td>
+                    <td className="px-4 py-3">
+                      {dayjs(r.end_date).diff(dayjs(r.start_date), 'day') + (r.half_day === 'first_half' || r.half_day === 'second_half' ? 0.5 : 1)}
+                      {r.half_day === 'first_half' && <span className="ml-1 text-xs text-slate-500">(1st Half)</span>}
+                      {r.half_day === 'second_half' && <span className="ml-1 text-xs text-slate-500">(2nd Half)</span>}
+                    </td>
                     <td className="max-w-[260px] truncate px-4 py-3 text-xs text-slate-600">{r.reason || '-'}</td>
                     <td className="px-4 py-3 capitalize">{r.status}</td>
                     <td className="px-4 py-3">

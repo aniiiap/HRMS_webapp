@@ -130,10 +130,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         today = date.today()
         year = int(request.query_params.get("year", today.year))
         month = int(request.query_params.get("month", today.month))
-        cache_key = f"attendance:heatmap:{request.user.id}:{year}:{month}"
-        cached = cache.get(cache_key)
-        if cached:
-            return Response(cached)
         _, last_day = monthrange(year, month)
         start = date(year, month, 1)
         end = date(year, month, last_day)
@@ -231,7 +227,6 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 "no_record": "#e2e8f0",
             },
         }
-        cache.set(cache_key, payload, timeout=60)
         return Response(payload)
 
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated, IsManagerOrAbove])
