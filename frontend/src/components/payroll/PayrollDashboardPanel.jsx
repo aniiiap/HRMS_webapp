@@ -43,7 +43,7 @@ export default function PayrollDashboardPanel({
 
   useEffect(() => {
     void load()
-  }, [load])
+  }, [load, runs])
 
   const latest = dashboard?.latest_run
   const kpis = dashboard?.kpis || {}

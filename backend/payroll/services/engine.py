@@ -235,6 +235,43 @@ def compute_employee_payroll(
             }
         )
 
+    # Automatically fetch and add approved expense claims
+    from expenses.models import ExpenseClaim, ExpenseClaimStatus
+    from payroll.models import PayrollComponent, PayrollComponentCategory
+    
+    unreimbursed_claims = ExpenseClaim.objects.filter(
+        employee=employee,
+        status=ExpenseClaimStatus.APPROVED,
+        is_reimbursed=False,
+        skip_payroll=False
+    )
+    total_expenses = sum((claim.approved_amount or claim.amount) for claim in unreimbursed_claims)
+    
+    if total_expenses > Decimal("0"):
+        total_expenses = _q(total_expenses)
+        reimbursement_comp, _ = PayrollComponent.objects.get_or_create(
+            organization=run.organization,
+            code="REIMBURSEMENT",
+            defaults={
+                "name": "Expense Reimbursements",
+                "category": PayrollComponentCategory.ADHOC,
+                "kind": PayrollComponentKind.EARNING,
+                "taxable": False,
+                "prorate_with_attendance": False,
+                "is_system": True,
+            }
+        )
+        # Reimbursements are not prorated or taxable
+        gross_full += total_expenses
+        breakdown.append(
+            {
+                "component": reimbursement_comp,
+                "kind": PayrollComponentKind.EARNING,
+                "full": total_expenses,
+                "prorated": total_expenses,
+            }
+        )
+
     gross_prorated = _q(sum((b["prorated"] for b in breakdown), Decimal("0")))
     taxable_prorated = _q(
         sum((b["prorated"] for b in breakdown if b["component"].taxable), Decimal("0"))

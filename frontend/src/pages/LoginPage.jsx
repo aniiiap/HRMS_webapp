@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { messageFromError, tokenStore } from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import SmartButton from '../components/ui/SmartButton';
 import { useTheme } from '../context/ThemeContext'
 
 export default function LoginPage() {
@@ -148,9 +149,14 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <button className="btn-primary w-full max-w-[320px] motion-safe:animate-fade-up" disabled={loading}>
-              {loading ? 'Signing in…' : 'Sign in'}
-            </button>
+            <SmartButton 
+              type="submit" 
+              className="w-full max-w-[320px] motion-safe:animate-fade-up" 
+              loading={loading}
+              success={!loading && user !== null}
+            >
+              Sign in
+            </SmartButton>
           </form>
         </div>
       </div>

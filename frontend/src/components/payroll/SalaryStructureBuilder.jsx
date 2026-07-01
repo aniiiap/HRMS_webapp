@@ -291,13 +291,7 @@ export default function SalaryStructureBuilder({
           <Calculator className="h-5 w-5 text-brand-600" />
           Salary structure
         </h3>
-        <p className="mt-1 text-sm text-slate-500">
-          Most companies enter <strong>monthly gross salary</strong> (what the employee earns on the payslip). The system
-          calculates company CTC and the component split automatically.
-        </p>
       </div>
-
-      <SalaryInputExplainer inputMode={ctcType === 'annual' ? 'annual' : ctcType === 'monthly_ctc' ? 'monthly_ctc' : 'gross'} />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_400px]">
         <div className="space-y-4">

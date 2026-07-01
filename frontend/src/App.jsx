@@ -23,6 +23,8 @@ const PlatformDashboardPage = lazy(() => import('./pages/platform/PlatformDashbo
 const PlatformOrganizationsPage = lazy(() => import('./pages/platform/PlatformOrganizationsPage'))
 const LetterTemplates = lazy(() => import('./pages/letters/LetterTemplates'))
 const LetterEditor = lazy(() => import('./pages/letters/LetterEditor'))
+const ExpensesPage = lazy(() => import('./pages/ExpensesPage'))
+const AdminExpensesPage = lazy(() => import('./pages/AdminExpensesPage'))
 import PlatformRoute from './components/PlatformRoute'
 import PlatformLayout from './components/PlatformLayout'
 import CompanyRoute from './components/CompanyRoute'
@@ -102,7 +104,20 @@ export default function App() {
           <Route path="/letters" element={<LetterTemplates />} />
           <Route path="/letters/:id" element={<LetterEditor />} />
           <Route path="/leaves" element={<LeavesPage />} />
+          
+          {/* Expenses */}
+          <Route path="/expenses" element={
+            <Suspense fallback={<RoutePageFallback />}>
+              <ExpensesPage />
+            </Suspense>
+          } />
+          
           <Route element={<RoleRoute allowedRoles={['admin', 'hr', 'manager']} />}>
+            <Route path="/expenses/approvals" element={
+              <Suspense fallback={<RoutePageFallback />}>
+                <AdminExpensesPage />
+              </Suspense>
+            } />
             <Route path="/reports" element={<ReportsPage />} />
           </Route>
           <Route element={<RoleRoute allowedRoles={['admin', 'hr']} />}>

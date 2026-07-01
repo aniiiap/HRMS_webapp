@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "reports",
     "saas_platform",
     "letters",
+    "expenses",
 ]
 
 if _clean_env("CLOUDINARY_CLOUD_NAME") and _clean_env("CLOUDINARY_API_KEY") and _clean_env("CLOUDINARY_API_SECRET"):

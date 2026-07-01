@@ -1,10 +1,85 @@
-import { Fragment, useState } from 'react'
-import { Eye, FileDown } from 'lucide-react'
+import { Fragment, useState, useEffect } from 'react'
+import { Eye, FileDown, Edit2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api, messageFromError } from '../../api/client'
 import StatusBadge from '../ui/StatusBadge'
 import PayslipPreviewModal from './PayslipPreviewModal'
 import { fmtInr, fmtInrFull, groupResultLines } from '../../utils/payrollFormat'
+
+function ManageExpensesModal({ employeeId, employeeName, runId, onClose, onRecalculate }) {
+  const [claims, setClaims] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchClaims() {
+      try {
+        const { data } = await api.get('/api/expenses/claims/', { params: { employee: employeeId, status: 'approved', is_reimbursed: false } })
+        setClaims(Array.isArray(data) ? data : data.results || [])
+      } catch (err) {
+        toast.error('Failed to load expenses')
+      } finally {
+        setLoading(false)
+      }
+    }
+    void fetchClaims()
+  }, [employeeId])
+
+  async function togglePayroll(claimId, currentSkip) {
+    try {
+      await api.post(`/api/expenses/claims/${claimId}/toggle_payroll/`)
+      setClaims(claims.map(c => c.id === claimId ? { ...c, skip_payroll: !currentSkip } : c))
+    } catch (err) {
+      toast.error('Failed to toggle expense')
+    }
+  }
+
+  async function handleSave() {
+    onClose()
+    if (onRecalculate) onRecalculate(runId)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Expenses for {employeeName}</h3>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="my-4 max-h-[60vh] overflow-y-auto">
+          {loading ? (
+            <div className="py-8 text-center text-sm text-slate-500">Loading expenses...</div>
+          ) : claims.length === 0 ? (
+            <div className="py-8 text-center text-sm text-slate-500">No pending approved expenses found for this employee.</div>
+          ) : (
+            <div className="space-y-2">
+              {claims.map(claim => (
+                <label key={claim.id} className="flex cursor-pointer items-start justify-between rounded-xl border border-slate-200 p-3 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                  <div>
+                    <div className="font-medium text-slate-900 dark:text-white">{claim.title}</div>
+                    <div className="text-xs text-slate-500">₹{claim.amount}</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={!claim.skip_payroll}
+                    onChange={() => void togglePayroll(claim.id, claim.skip_payroll)}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+          <button type="button" className="btn-primary w-full" onClick={handleSave}>
+            Done & Recalculate Payroll
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function PayRegisterPanel({
   results = [],
@@ -17,6 +92,7 @@ export default function PayRegisterPanel({
 }) {
   const [expandedId, setExpandedId] = useState(null)
   const [preview, setPreview] = useState({ url: null, name: '', period: '', resultId: null })
+  const [manageExpensesFor, setManageExpensesFor] = useState(null)
 
   const canEdit = selectedRun && (selectedRun.status === 'draft' || selectedRun.status === 'ready') && isPrivileged
   const canPayslip = selectedRun && ['finalized', 'paid'].includes(selectedRun.status)
@@ -59,8 +135,40 @@ export default function PayRegisterPanel({
     }
   }
 
+  function handleExportRegister() {
+    import('../../utils/csvExport').then(({ downloadCSV }) => {
+      const exportData = results.map(row => ({
+        'Employee Name': row.employee_name,
+        'Employee Code': row.employee_code,
+        'Department': row.department || '',
+        'Designation': row.designation || '',
+        'Paid Days': row.paid_days,
+        'LOP Days': row.lop_days,
+        'Basic': row.basic,
+        'HRA': row.hra,
+        'Allowances': row.other_allowances,
+        'Reimbursements': row.total_reimbursements,
+        'Gross Pay': row.gross_prorated,
+        'Deductions': row.total_deductions,
+        'Net Pay': row.net_pay,
+        'Status': row.status || selectedRun?.status || 'draft'
+      }))
+      const period = selectedRun ? `${selectedRun.period_year}-${String(selectedRun.period_month).padStart(2, '0')}` : 'Payroll'
+      downloadCSV(exportData, `Pay_Register_${period}.csv`)
+    })
+  }
+
   return (
     <>
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={handleExportRegister}
+          className="flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200"
+        >
+          <FileDown className="h-4 w-4" />
+          Export Register
+        </button>
+      </div>
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/30">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800">
@@ -142,7 +250,13 @@ export default function PayRegisterPanel({
                   {open && (
                     <tr className="bg-slate-50/90 dark:bg-slate-900/60">
                       <td colSpan={9} className="px-6 py-5">
-                        <RegisterBreakdown g={g} row={row} canEdit={canEdit} onUpdateResult={onUpdateResult} />
+                        <RegisterBreakdown 
+                          g={g} 
+                          row={row} 
+                          canEdit={canEdit} 
+                          onUpdateResult={onUpdateResult} 
+                          onOpenManageExpenses={setManageExpensesFor}
+                        />
                       </td>
                     </tr>
                   )}
@@ -167,11 +281,20 @@ export default function PayRegisterPanel({
         onClose={closePreview}
         onDownload={preview.resultId ? () => void downloadPayslip(preview.resultId) : undefined}
       />
+      {manageExpensesFor && (
+        <ManageExpensesModal
+          employeeId={manageExpensesFor.employee}
+          employeeName={manageExpensesFor.employee_name}
+          runId={selectedRun?.id}
+          onClose={() => setManageExpensesFor(null)}
+          onRecalculate={onRecalculate}
+        />
+      )}
     </>
   )
 }
 
-function RegisterBreakdown({ g, row, canEdit, onUpdateResult }) {
+function RegisterBreakdown({ g, row, canEdit, onUpdateResult, onOpenManageExpenses }) {
   const att = row.attendance_summary
   return (
     <div className="space-y-4">
@@ -220,7 +343,14 @@ function RegisterBreakdown({ g, row, canEdit, onUpdateResult }) {
       )}
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="rounded-xl border border-emerald-200/70 bg-white p-4 dark:border-emerald-900/40 dark:bg-slate-900">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Earnings (prorated)</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Earnings (prorated)</h4>
+          {canEdit && (
+            <button type="button" onClick={() => onOpenManageExpenses(row)} className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 uppercase tracking-wide bg-brand-50 hover:bg-brand-100 px-2 py-1 rounded">
+              Manage Expenses
+            </button>
+          )}
+        </div>
         <dl className="mt-3 space-y-2 text-sm">
           <BreakdownRow label="Basic" value={fmtInrFull(g.basic)} />
           <BreakdownRow label="HRA" value={fmtInrFull(g.hra)} />
@@ -228,7 +358,12 @@ function RegisterBreakdown({ g, row, canEdit, onUpdateResult }) {
           {g.earnings
             .filter((ln) => !['BASIC', 'HRA'].includes((ln.component_code || '').toUpperCase()))
             .map((ln) => (
-              <BreakdownRow key={ln.id} label={ln.component_name} value={fmtInrFull(ln.amount_prorated)} sub />
+              <BreakdownRow 
+                key={ln.id} 
+                label={ln.component_name} 
+                value={fmtInrFull(ln.amount_prorated)} 
+                sub 
+              />
             ))}
           <BreakdownRow label="Gross salary" value={fmtInrFull(g.gross)} bold />
         </dl>
@@ -268,14 +403,17 @@ function RegisterBreakdown({ g, row, canEdit, onUpdateResult }) {
   )
 }
 
-function BreakdownRow({ label, value, bold, accent, sub }) {
+function BreakdownRow({ label, value, bold, accent, sub, action }) {
   return (
     <div
-      className={`flex justify-between gap-2 ${sub ? 'pl-3 text-xs text-slate-500' : ''} ${
+      className={`flex justify-between gap-2 items-center ${sub ? 'pl-3 text-xs text-slate-500' : ''} ${
         bold ? 'font-semibold text-slate-900 dark:text-white' : accent ? 'font-bold text-brand-700 dark:text-brand-300' : ''
       }`}
     >
-      <dt>{label}</dt>
+      <dt className="flex items-center">
+        {label}
+        {action && action}
+      </dt>
       <dd className="tabular-nums">{value}</dd>
     </div>
   )

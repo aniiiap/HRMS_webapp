@@ -115,11 +115,11 @@ export default function LeavesPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Leave Management</h2>
-      {error && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Leave Management</h2>
+      {error && <div className="rounded-xl bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-300">{error}</div>}
 
-      <div className="card overflow-hidden border border-slate-200/80">
-        <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50/90 px-3 py-2">
+      <div className="card overflow-hidden border border-slate-200/80 dark:border-slate-700/80">
+        <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-800/90 px-3 py-2">
           {[
             { id: 'requests', label: 'Requests' },
             ...(isManagerPlus ? [{ id: 'rules', label: 'Rules' }] : []),
@@ -130,7 +130,7 @@ export default function LeavesPage() {
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                activeTab === tab.id ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600 hover:bg-white/70'
+                activeTab === tab.id ? 'bg-white dark:bg-slate-700 text-brand-700 dark:text-brand-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-slate-700/70'
               }`}
             >
               {tab.label}
@@ -166,8 +166,8 @@ export default function LeavesPage() {
           </form>
 
           {isManagerPlus && (
-            <div className="card overflow-hidden border border-slate-200/80">
-              <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50/90 px-3 py-2">
+            <div className="card overflow-hidden border border-slate-200/80 dark:border-slate-700/80">
+              <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-800/90 px-3 py-2">
                 {[
                   { id: 'pending', label: 'Pending' },
                   { id: 'approved', label: 'Approved' },
@@ -179,7 +179,7 @@ export default function LeavesPage() {
                     type="button"
                     onClick={() => { setRequestFilter(tab.id); setRequestPage(1) }}
                     className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                      requestFilter === tab.id ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600 hover:bg-white/70'
+                      requestFilter === tab.id ? 'bg-white dark:bg-slate-700 text-brand-700 dark:text-brand-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-slate-700/70'
                     }`}
                   >
                     {tab.label}
@@ -191,7 +191,7 @@ export default function LeavesPage() {
 
           <div className="card overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-left text-slate-600">
+              <thead className="bg-slate-50 dark:bg-slate-800/80 text-left text-slate-600 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-3">Employee</th>
                   <th className="px-4 py-3">Type</th>
@@ -203,19 +203,19 @@ export default function LeavesPage() {
                   <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
                 {visibleRows.map((r) => (
-                  <tr key={r.id} className="border-t border-slate-100">
-                    <td className="px-4 py-3">{r.employee_name}</td>
+                  <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-200">{r.employee_name}</td>
                     <td className="px-4 py-3">{r.leave_type_name || leaveLabel(r.leave_type)}</td>
                     <td className="px-4 py-3 text-xs">{r.policy_name || 'Unassigned'}</td>
                     <td className="px-4 py-3">{dayjs(r.start_date).format('DD MMM YYYY')} to {dayjs(r.end_date).format('DD MMM YYYY')}</td>
                     <td className="px-4 py-3">
                       {dayjs(r.end_date).diff(dayjs(r.start_date), 'day') + (r.half_day === 'first_half' || r.half_day === 'second_half' ? 0.5 : 1)}
-                      {r.half_day === 'first_half' && <span className="ml-1 text-xs text-slate-500">(1st Half)</span>}
-                      {r.half_day === 'second_half' && <span className="ml-1 text-xs text-slate-500">(2nd Half)</span>}
+                      {r.half_day === 'first_half' && <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">(1st Half)</span>}
+                      {r.half_day === 'second_half' && <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">(2nd Half)</span>}
                     </td>
-                    <td className="max-w-[260px] truncate px-4 py-3 text-xs text-slate-600">{r.reason || '-'}</td>
+                    <td className="max-w-[260px] truncate px-4 py-3 text-xs text-slate-600 dark:text-slate-400">{r.reason || '-'}</td>
                     <td className="px-4 py-3 capitalize">{r.status}</td>
                     <td className="px-4 py-3">
                       {isManagerPlus && r.status === 'pending' ? (
@@ -229,7 +229,7 @@ export default function LeavesPage() {
                     </td>
                   </tr>
                 ))}
-                {visibleRows.length === 0 && <tr><td className="px-4 py-8 text-center text-slate-500" colSpan="8">No leave requests.</td></tr>}
+                {visibleRows.length === 0 && <tr><td className="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colSpan="8">No leave requests.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -253,7 +253,7 @@ export default function LeavesPage() {
       {activeTab === 'balances' && (
         <div className="card overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-600">
+            <thead className="bg-slate-50 dark:bg-slate-800/80 text-left text-slate-600 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-3">Employee</th>
                 <th className="px-4 py-3">Rules</th>
@@ -261,10 +261,10 @@ export default function LeavesPage() {
                 <th className="px-4 py-3">Leave balances (used / quota)</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
               {balances.map((b) => (
-                <tr key={`${b.employee_id}-${b.year}`} className="border-t border-slate-100">
-                  <td className="px-4 py-3">{b.employee_code} - {b.employee_name}</td>
+                <tr key={`${b.employee_id}-${b.year}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-200">{b.employee_code} - {b.employee_name}</td>
                   <td className="px-4 py-3 text-xs">{b.policy_name || '—'}</td>
                   <td className="px-4 py-3">{b.is_on_probation ? 'Yes' : 'No'}</td>
                   <td className="px-4 py-3 text-xs">
@@ -280,7 +280,7 @@ export default function LeavesPage() {
                   </td>
                 </tr>
               ))}
-              {balances.length === 0 && <tr><td className="px-4 py-8 text-center text-slate-500" colSpan="4">No leave balance records.</td></tr>}
+              {balances.length === 0 && <tr><td className="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colSpan="4">No leave balance records.</td></tr>}
             </tbody>
           </table>
         </div>

@@ -85,6 +85,13 @@ export default {
           from: { opacity: '0', transform: 'translateX(-8px)' },
           to: { opacity: '1', transform: 'translateX(0)' },
         },
+        ring: {
+          '0%': { transform: 'rotate(0)' },
+          '5%, 15%': { transform: 'rotate(15deg)' },
+          '10%, 20%': { transform: 'rotate(-10deg)' },
+          '25%': { transform: 'rotate(0)' },
+          '100%': { transform: 'rotate(0)' },
+        },
       },
       animation: {
         'fade-up': 'fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards',
@@ -95,6 +102,7 @@ export default {
         'pulse-soft': 'pulseSoft 5.5s ease-in-out infinite',
         'slide-in-left': 'slideInLeft 0.35s ease-out forwards',
         shimmer: 'shimmer 1.8s ease-in-out infinite',
+        ring: 'ring 2s ease-in-out infinite',
       },
       backgroundImage: {
         'mesh-light':

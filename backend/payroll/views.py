@@ -471,6 +471,17 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         recalculate_run(run)
+        
+        # Lock in approved expenses
+        from expenses.models import ExpenseClaim, ExpenseClaimStatus
+        for res in run.employee_results.all():
+            ExpenseClaim.objects.filter(
+                employee=res.employee,
+                status=ExpenseClaimStatus.APPROVED,
+                is_reimbursed=False,
+                skip_payroll=False
+            ).update(is_reimbursed=True, payroll_run=run)
+
         run.status = PayrollRunStatus.FINALIZED
         run.save(update_fields=["status", "updated_at"])
         logger.info("payroll finalized run_id=%s org=%s period=%s-%02d", run.id, run.organization_id, run.period_year, run.period_month)
@@ -481,6 +492,11 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
         run = self.get_object()
         if run.status in (PayrollRunStatus.DRAFT, PayrollRunStatus.READY):
             raise ValidationError("Run is already open.")
+            
+        # Re-open locked expenses
+        if hasattr(run, 'reimbursed_expenses'):
+            run.reimbursed_expenses.update(is_reimbursed=False, payroll_run=None)
+            
         run.status = PayrollRunStatus.DRAFT
         run.save(update_fields=["status", "updated_at"])
         return Response(PayrollRunSerializer(run).data)

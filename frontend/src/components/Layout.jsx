@@ -13,8 +13,9 @@ import {
   Settings,
   Sun,
   Users,
-  X,
-  FileText
+  FileText,
+  Receipt,
+  X
 } from 'lucide-react'
 import dayjs from 'dayjs'
 import { Suspense, useEffect, useRef, useState } from 'react'
@@ -38,6 +39,8 @@ const allGeneral = [
 
 const allMore = [
   { to: '/leaves', label: 'Leaves', icon: Briefcase, iconFx: 'icon-fx-tilt' },
+  { to: '/expenses', label: 'Expenses', icon: Receipt, iconFx: 'icon-fx-rise' },
+  { to: '/expenses/approvals', label: 'Expense Approvals', icon: Receipt, iconFx: 'icon-fx-rise' },
   { to: '/organizations', label: 'Organizations', icon: Building2, iconFx: 'icon-fx-pop' },
   { to: '/reports', label: 'Reports', icon: FileBarChart2, iconFx: 'icon-fx-rise' },
 ]
@@ -71,6 +74,8 @@ export default function Layout() {
   const more = allMore.filter((item) => {
     if (item.to === '/organizations') return canViewPayrollAdmin && !user?.is_superuser
     if (item.to === '/reports') return canViewReports
+    if (item.to === '/expenses/approvals') return ['admin', 'hr', 'manager'].includes(user?.role)
+    if (item.to === '/expenses') return ['employee', 'manager'].includes(user?.role)
     return true
   })
 
@@ -258,9 +263,12 @@ export default function Layout() {
                   if (next) await loadNotifications()
                 }}
               >
-                <Bell size={20} />
+                <Bell size={20} className={unreadCount > 0 ? "animate-ring text-brand-600 dark:text-brand-400" : ""} />
                 {unreadCount > 0 && (
-                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-500 ring-2 ring-white dark:ring-slate-950" />
+                  <>
+                    <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-500 animate-ping opacity-75" />
+                    <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-500 ring-2 ring-white dark:ring-slate-950" />
+                  </>
                 )}
               </button>
               {notifOpen && (
