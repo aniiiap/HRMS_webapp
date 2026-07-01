@@ -170,13 +170,23 @@ export default function AttendanceLogsPanel({
   }, [calendarSearch, year, month, calendarPageSize])
 
   async function saveEdit() {
-    if (!editing?.attendance_id) return
+    if (!editing) return
     try {
-      await api.patch(`/api/attendance/${editing.attendance_id}/`, {
-        check_in: editing.check_in || null,
-        check_out: editing.check_out || null,
-        notes: editing.notes || '',
-      })
+      if (editing.attendance_id) {
+        await api.patch(`/api/attendance/${editing.attendance_id}/`, {
+          check_in: editing.check_in || null,
+          check_out: editing.check_out || null,
+          notes: editing.notes || '',
+        })
+      } else {
+        await api.post(`/api/attendance/`, {
+          employee: editing.employee_id,
+          date: editing.date,
+          check_in: editing.check_in || null,
+          check_out: editing.check_out || null,
+          notes: editing.notes || '',
+        })
+      }
       toast.success('Attendance updated.')
       setEditing(null)
       await loadDailyLogs()
@@ -305,34 +315,34 @@ export default function AttendanceLogsPanel({
                     </td>
                     <td className="px-4 py-3"><StatusBadge code={r.status_code} /></td>
                     <td className="px-4 py-3">
-                      {editing?.attendance_id === r.attendance_id && r.attendance_id ? (
+                      {(editing?.attendance_id === r.attendance_id && editing?.employee_id === r.employee_id) ? (
                         <input type="datetime-local" className="rounded border border-slate-300 px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-900" value={editing.check_in} onChange={(e) => setEditing({ ...editing, check_in: e.target.value })} />
                       ) : formatTime(r.check_in)}
                     </td>
                     <td className="px-4 py-3">
-                      {editing?.attendance_id === r.attendance_id && r.attendance_id ? (
+                      {(editing?.attendance_id === r.attendance_id && editing?.employee_id === r.employee_id) ? (
                         <input type="datetime-local" className="rounded border border-slate-300 px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-900" value={editing.check_out} onChange={(e) => setEditing({ ...editing, check_out: e.target.value })} />
                       ) : formatTime(r.check_out)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {editing?.attendance_id === r.attendance_id ? (
+                      {(editing?.attendance_id === r.attendance_id && editing?.employee_id === r.employee_id) ? (
                         <div className="flex justify-end gap-1">
                           <button type="button" className="btn-secondary !px-2 !py-1" onClick={() => void saveEdit()}><Save size={14} /></button>
                           <button type="button" className="btn-secondary !px-2 !py-1" onClick={() => setEditing(null)}><X size={14} /></button>
                         </div>
                       ) : (
                         <div className="flex justify-end gap-1">
-                          {r.attendance_id && (
-                            <button type="button" className="btn-secondary !px-2 !py-1" title="Edit" onClick={() => setEditing({
-                              attendance_id: r.attendance_id,
-                              check_in: r.check_in ? dayjs(r.check_in).format('YYYY-MM-DDTHH:mm') : '',
-                              check_out: r.check_out ? dayjs(r.check_out).format('YYYY-MM-DDTHH:mm') : '',
-                              notes: r.notes || '',
-                            })}
-                            >
-                              <Pencil size={14} />
-                            </button>
-                          )}
+                          <button type="button" className="btn-secondary !px-2 !py-1" title="Edit" onClick={() => setEditing({
+                            attendance_id: r.attendance_id,
+                            employee_id: r.employee_id,
+                            date: logDate,
+                            check_in: r.check_in ? dayjs(r.check_in).format('YYYY-MM-DDTHH:mm') : '',
+                            check_out: r.check_out ? dayjs(r.check_out).format('YYYY-MM-DDTHH:mm') : '',
+                            notes: r.notes || '',
+                          })}
+                          >
+                            <Pencil size={14} />
+                          </button>
                           <button type="button" className="btn-secondary !px-2 !py-1" title="View" onClick={() => setDetailRow(r)}><Eye size={14} /></button>
                         </div>
                       )}

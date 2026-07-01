@@ -39,7 +39,8 @@ def _working_days_in_month(employee: Employee, year: int, month: int) -> list[da
     days = []
     d = start
     while d <= end:
-        if is_scheduled_working_day(employee, d):
+        # Payroll strictly considers Monday-Friday (0-4) as working days, regardless of attendance shift
+        if d.weekday() < 5:
             days.append(d)
         d += timedelta(days=1)
     return days
@@ -58,7 +59,8 @@ def _leave_date_sets(employee: Employee, month_start: date, month_end: date) -> 
         d = max(leave.start_date, month_start)
         end_d = min(leave.end_date, month_end)
         while d <= end_d:
-            if is_scheduled_working_day(employee, d):
+            # Payroll strictly considers Monday-Friday (0-4) as working days
+            if d.weekday() < 5:
                 if leave.leave_type in (LeaveType.LOP, "unpaid", "loss_of_pay"):
                     unpaid.add(d)
                 else:
