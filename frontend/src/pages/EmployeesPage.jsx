@@ -1,12 +1,64 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, LocateFixed, MailPlus, MapPin, Pencil, Power, Trash2, X } from 'lucide-react'
+import { Check, LocateFixed, MailPlus, MapPin, Pencil, Power, Trash2, X, Download } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { api, messageFromError } from '../api/client'
 import PageHeader from '../components/ui/PageHeader'
 import { useAuth } from '../context/AuthContext'
 import { useConfirm } from '../context/ConfirmContext'
 import { useSearchParams } from 'react-router-dom'
+
+function ImageModal({ employee, onClose }) {
+  if (!employee || !employee.profile_image) return null;
+
+  const handleDownload = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(employee.profile_image);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `profile_${employee.employee_code}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Failed to download image", err);
+      // Fallback
+      window.open(employee.profile_image, '_blank');
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="relative max-w-2xl w-full max-h-[90vh] flex flex-col items-center justify-center" onClick={(e) => e.stopPropagation()}>
+        <button className="absolute -top-12 right-0 text-white hover:text-slate-300 transition-colors" onClick={onClose}>
+          <X size={28} />
+        </button>
+        <img 
+          src={employee.profile_image} 
+          alt={`${employee.first_name} ${employee.last_name}`} 
+          className="max-w-full max-h-[70vh] rounded-xl shadow-2xl object-contain bg-slate-900" 
+        />
+        <div className="mt-6 flex flex-col items-center gap-3 text-white">
+          <p className="text-xl font-bold tracking-tight">{employee.first_name} {employee.last_name}</p>
+          <button
+            onClick={handleDownload}
+            className="inline-flex items-center gap-2 rounded-xl bg-white/20 hover:bg-white/30 px-6 py-2.5 text-sm font-semibold tracking-wide backdrop-blur-sm transition-all"
+          >
+            <Download size={16} />
+            Download
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 export default function EmployeesPage() {
   const { isPrivileged } = useAuth()
@@ -16,6 +68,7 @@ export default function EmployeesPage() {
   const [templates, setTemplates] = useState([])
   const [activeTab, setActiveTab] = useState('employees')
   const [error, setError] = useState('')
+  const [viewingImage, setViewingImage] = useState(null)
   const [form, setForm] = useState({
     email: '',
     first_name: '',
@@ -467,14 +520,16 @@ export default function EmployeesPage() {
               <tr key={r.id} className="border-t border-slate-100 align-top">
                 <td className="px-4 py-3 font-mono text-xs">{r.employee_code}</td>
                 <td className="px-4 py-3 pr-8">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     {r.profile_image && !brokenProfileIds[r.id] ? (
-                      <img
-                        src={r.profile_image}
-                        alt={`${r.first_name} ${r.last_name}`}
-                        className="h-8 w-8 rounded-full object-cover"
-                        onError={() => setBrokenProfileIds((prev) => ({ ...prev, [r.id]: true }))}
-                      />
+                      <button type="button" onClick={() => setViewingImage(r)} className="focus:outline-none focus:ring-2 focus:ring-brand-500 rounded-full transition-transform hover:scale-105">
+                        <img
+                          src={r.profile_image}
+                          alt={`${r.first_name} ${r.last_name}`}
+                          className="h-9 w-9 rounded-full object-cover shadow-sm border border-slate-200 dark:border-slate-700"
+                          onError={() => setBrokenProfileIds((prev) => ({ ...prev, [r.id]: true }))}
+                        />
+                      </button>
                     ) : (
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-200 text-[11px] font-bold text-brand-800">
                         {`${r.first_name || ''} ${r.last_name || ''}`.trim().split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || r.email?.[0]?.toUpperCase() || '?'}
@@ -642,6 +697,10 @@ export default function EmployeesPage() {
           </tbody>
         </table>
       </div>
+      )}
+      
+      {viewingImage && (
+        <ImageModal employee={viewingImage} onClose={() => setViewingImage(null)} />
       )}
 
     </div>

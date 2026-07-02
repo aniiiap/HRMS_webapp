@@ -1,9 +1,123 @@
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, Download, Eye, Pencil, Save, Search, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api, messageFromError } from '../../api/client'
 import Pagination from '../Pagination'
+
+function EditLogModal({ editing, onClose, onSave }) {
+  const [status, setStatus] = useState(editing.check_in ? 'Present' : 'Absent')
+  const [inTime, setInTime] = useState(editing.check_in ? dayjs(editing.check_in).format('HH:mm') : '')
+  const [outTime, setOutTime] = useState(editing.check_out ? dayjs(editing.check_out).format('HH:mm') : '')
+  const [notes, setNotes] = useState(editing.notes || '')
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const handleSave = () => {
+    let finalCheckIn = null;
+    let finalCheckOut = null;
+    if (status === 'Present') {
+      if (inTime) finalCheckIn = `${editing.date}T${inTime}`;
+      if (outTime) finalCheckOut = `${editing.date}T${outTime}`;
+    }
+    onSave({
+      ...editing,
+      check_in: finalCheckIn,
+      check_out: finalCheckOut,
+      notes,
+    })
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md transition-opacity">
+      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col border border-slate-200/60 dark:border-slate-700/50">
+        
+        {/* Header - Premium gradient styling */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/40 dark:to-slate-900/40">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+              <Pencil size={18} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h3 className="text-[17px] font-bold tracking-tight text-slate-800 dark:text-white">Edit Attendance Log</h3>
+              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Update in/out times manually</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-all">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6 sm:p-8 space-y-6 bg-white dark:bg-slate-900">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div>
+              <label className="block text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 mb-2 uppercase">Status</label>
+              <select 
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all hover:border-slate-300 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:hover:border-slate-600 dark:focus:border-brand-500/80 dark:focus:bg-slate-800"
+                value={status} 
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 mb-2 uppercase">In Time</label>
+              <input 
+                type="time" 
+                disabled={status === 'Absent'}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all hover:border-slate-300 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 disabled:opacity-40 disabled:cursor-not-allowed dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:hover:border-slate-600 dark:focus:border-brand-500/80 dark:focus:bg-slate-800"
+                value={inTime} 
+                onChange={(e) => setInTime(e.target.value)} 
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 mb-2 uppercase">Out Time</label>
+              <input 
+                type="time" 
+                disabled={status === 'Absent'}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all hover:border-slate-300 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 disabled:opacity-40 disabled:cursor-not-allowed dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:hover:border-slate-600 dark:focus:border-brand-500/80 dark:focus:bg-slate-800"
+                value={outTime} 
+                onChange={(e) => setOutTime(e.target.value)} 
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 mb-2 uppercase">Comment</label>
+            <textarea 
+              rows={3}
+              placeholder="Add an optional note about this edit..."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all hover:border-slate-300 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 placeholder:text-slate-400 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-brand-500/80 dark:focus:bg-slate-800 resize-none"
+              value={notes} 
+              onChange={(e) => setNotes(e.target.value)} 
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/80 dark:bg-slate-900">
+          <button onClick={onClose} className="px-5 py-2.5 text-sm font-bold tracking-wide text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 rounded-xl transition-all">
+            CANCEL
+          </button>
+          <button onClick={handleSave} className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold tracking-wide text-white shadow-lg shadow-brand-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-500/40 active:translate-y-0">
+            <div className="absolute inset-0 bg-gradient-to-r from-brand-600 to-brand-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <Save size={16} className="relative z-10" /> 
+            <span className="relative z-10">SAVE CHANGES</span>
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 const STATUS_LEGEND = [
   { code: 'P', label: 'Present', color: 'bg-emerald-500' },
@@ -169,22 +283,25 @@ export default function AttendanceLogsPanel({
     setCalendarPage(1)
   }, [calendarSearch, year, month, calendarPageSize])
 
-  async function saveEdit() {
-    if (!editing) return
+  async function saveEdit(payload) {
+    if (!payload) return
     try {
-      if (editing.attendance_id) {
-        await api.patch(`/api/attendance/${editing.attendance_id}/`, {
-          check_in: editing.check_in || null,
-          check_out: editing.check_out || null,
-          notes: editing.notes || '',
+      const payload_check_in = payload.check_in ? dayjs(payload.check_in).toISOString() : null
+      const payload_check_out = payload.check_out ? dayjs(payload.check_out).toISOString() : null
+
+      if (payload.attendance_id) {
+        await api.patch(`/api/attendance/${payload.attendance_id}/`, {
+          check_in: payload_check_in,
+          check_out: payload_check_out,
+          notes: payload.notes || '',
         })
       } else {
         await api.post(`/api/attendance/`, {
-          employee: editing.employee_id,
-          date: editing.date,
-          check_in: editing.check_in || null,
-          check_out: editing.check_out || null,
-          notes: editing.notes || '',
+          employee: payload.employee_id,
+          date: payload.date,
+          check_in: payload_check_in,
+          check_out: payload_check_out,
+          notes: payload.notes || '',
         })
       }
       toast.success('Attendance updated.')
@@ -315,29 +432,19 @@ export default function AttendanceLogsPanel({
                     </td>
                     <td className="px-4 py-3"><StatusBadge code={r.status_code} /></td>
                     <td className="px-4 py-3">
-                      {(editing?.attendance_id === r.attendance_id && editing?.employee_id === r.employee_id) ? (
-                        <input type="datetime-local" className="rounded border border-slate-300 px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-900" value={editing.check_in} onChange={(e) => setEditing({ ...editing, check_in: e.target.value })} />
-                      ) : formatTime(r.check_in)}
+                      {formatTime(r.check_in)}
                     </td>
                     <td className="px-4 py-3">
-                      {(editing?.attendance_id === r.attendance_id && editing?.employee_id === r.employee_id) ? (
-                        <input type="datetime-local" className="rounded border border-slate-300 px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-900" value={editing.check_out} onChange={(e) => setEditing({ ...editing, check_out: e.target.value })} />
-                      ) : formatTime(r.check_out)}
+                      {formatTime(r.check_out)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {(editing?.attendance_id === r.attendance_id && editing?.employee_id === r.employee_id) ? (
-                        <div className="flex justify-end gap-1">
-                          <button type="button" className="btn-secondary !px-2 !py-1" onClick={() => void saveEdit()}><Save size={14} /></button>
-                          <button type="button" className="btn-secondary !px-2 !py-1" onClick={() => setEditing(null)}><X size={14} /></button>
-                        </div>
-                      ) : (
                         <div className="flex justify-end gap-1">
                           <button type="button" className="btn-secondary !px-2 !py-1" title="Edit" onClick={() => setEditing({
                             attendance_id: r.attendance_id,
                             employee_id: r.employee_id,
                             date: logDate,
-                            check_in: r.check_in ? dayjs(r.check_in).format('YYYY-MM-DDTHH:mm') : '',
-                            check_out: r.check_out ? dayjs(r.check_out).format('YYYY-MM-DDTHH:mm') : '',
+                            check_in: r.check_in,
+                            check_out: r.check_out,
                             notes: r.notes || '',
                           })}
                           >
@@ -345,7 +452,6 @@ export default function AttendanceLogsPanel({
                           </button>
                           <button type="button" className="btn-secondary !px-2 !py-1" title="View" onClick={() => setDetailRow(r)}><Eye size={14} /></button>
                         </div>
-                      )}
                     </td>
                   </tr>
                 ))}
@@ -470,6 +576,14 @@ export default function AttendanceLogsPanel({
             </dl>
           </div>
         </div>
+      )}
+
+      {editing && (
+        <EditLogModal 
+          editing={editing} 
+          onClose={() => setEditing(null)} 
+          onSave={saveEdit} 
+        />
       )}
     </div>
   )
