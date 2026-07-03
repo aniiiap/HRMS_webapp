@@ -40,6 +40,7 @@ export default function SalaryStructureBuilder({
 
   const activeId = fixedEmployeeId || employeeId
 
+  const confirm = useConfirm()
   const [ctcBreakup, setCtcBreakup] = useState(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [includeFlags, setIncludeFlags] = useState(() => defaultIncludeFlagsFromTemplate())
@@ -63,7 +64,7 @@ export default function SalaryStructureBuilder({
     }
     try {
       const [linesRes, revRes, compRes] = await Promise.all([
-        api.get('/api/payroll/salary-lines/', { params: { employee: activeId } }),
+        api.get('/api/payroll/salary-lines/', { params: { employee: activeId, is_active: 'true' } }),
         api.get('/api/payroll/compensation/revision-history/', { params: { employee: activeId } }),
         api.get('/api/payroll/compensation/', { params: { employee: activeId } }),
       ])
@@ -275,6 +276,23 @@ export default function SalaryStructureBuilder({
     if (!ok) return
     try {
       await api.delete(`/api/payroll/salary-lines/${id}/`)
+      await loadAll()
+    } catch (err) {
+      toast.error(messageFromError(err))
+    }
+  }
+
+  async function deleteRevision(id) {
+    const ok = await confirm({
+      title: 'Delete salary revision?',
+      message: 'This will delete the revision history and the associated salary structure lines that started on this date. This action cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    })
+    if (!ok) return
+    try {
+      await api.delete(`/api/payroll/compensation/delete-revision/${id}/`)
+      toast.success('Revision deleted.')
       await loadAll()
     } catch (err) {
       toast.error(messageFromError(err))
@@ -550,6 +568,7 @@ export default function SalaryStructureBuilder({
                         <tr>
                           <th className="px-4 py-2 text-left">Effective</th>
                           <th className="px-4 py-2 text-left">Gross at revision</th>
+                          {canEdit && <th className="px-4 py-2 text-right">Actions</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -557,6 +576,18 @@ export default function SalaryStructureBuilder({
                           <tr key={r.id} className="border-t border-slate-100 dark:border-slate-800">
                             <td className="px-4 py-2">{dayjs(r.effective_from).format('MMM YYYY')}</td>
                             <td className="px-4 py-2 font-medium">{fmtInrFull(r.monthly_gross)}</td>
+                            {canEdit && (
+                              <td className="px-4 py-2 text-right">
+                                <button
+                                  type="button"
+                                  className="text-slate-400 hover:text-rose-600"
+                                  onClick={() => void deleteRevision(r.id)}
+                                  title="Delete revision"
+                                >
+                                  <Trash2 className="inline h-4 w-4" />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>

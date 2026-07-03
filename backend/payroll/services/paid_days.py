@@ -39,9 +39,7 @@ def _working_days_in_month(employee: Employee, year: int, month: int) -> list[da
     days = []
     d = start
     while d <= end:
-        # Payroll strictly considers Monday-Friday (0-4) as working days, regardless of attendance shift
-        if d.weekday() < 5:
-            days.append(d)
+        days.append(d)
         d += timedelta(days=1)
     return days
 
@@ -140,22 +138,19 @@ def compute_paid_days_for_employee(
             # Future days are assumed present (optimistic mid-month projection)
             credit = Decimal("1")
             present_days += Decimal("1")
+        elif not is_scheduled_working_day(employee, d):
+            # It's a weekend / non-scheduled day, so it counts as paid in a calendar-days model
+            credit = Decimal("1")
+            present_days += Decimal("1")
         else:
             att = attendances.get(d)
             if not att or not att.check_in:
                 credit = Decimal("0")
                 absent_days += Decimal("1")
             else:
-                anomaly = attendance_anomaly(att)
-                if anomaly == "missing_checkout":
-                    credit = Decimal("0")
-                    absent_days += Decimal("1")
-                elif anomaly in HALF_DAY_ANOMALIES:
-                    credit = Decimal("0.5")
-                    half_day_penalties += Decimal("0.5")
-                    present_days += Decimal("0.5")
-                else:
-                    present_days += Decimal("1")
+                # If employee checked in, count as fully present regardless of anomaly
+                credit = Decimal("1")
+                present_days += Decimal("1")
 
         day_credits.append(credit)
 

@@ -14,12 +14,15 @@ from ..models import EmployeeSalaryLine, PayrollComponent
 
 def has_active_basic_salary(employee: Employee, on_day: date | None = None) -> bool:
     on_day = on_day or date.today()
-    return EmployeeSalaryLine.objects.filter(
+    base_qs = EmployeeSalaryLine.objects.filter(
         employee=employee,
-        effective_from__lte=on_day,
         component__code__iexact="BASIC",
         component__organization_id=employee.organization_id,
-    ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=on_day)).exists()
+    )
+    exists_on_day = base_qs.filter(effective_from__lte=on_day).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=on_day)).exists()
+    if exists_on_day:
+        return True
+    return base_qs.filter(effective_to__isnull=True).exists()
 
 
 def salary_structure_warnings(employee: Employee, period_year: int, period_month: int) -> list[str]:
@@ -38,6 +41,8 @@ def salary_structure_warnings(employee: Employee, period_year: int, period_month
         employee=employee,
         effective_from__lte=on_day,
     ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=on_day)).exists()
+    if not has_any:
+        has_any = EmployeeSalaryLine.objects.filter(employee=employee, effective_to__isnull=True).exists()
 
     if not has_any:
         warnings.append("No salary structure lines configured.")

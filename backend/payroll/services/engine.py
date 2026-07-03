@@ -103,9 +103,26 @@ def _active_salary_lines(employee: Employee, on_day: date) -> list[EmployeeSalar
         EmployeeSalaryLine.objects.filter(employee=employee, effective_from__lte=on_day)
         .filter(Q(effective_to__isnull=True) | Q(effective_to__gte=on_day))
         .select_related("component")
-        .order_by("sort_order", "id")
+        .order_by("sort_order", "-effective_from", "id")
     )
-    return list(qs)
+    lines = list(qs)
+    if not lines:
+        qs_fallback = (
+            EmployeeSalaryLine.objects.filter(employee=employee, effective_to__isnull=True)
+            .select_related("component")
+            .order_by("sort_order", "-effective_from", "id")
+        )
+        lines = list(qs_fallback)
+        
+    # Deduplicate by component (keep the most recent effective_from)
+    seen_components = set()
+    deduped = []
+    for line in lines:
+        if line.component_id not in seen_components:
+            seen_components.add(line.component_id)
+            deduped.append(line)
+            
+    return deduped
 
 
 def _proration_ratio(paid_days: Decimal | int | float | str, working_days: int) -> Decimal:

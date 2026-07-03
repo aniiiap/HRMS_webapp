@@ -39,12 +39,15 @@ def resolve_shift_rule(employee) -> ShiftRuleSettings:
     template = getattr(employee, "shift_template", None)
     shift_start = employee.shift_start_time or (template.start_time if template else None)
     shift_end = employee.shift_end_time or (template.end_time if template else None)
-    grace = employee.grace_minutes
-    if grace is None and template:
+
+    # When a template is assigned, always use its grace values — the template IS the rule.
+    # Employee-level overrides only apply when there is no template.
+    if template:
         grace = template.grace_minutes
-    early_grace = employee.early_checkout_grace_minutes
-    if early_grace is None and template:
         early_grace = template.early_checkout_grace_minutes
+    else:
+        grace = employee.grace_minutes
+        early_grace = employee.early_checkout_grace_minutes
 
     def tpl(attr, default):
         if template is None:
@@ -55,7 +58,7 @@ def resolve_shift_rule(employee) -> ShiftRuleSettings:
         shift_start=shift_start,
         shift_end=shift_end,
         grace_minutes=int(grace or 0),
-        early_checkout_grace_minutes=int(early_grace or 10),
+        early_checkout_grace_minutes=int(early_grace or 0),
         is_night_shift=bool(tpl("is_night_shift", False)),
         enable_anomaly_tracking=bool(tpl("enable_anomaly_tracking", True)),
         track_in_time=bool(tpl("track_in_time", True)),

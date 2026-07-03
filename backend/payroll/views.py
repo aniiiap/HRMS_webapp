@@ -417,6 +417,14 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_create(self, serializer):
+        from calendar import monthrange
+        year = serializer.validated_data.get("period_year")
+        month = serializer.validated_data.get("period_month")
+        wd = serializer.validated_data.get("working_days")
+        if not wd and year and month:
+            # Overwrite default 22 with the actual calendar days
+            serializer.validated_data["working_days"] = monthrange(year, month)[1]
+            
         run = serializer.save(status=PayrollRunStatus.DRAFT)
         employees = Employee.objects.filter(
             organization_id=run.organization_id,
@@ -728,6 +736,11 @@ class EmployeeSalaryLineViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_authenticated:
             return qs.none()
+            
+        is_active = self.request.query_params.get("is_active")
+        if is_active and is_active.lower() == "true":
+            qs = qs.filter(effective_to__isnull=True)
+            
         if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
             return filter_by_employee_org(qs, organization_id_from_request(self.request))
         if user.role == UserRole.MANAGER:
@@ -824,7 +837,7 @@ class EmployeeCompensationViewSet(viewsets.ModelViewSet):
     )
     serializer_class = EmployeeCompensationSerializer
     filterset_fields = ["employee", "organization"]
-    http_method_names = ["get", "post", "patch", "put", "head", "options"]
+    http_method_names = ["get", "post", "patch", "put", "delete", "head", "options"]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -956,6 +969,29 @@ class EmployeeCompensationViewSet(viewsets.ModelViewSet):
             raise ValidationError({"employee": "Required."})
         qs = CompensationRevision.objects.filter(employee_id=emp_id).order_by("-effective_from")
         return Response(CompensationRevisionSerializer(qs, many=True).data)
+
+    @action(detail=False, methods=["delete"], url_path=r"delete-revision/(?P<rev_id>\d+)")
+    @transaction.atomic
+    def delete_revision(self, request, rev_id=None):
+        from django.shortcuts import get_object_or_404
+        from rest_framework import status
+        from rest_framework.exceptions import PermissionDenied
+        
+        rev = get_object_or_404(CompensationRevision, pk=rev_id)
+        
+        # Verify permissions
+        comp = self.get_queryset().filter(employee=rev.employee).first()
+        if not comp:
+            raise PermissionDenied("You do not have permission to modify this employee's compensation.")
+            
+        # Delete associated salary lines with this effective date
+        EmployeeSalaryLine.objects.filter(
+            employee=rev.employee, 
+            effective_from=rev.effective_from
+        ).delete()
+        
+        rev.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class EmployeePayrollProfileViewSet(viewsets.ModelViewSet):

@@ -162,6 +162,7 @@ def apply_compensation_revision(
         defaults={"organization_id": org_id, "effective_from": effective_from},
     )
     prev_gross = comp.monthly_gross
+    prev_eff = comp.effective_from
     comp.organization_id = org_id
     comp.ctc_type = ctc_type
     comp.monthly_gross = employee_gross
@@ -169,16 +170,29 @@ def apply_compensation_revision(
     comp.effective_from = effective_from
     comp.save()
 
-    if prev_gross != employee_gross or not CompensationRevision.objects.filter(employee=employee).exists():
-        CompensationRevision.objects.create(
-            employee=employee,
-            effective_from=effective_from,
-            ctc_type=ctc_type,
-            monthly_gross=employee_gross,
-            annual_ctc=annual,
-            note=note or "Compensation updated",
-            created_by=user,
-        )
+    if (
+        prev_gross != employee_gross 
+        or prev_eff != effective_from 
+        or not CompensationRevision.objects.filter(employee=employee).exists()
+    ):
+        # If there's already a revision on this exact date, update it rather than duplicating.
+        rev = CompensationRevision.objects.filter(employee=employee, effective_from=effective_from).first()
+        if rev:
+            rev.monthly_gross = employee_gross
+            rev.annual_ctc = annual
+            rev.ctc_type = ctc_type
+            rev.note = note or "Compensation updated"
+            rev.save()
+        else:
+            CompensationRevision.objects.create(
+                employee=employee,
+                effective_from=effective_from,
+                ctc_type=ctc_type,
+                monthly_gross=employee_gross,
+                annual_ctc=annual,
+                note=note or "Compensation updated",
+                created_by=user,
+            )
 
     sync_payroll_profile_from_compensation(comp)
 
@@ -206,10 +220,10 @@ def generate_from_ctc(
 
     if close_previous:
         day_before = effective_from - timedelta(days=1)
+        # Close all currently active lines so we don't end up with multiple active structures
         EmployeeSalaryLine.objects.filter(
             employee=employee,
             effective_to__isnull=True,
-            effective_from__lt=effective_from,
         ).update(effective_to=day_before)
 
     created: list[EmployeeSalaryLine] = []

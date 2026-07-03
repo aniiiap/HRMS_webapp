@@ -8,8 +8,8 @@ import Pagination from '../Pagination'
 
 function EditLogModal({ editing, onClose, onSave }) {
   const [status, setStatus] = useState(editing.check_in ? 'Present' : 'Absent')
-  const [inTime, setInTime] = useState(editing.check_in ? dayjs(editing.check_in).format('HH:mm') : '')
-  const [outTime, setOutTime] = useState(editing.check_out ? dayjs(editing.check_out).format('HH:mm') : '')
+  const [inTime, setInTime] = useState(editing.check_in ? dayjs(editing.check_in).format('HH:mm') : (editing.shift_start_time || ''))
+  const [outTime, setOutTime] = useState(editing.check_out ? dayjs(editing.check_out).format('HH:mm') : (editing.shift_end_time || ''))
   const [notes, setNotes] = useState(editing.notes || '')
 
   useEffect(() => {
@@ -24,8 +24,8 @@ function EditLogModal({ editing, onClose, onSave }) {
     let finalCheckIn = null;
     let finalCheckOut = null;
     if (status === 'Present') {
-      if (inTime) finalCheckIn = `${editing.date}T${inTime}`;
-      if (outTime) finalCheckOut = `${editing.date}T${outTime}`;
+      if (inTime) finalCheckIn = dayjs(`${editing.date}T${inTime}`).format();
+      if (outTime) finalCheckOut = dayjs(`${editing.date}T${outTime}`).format();
     }
     onSave({
       ...editing,

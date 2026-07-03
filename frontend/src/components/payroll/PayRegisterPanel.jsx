@@ -143,6 +143,7 @@ export default function PayRegisterPanel({
         'Department': row.department || '',
         'Designation': row.designation || '',
         'Paid Days': row.paid_days,
+        'Weekend Days': getWeekendDaysCount(row),
         'LOP Days': row.lop_days,
         'Basic': row.basic,
         'HRA': row.hra,
@@ -156,6 +157,14 @@ export default function PayRegisterPanel({
       const period = selectedRun ? `${selectedRun.period_year}-${String(selectedRun.period_month).padStart(2, '0')}` : 'Payroll'
       downloadCSV(exportData, `Pay_Register_${period}.csv`)
     })
+  }
+
+  function getWeekendDaysCount(row) {
+    if (!selectedRun || !selectedRun.period_year || !selectedRun.period_month || !selectedRun.working_days) return 0;
+    const year = Number(selectedRun.period_year);
+    const month = Number(selectedRun.period_month);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    return Math.max(0, daysInMonth - Number(selectedRun.working_days));
   }
 
   return (
@@ -177,6 +186,7 @@ export default function PayRegisterPanel({
               <th className="px-3 py-3">Employee</th>
               <th className="px-3 py-3">Department</th>
               <th className="px-3 py-3">Paid</th>
+              <th className="px-3 py-3">Weekends</th>
               <th className="px-3 py-3">LOP</th>
               <th className="px-3 py-3">Gross</th>
               <th className="px-3 py-3">Net</th>
@@ -222,6 +232,7 @@ export default function PayRegisterPanel({
                         </span>
                       )}
                     </td>
+                    <td className="px-3 py-3">{getWeekendDaysCount(row)}</td>
                     <td className="px-3 py-3">{row.lop_days}</td>
                     <td className="px-3 py-3 tabular-nums font-medium">{fmtInr(row.gross_prorated)}</td>
                     <td className="px-3 py-3 tabular-nums font-bold text-emerald-700 dark:text-emerald-400">{fmtInr(row.net_pay)}</td>
@@ -249,7 +260,7 @@ export default function PayRegisterPanel({
                   </tr>
                   {open && (
                     <tr className="bg-slate-50/90 dark:bg-slate-900/60">
-                      <td colSpan={9} className="px-6 py-5">
+                      <td colSpan={10} className="px-6 py-5">
                         <RegisterBreakdown 
                           g={g} 
                           row={row} 
@@ -265,7 +276,7 @@ export default function PayRegisterPanel({
             })}
             {results.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-12 text-center text-slate-500">
+                <td colSpan={10} className="px-4 py-12 text-center text-slate-500">
                   No employees in this run. Sync staff or create a new pay run.
                 </td>
               </tr>

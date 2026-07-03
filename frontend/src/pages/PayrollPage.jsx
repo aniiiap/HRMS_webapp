@@ -53,19 +53,18 @@ export default function PayrollPage() {
   const [statutory, setStatutory] = useState(null)
   const [employees, setEmployees] = useState([])
 
-  const [newRun, setNewRun] = useState({ year: String(new Date().getFullYear()), month: String(new Date().getMonth() + 1), working_days: '22' })
+  const [newRun, setNewRun] = useState({ 
+    year: String(new Date().getFullYear()), 
+    month: String(new Date().getMonth() + 1), 
+    working_days: String(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()) 
+  })
 
   useEffect(() => {
     const year = Number(periodYear)
     const month = Number(periodMonth)
     if (!year || !month) return
     const daysInMonth = new Date(year, month, 0).getDate()
-    let workingDaysCount = 0
-    for (let i = 1; i <= daysInMonth; i++) {
-      const d = new Date(year, month - 1, i).getDay()
-      if (d !== 0 && d !== 6) workingDaysCount++
-    }
-    setNewRun((prev) => ({ ...prev, working_days: String(workingDaysCount) }))
+    setNewRun((prev) => ({ ...prev, working_days: String(daysInMonth) }))
   }, [periodYear, periodMonth])
   const [summaryBusy, setSummaryBusy] = useState(false)
   const [compForm, setCompForm] = useState({
@@ -480,7 +479,13 @@ export default function PayrollPage() {
       toast.success('Run marked ready for finalization.')
       await loadRuns()
     } catch (err) {
-      toast.error(messageFromError(err))
+      const data = err.response?.data
+      if (data?.readiness?.blockers?.length > 0) {
+        const firstBlocker = data.readiness.blockers[0]
+        toast.error(`Cannot mark ready: ${firstBlocker.employee_name} - ${firstBlocker.issues[0]}`)
+      } else {
+        toast.error(messageFromError(err))
+      }
     }
   }
 
@@ -660,8 +665,19 @@ export default function PayrollPage() {
               onRecalculate={recalcRun}
               onSyncEmployees={syncEmployees}
               onMarkReady={async (id) => {
-                await api.post(`/api/payroll/runs/${id}/mark-ready/`)
-                await loadRuns()
+                try {
+                  await api.post(`/api/payroll/runs/${id}/mark-ready/`)
+                  toast.success('Run marked ready')
+                  await loadRuns()
+                } catch (err) {
+                  const data = err.response?.data
+                  if (data?.readiness?.blockers?.length > 0) {
+                    const firstBlocker = data.readiness.blockers[0]
+                    toast.error(`Cannot mark ready: ${firstBlocker.employee_name} - ${firstBlocker.issues[0]}`)
+                  } else {
+                    toast.error(data?.error || err.message)
+                  }
+                }
               }}
               onFinalize={finalizeRun}
               onReopen={reopenRun}

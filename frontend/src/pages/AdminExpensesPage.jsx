@@ -357,10 +357,11 @@ export default function AdminExpensesPage() {
                                                     </div>
                                                 )}
                                                 {activeTab === 'rejected' && (
-                                                    <button onClick={() => handleAction(claim.id, 'delete')} className="px-3 py-1.5 text-slate-600 bg-slate-100 hover:bg-red-100 hover:text-red-600 rounded-lg text-xs font-medium transition-colors">
-                                                        Delete
-                                                    </button>
+                                                    <span className="text-red-500 text-xs font-medium mr-2">Rejected</span>
                                                 )}
+                                                <button onClick={() => handleAction(claim.id, 'delete')} className="px-3 py-1.5 text-slate-600 bg-slate-100 hover:bg-red-100 hover:text-red-600 rounded-lg text-xs font-medium transition-colors">
+                                                    Delete
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

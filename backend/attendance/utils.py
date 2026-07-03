@@ -36,25 +36,28 @@ def attendance_anomaly(attendance: Attendance) -> str:
         worked_seconds = max((local_co - local_ci).total_seconds(), 0)
         worked_minutes = worked_seconds / 60
 
-        if settings.track_work_duration and worked_minutes >= settings.full_day_minutes:
-            return "none"
-        if worked_seconds >= scheduled_seconds > 0 and not settings.track_work_duration:
-            return "none"
+
 
         late_grace = timedelta(minutes=settings.grace_minutes)
         early_grace = timedelta(minutes=settings.early_checkout_grace_minutes)
 
-        if settings.track_in_time and local_ci > start_dt + late_grace:
+        is_late_checkin = settings.track_in_time and local_ci > start_dt + late_grace
+        is_early_checkout = settings.track_out_time and local_co < end_dt - early_grace
+
+        if is_late_checkin and is_early_checkout:
+            return "late_and_early"
+        if is_late_checkin:
             return "late_checkin"
-        if settings.track_out_time and local_co < end_dt - early_grace:
+        if is_early_checkout:
             return "early_checkout"
-        if settings.track_work_duration:
+
+        # Only check work duration if NEITHER in-time NOR out-time flagged an issue.
+        # If both in/out were on time, skip duration check (they clearly worked the shift).
+        if settings.track_work_duration and not settings.track_in_time and not settings.track_out_time:
             if worked_minutes < settings.half_day_minutes:
                 return "short_hours"
             if worked_minutes < settings.full_day_minutes:
                 return "short_hours"
-        elif worked_seconds < scheduled_seconds:
-            return "short_hours"
 
     elif attendance.check_in and settings.shift_start and settings.track_in_time:
         local_ci = timezone.localtime(attendance.check_in)

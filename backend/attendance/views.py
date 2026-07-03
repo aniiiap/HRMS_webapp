@@ -26,6 +26,7 @@ from leave_management.models import LeaveRequest, LeaveStatus, LeaveType
 
 from .log_status import day_status_for_employee
 from .utils import apply_auto_clock_out, attendance_anomaly
+from .rule_settings import resolve_shift_rule
 from .models import Attendance, AttendanceCorrectionRequest, AttendanceCorrectionStatus, AttendanceCorrectionType
 from .serializers import (
     AttendanceCorrectionCreateSerializer,
@@ -318,6 +319,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     profile_image_url = None
 
             anomaly = attendance_anomaly(att) if att else "none"
+            settings = resolve_shift_rule(e)
+            shift_start_time = settings.shift_start.strftime("%H:%M") if settings.shift_start else "09:00"
+            shift_end_time = settings.shift_end.strftime("%H:%M") if settings.shift_end else "18:00"
 
             result_rows.append(
                 {
@@ -335,6 +339,8 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     "check_out": att.check_out if att else None,
                     "anomaly": anomaly,
                     "notes": att.notes if att else "",
+                    "shift_start_time": shift_start_time,
+                    "shift_end_time": shift_end_time,
                 }
             )
 
