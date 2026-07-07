@@ -51,13 +51,9 @@ def attendance_anomaly(attendance: Attendance) -> str:
         if is_early_checkout:
             return "early_checkout"
 
-        # Only check work duration if NEITHER in-time NOR out-time flagged an issue.
-        # If both in/out were on time, skip duration check (they clearly worked the shift).
-        if settings.track_work_duration and not settings.track_in_time and not settings.track_out_time:
-            if worked_minutes < settings.half_day_minutes:
-                return "short_hours"
-            if worked_minutes < settings.full_day_minutes:
-                return "short_hours"
+        # The user explicitly requested that work duration is only for UI purposes
+        # and should not trigger anomalies if grace periods are covered.
+
 
     elif attendance.check_in and settings.shift_start and settings.track_in_time:
         local_ci = timezone.localtime(attendance.check_in)
