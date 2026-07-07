@@ -6,10 +6,66 @@ import toast from 'react-hot-toast'
 import { api, messageFromError } from '../../api/client'
 import Pagination from '../Pagination'
 
+function TimePicker12h({ value, onChange, disabled }) {
+  const hasValue = Boolean(value)
+  const [h, m] = hasValue ? value.split(':') : ['', '']
+  const hour = hasValue ? parseInt(h, 10) : 0
+  const isPM = hasValue && hour >= 12
+  const displayHour = hasValue ? (hour % 12 || 12) : ''
+  
+  return (
+    <div className="flex items-center gap-1.5">
+      <select 
+        disabled={disabled}
+        className="w-16 rounded-xl border border-slate-200 bg-white px-2 py-2.5 text-sm font-semibold text-slate-700 shadow-sm outline-none transition-all hover:border-slate-300 hover:bg-slate-50 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        value={displayHour}
+        onChange={e => {
+          const val = e.target.value
+          if (!val) { onChange(''); return }
+          const newH = (parseInt(val) % 12) + (isPM ? 12 : 0)
+          onChange(`${String(newH).padStart(2, '0')}:${m || '00'}`)
+        }}
+      >
+        <option value="">--</option>
+        {[1,2,3,4,5,6,7,8,9,10,11,12].map(num => <option key={num} value={num}>{num}</option>)}
+      </select>
+      <span className="text-slate-400 font-bold">:</span>
+      <select 
+        disabled={disabled}
+        className="w-16 rounded-xl border border-slate-200 bg-white px-2 py-2.5 text-sm font-semibold text-slate-700 shadow-sm outline-none transition-all hover:border-slate-300 hover:bg-slate-50 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        value={m}
+        onChange={e => {
+          const val = e.target.value
+          if (!val || !displayHour) return
+          onChange(`${String(hour).padStart(2, '0')}:${val}`)
+        }}
+      >
+        <option value="">--</option>
+        {Array.from({length: 60}, (_, i) => String(i).padStart(2, '0')).map(num => <option key={num} value={num}>{num}</option>)}
+      </select>
+      <select 
+        disabled={disabled || !hasValue}
+        className="w-20 rounded-xl border border-slate-200 bg-white px-2 py-2.5 text-sm font-semibold text-slate-700 shadow-sm outline-none transition-all hover:border-slate-300 hover:bg-slate-50 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        value={hasValue ? (isPM ? 'PM' : 'AM') : ''}
+        onChange={e => {
+          if (!hasValue) return
+          const newIsPM = e.target.value === 'PM'
+          const newH = (displayHour % 12) + (newIsPM ? 12 : 0)
+          onChange(`${String(newH).padStart(2, '0')}:${m}`)
+        }}
+      >
+        <option value="" className="hidden">--</option>
+        <option value="AM">AM</option>
+        <option value="PM">PM</option>
+      </select>
+    </div>
+  )
+}
+
 function EditLogModal({ editing, onClose, onSave }) {
   const [status, setStatus] = useState(editing.check_in ? 'Present' : 'Absent')
-  const [inTime, setInTime] = useState(editing.check_in ? dayjs(editing.check_in).format('HH:mm') : (editing.shift_start_time || ''))
-  const [outTime, setOutTime] = useState(editing.check_out ? dayjs(editing.check_out).format('HH:mm') : (editing.shift_end_time || ''))
+  const [inTime, setInTime] = useState(editing.check_in ? dayjs(editing.check_in).format('HH:mm') : '')
+  const [outTime, setOutTime] = useState(editing.check_out ? dayjs(editing.check_out).format('HH:mm') : '')
   const [notes, setNotes] = useState(editing.notes || '')
 
   useEffect(() => {
@@ -56,41 +112,44 @@ function EditLogModal({ editing, onClose, onSave }) {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6 bg-white dark:bg-slate-900">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div>
+            <label className="block text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 mb-2 uppercase">Status</label>
+            <select 
+              className="w-full sm:w-1/2 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all hover:border-slate-300 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:hover:border-slate-600 dark:focus:border-brand-500/80 dark:focus:bg-slate-800"
+              value={status} 
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <option value="Present">Present</option>
+              <option value="Absent">Absent</option>
+            </select>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
             <div>
-              <label className="block text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 mb-2 uppercase">Status</label>
-              <select 
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all hover:border-slate-300 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:hover:border-slate-600 dark:focus:border-brand-500/80 dark:focus:bg-slate-800"
-                value={status} 
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="Present">Present</option>
-                <option value="Absent">Absent</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 mb-2 uppercase">In Time</label>
-              <input 
-                type="time" 
+              <label className="block text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 mb-2 uppercase flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                Check In Time
+              </label>
+              <TimePicker12h 
                 disabled={status === 'Absent'}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all hover:border-slate-300 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 disabled:opacity-40 disabled:cursor-not-allowed dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:hover:border-slate-600 dark:focus:border-brand-500/80 dark:focus:bg-slate-800"
-                value={inTime} 
-                onChange={(e) => setInTime(e.target.value)} 
+                value={inTime}
+                onChange={setInTime}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 mb-2 uppercase">Out Time</label>
-              <input 
-                type="time" 
+              <label className="block text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 mb-2 uppercase flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
+                Check Out Time
+              </label>
+              <TimePicker12h 
                 disabled={status === 'Absent'}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all hover:border-slate-300 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 disabled:opacity-40 disabled:cursor-not-allowed dark:border-slate-700/80 dark:bg-slate-800/50 dark:text-slate-100 dark:hover:border-slate-600 dark:focus:border-brand-500/80 dark:focus:bg-slate-800"
-                value={outTime} 
-                onChange={(e) => setOutTime(e.target.value)} 
+                value={outTime}
+                onChange={setOutTime}
               />
             </div>
           </div>
           
-          <div>
+          <div className="pt-2">
             <label className="block text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 mb-2 uppercase">Comment</label>
             <textarea 
               rows={3}

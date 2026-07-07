@@ -37,15 +37,17 @@ class ShiftRuleSettings:
 
 def resolve_shift_rule(employee) -> ShiftRuleSettings:
     template = getattr(employee, "shift_template", None)
-    shift_start = employee.shift_start_time or (template.start_time if template else None)
-    shift_end = employee.shift_end_time or (template.end_time if template else None)
 
-    # When a template is assigned, always use its grace values — the template IS the rule.
+    # When a template is assigned, always use its values — the template IS the rule.
     # Employee-level overrides only apply when there is no template.
     if template:
+        shift_start = template.start_time
+        shift_end = template.end_time
         grace = template.grace_minutes
         early_grace = template.early_checkout_grace_minutes
     else:
+        shift_start = employee.shift_start_time
+        shift_end = employee.shift_end_time
         grace = employee.grace_minutes
         early_grace = employee.early_checkout_grace_minutes
 
