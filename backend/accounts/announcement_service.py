@@ -199,21 +199,35 @@ def dispatch_announcement(announcement: CompanyAnnouncement) -> dict:
     sms_failed = 0
 
     org_name = announcement.organization.name if announcement.organization_id else "HR Core"
+    
+    from accounts.announcement_mailer import build_announcement_email_html
+    from accounts.invite_mailer import send_html_email_batch
+    
+    html = build_announcement_email_html(
+        title=announcement.title,
+        message=announcement.message,
+        organization_name=org_name,
+        priority=announcement.priority,
+    )
+    subject = f"[{org_name}] {announcement.title}"
+    email_payloads = []
+    
     for user in recipients:
         if announcement.send_email and user.email:
-            ok, detail = send_announcement_email(
-                to_email=user.email,
-                full_name=f"{user.first_name} {user.last_name}".strip() or user.email,
-                title=announcement.title,
-                message=announcement.message,
-                organization_name=org_name,
-                priority=announcement.priority,
-            )
-            if ok:
-                emails_sent += 1
-            else:
-                emails_failed += 1
-                logger.warning("announcement email to %s failed: %s", user.email, detail)
+            email_payloads.append({
+                "to": user.email,
+                "subject": subject,
+                "html": html,
+            })
+            
+    if email_payloads:
+        sent, failed = send_html_email_batch(payloads=email_payloads)
+        emails_sent += sent
+        emails_failed += failed
+        if failed > 0:
+            logger.warning("Failed to send %d announcement emails via batch.", failed)
+            
+    for user in recipients:
 
         if announcement.send_sms:
             employee: Employee | None = getattr(user, "employee_profile", None)

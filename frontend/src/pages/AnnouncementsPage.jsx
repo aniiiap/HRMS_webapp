@@ -19,7 +19,6 @@ function createEmptyForm() {
     target_value: '',
     target_employee_ids: [],
     send_email: false,
-    send_sms: false,
     publish_on: todayDateValue(),
   }
 }
@@ -37,7 +36,6 @@ function buildPayload(values) {
         : (values.target_value || '').trim(),
     target_employee_ids: values.target_audience === 'employees' ? values.target_employee_ids || [] : [],
     send_email: Boolean(values.send_email),
-    send_sms: Boolean(values.send_sms),
     publish_on: fromDateInputValue(values.publish_on),
   }
 }
@@ -151,7 +149,6 @@ export default function AnnouncementsPage() {
       target_value: row.target_value || '',
       target_employee_ids: Array.isArray(row.target_employee_ids) ? row.target_employee_ids : [],
       send_email: Boolean(row.send_email),
-      send_sms: Boolean(row.send_sms),
       publish_on: toDateInputValue(row.publish_on),
     })
     setEditEmpSearch('')
@@ -170,7 +167,6 @@ export default function AnnouncementsPage() {
       const d = data.delivery || {}
       const parts = [`${d.notifications || 0} notified`]
       if (form.send_email) parts.push(`${d.emails_sent || 0} emailed`)
-      if (form.send_sms) parts.push(`${d.sms_sent || 0} SMS`)
       toast.success(`Announcement published — ${parts.join(', ')}.`)
       setForm(createEmptyForm())
       setEmpSearch('')
@@ -323,7 +319,7 @@ export default function AnnouncementsPage() {
             onToggleEmployee={toggleEmployeeInForm}
           />
           <p className="text-xs text-slate-500">
-            In-app notification and popup are always sent. Email uses your Resend setup. SMS requires Twilio configuration.
+            In-app notification and popup are always sent. Email uses your Resend setup.
           </p>
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? 'Publishing…' : 'Publish announcement'}
@@ -375,7 +371,6 @@ export default function AnnouncementsPage() {
                 </td>
                 <td className="px-4 py-3 text-xs text-slate-500">
                   App{r.send_email ? ' · Email' : ''}
-                  {r.send_sms ? ' · SMS' : ''}
                 </td>
                 <td className="px-4 py-3 text-xs">
                   {r.publish_on ? dayjs(r.publish_on).format('DD MMM YYYY') : '—'}

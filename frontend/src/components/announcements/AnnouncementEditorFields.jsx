@@ -166,15 +166,6 @@ export default function AnnouncementEditorFields({
           <Mail className="h-4 w-4 text-slate-500" />
           Also send email
         </label>
-        <label className="flex items-center gap-2" title="SMS requires a paid provider (e.g. Twilio)">
-          <input
-            type="checkbox"
-            checked={Boolean(values.send_sms)}
-            onChange={(e) => set({ send_sms: e.target.checked })}
-          />
-          <MessageSquare className="h-4 w-4 text-slate-500" />
-          Also send SMS (paid provider)
-        </label>
       </div>
     </div>
   )

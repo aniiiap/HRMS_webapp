@@ -119,3 +119,51 @@ def send_html_email(*, to_email: str, subject: str, html: str) -> tuple[bool, st
         return False, f"Resend HTTP {exc.code}: {body[:300]}"
     except Exception as exc:
         return False, f"Resend error: {exc}"
+
+
+def send_html_email_batch(*, payloads: list[dict]) -> tuple[int, int]:
+    """
+    Sends multiple emails in a single request using Resend's batch endpoint.
+    payloads: [{'to': '...', 'subject': '...', 'html': '...'}, ...]
+    Returns (emails_sent, emails_failed).
+    """
+    api_key = settings.RESEND_API_KEY
+    from_email = settings.RESEND_FROM_EMAIL
+    if not api_key or not from_email:
+        return 0, len(payloads)
+
+    sent = 0
+    failed = 0
+    
+    # Resend batch limit is 100 per request
+    for i in range(0, len(payloads), 100):
+        batch = payloads[i:i+100]
+        batch_data = []
+        for p in batch:
+            batch_data.append({
+                "from": from_email,
+                "to": [p["to"]],
+                "subject": p["subject"],
+                "html": p["html"]
+            })
+            
+        req = request.Request(
+            "https://api.resend.com/emails/batch",
+            data=json.dumps(batch_data).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with request.urlopen(req, timeout=30) as resp:
+                if 200 <= resp.status < 300:
+                    sent += len(batch)
+                else:
+                    failed += len(batch)
+        except Exception as exc:
+            logger.warning("Resend batch email failed: %s", exc)
+            failed += len(batch)
+            
+    return sent, failed
