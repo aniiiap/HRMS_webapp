@@ -547,7 +547,7 @@ export default function DashboardPage() {
         <div className="card relative w-full shrink-0 overflow-hidden bg-[#dff7f1] ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10">
           <div className="relative flex flex-col p-4">
             <img
-              src="/illustrations/10172825_8401.jpg"
+              src="/illustrations/10172825_8401.webp"
               alt="Welcome illustration"
               className="mt-2 h-[190px] w-full rounded-2xl bg-white object-contain p-2 md:h-[210px]"
             />

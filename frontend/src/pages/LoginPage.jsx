@@ -72,8 +72,11 @@ export default function LoginPage() {
           <div className="relative hidden min-h-[480px] items-center justify-center bg-gradient-to-br from-brand-50 via-warm-50 to-accent-50/40 p-8 md:flex dark:from-stone-900 dark:via-stone-900 dark:to-brand-950/30">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(20,184,166,0.15),transparent_50%)]" />
             <img
-              src="/illustrations/24070702_bwink_bld_03_single_03.jpg"
+              src="/illustrations/24070702_bwink_bld_03_single_03.webp"
               alt="HR operations illustration"
+              loading="lazy"
+              fetchpriority="low"
+              decoding="async"
               className="relative z-10 h-full max-h-[400px] w-full rounded-2xl object-contain motion-safe:animate-float-slow"
             />
           </div>

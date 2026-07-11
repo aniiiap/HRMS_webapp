@@ -111,8 +111,8 @@ export default function AttendancePage() {
           localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ ...coords, ts: Date.now() }))
           resolve(coords)
         },
-        () => reject(new Error('Location permission is required for attendance punch.')),
-        { enableHighAccuracy: false, timeout: 4000, maximumAge: 120000 },
+        () => reject(new Error('Location permission is required or location request timed out.')),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
       )
     })
   }
@@ -142,8 +142,10 @@ export default function AttendancePage() {
   useEffect(() => { void load() }, [isManagerPlus, month, year])
 
   async function punch(type) {
+    const toastId = toast.loading('Acquiring high-accuracy location...')
     try {
       const location = await captureLocation()
+      toast.loading('Clocking in...', { id: toastId })
       const { data } = await api.post(`/api/attendance/${type}/`, location)
       setRows((prev) => {
         const next = [...prev]
@@ -155,9 +157,10 @@ export default function AttendancePage() {
         }
         return next
       })
-      toast.success(type === 'check_in' ? 'Clocked in successfully.' : 'Clocked out successfully.')
+      toast.success(type === 'check_in' ? 'Clocked in successfully.' : 'Clocked out successfully.', { id: toastId })
       void load()
     } catch (err) {
+      toast.error(messageFromError(err), { id: toastId })
       setError(messageFromError(err))
     }
   }
