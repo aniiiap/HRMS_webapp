@@ -41,6 +41,13 @@ api.interceptors.response.use(
             localStorage.setItem(ACCESS, res.data.access)
             return res.data.access
           })
+          .catch((err) => {
+            if (err.response?.status === 401 || err.response?.status === 403) {
+              tokenStore.clear()
+              window.location.href = '/'
+            }
+            throw err
+          })
           .finally(() => {
             refreshing = null
           })

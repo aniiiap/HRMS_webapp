@@ -123,8 +123,8 @@ export default function EmployeeCompensationSection({ employeeId, readOnly = fal
             <KpiCard icon={TrendingUp} label="Annual CTC" value={displayAnnual ? fmtInrFull(displayAnnual) : '—'} />
           </div>
 
-          {canEdit && (
-            <form onSubmit={saveComp} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
+          {!readOnly && (
+            <form onSubmit={save} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
               <h4 className="text-sm font-semibold">{comp ? 'Revise compensation' : 'Add compensation details'}</h4>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <label className="text-xs font-medium text-slate-500">
@@ -187,7 +187,7 @@ export default function EmployeeCompensationSection({ employeeId, readOnly = fal
                     <th className="px-4 py-3">Effective</th>
                     <th className="px-4 py-3">Monthly gross</th>
                     <th className="px-4 py-3">Annual CTC</th>
-                    {canEdit && <th className="px-4 py-3 text-right">Actions</th>}
+                    {!readOnly && <th className="px-4 py-3 text-right">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -196,15 +196,14 @@ export default function EmployeeCompensationSection({ employeeId, readOnly = fal
                       <td className="px-4 py-3">{dayjs(r.effective_from).format('MMM YYYY')}</td>
                       <td className="px-4 py-3 font-semibold">{fmtInrFull(r.monthly_gross)}</td>
                       <td className="px-4 py-3">{fmtInrFull(r.annual_ctc)}</td>
-                      {canEdit && (
+                      {!readOnly && (
                         <td className="px-4 py-3 text-right">
                           <button
                             type="button"
-                            className="text-slate-400 hover:text-rose-600"
-                            onClick={() => void deleteRevision(r.id)}
-                            title="Delete revision"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-slate-700 dark:hover:border-red-900/50 dark:hover:bg-red-900/20"
+                            onClick={() => deleteRevision(r.id)}
                           >
-                            <Trash2 className="inline h-4 w-4" />
+                            <Trash2 size={14} />
                           </button>
                         </td>
                       )}

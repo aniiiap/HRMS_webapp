@@ -66,16 +66,23 @@ export default function Layout() {
     user?.email?.split('@')?.[0] ||
     (user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Account')
   const canViewPayrollAdmin = ['admin', 'hr'].includes(user?.role)
-  const canViewReports = ['admin', 'hr', 'manager'].includes(user?.role)
-  const general = allGeneral.filter((item) => {
-    if (item.to === '/employees') return ['admin', 'hr', 'manager'].includes(user?.role)
+  const canViewReports = ['admin', 'hr'].includes(user?.role)
+  const general = allGeneral.map((item) => {
+    if (item.to === '/letters' && !['admin', 'hr'].includes(user?.role)) {
+      return { ...item, to: `/employees/${user?.employee_id}?tab=documents`, label: 'My Documents' }
+    }
+    return item
+  }).filter((item) => {
+    if (item.to === '/employees') return ['admin', 'hr'].includes(user?.role)
+    if (item.to === '/announcements') return ['admin', 'hr', 'employee'].includes(user?.role)
+    if (item.to === '/payroll') return ['admin', 'hr', 'employee'].includes(user?.role)
     return true
   })
   const more = allMore.filter((item) => {
     if (item.to === '/organizations') return canViewPayrollAdmin && !user?.is_superuser
     if (item.to === '/reports') return canViewReports
-    if (item.to === '/expenses/approvals') return ['admin', 'hr', 'manager'].includes(user?.role)
-    if (item.to === '/expenses') return ['employee', 'manager'].includes(user?.role)
+    if (item.to === '/expenses/approvals') return ['admin', 'hr'].includes(user?.role)
+    if (item.to === '/expenses') return ['employee'].includes(user?.role)
     return true
   })
 
@@ -152,7 +159,7 @@ export default function Layout() {
                 <span className={`inline-flex ${item.iconFx}`}>
                   <item.icon size={18} strokeWidth={2} />
                 </span>
-                {user?.role === 'employee' && item.employeeLabel ? item.employeeLabel : item.label}
+                {['employee', 'manager'].includes(user?.role) && item.employeeLabel ? item.employeeLabel : item.label}
               </NavLink>
             ))}
           </div>
@@ -165,7 +172,7 @@ export default function Layout() {
                 <span className={`inline-flex ${item.iconFx}`}>
                   <item.icon size={18} strokeWidth={2} />
                 </span>
-                {user?.role === 'employee' && item.employeeLabel ? item.employeeLabel : item.label}
+                {['employee', 'manager'].includes(user?.role) && item.employeeLabel ? item.employeeLabel : item.label}
               </NavLink>
             ))}
           </div>

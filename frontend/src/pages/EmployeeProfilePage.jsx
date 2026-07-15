@@ -48,7 +48,37 @@ export default function EmployeeProfilePage() {
   const [saving, setSaving] = useState(false)
 
   const canEditPayroll = isPrivileged
-  const canEditProfile = isPrivileged
+  const canEditProfile = isPrivileged && employee?.role !== 'admin'
+  const canUploadDocs = isPrivileged || (user?.email === employee?.email)
+
+  const handleDocUpload = async (file) => {
+    try {
+      const formData = new FormData()
+      formData.append('employee', id)
+      formData.append('title', file.name)
+      formData.append('upload', file)
+      await api.post('/api/documents/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      toast.success('Document uploaded successfully.')
+      // Refresh documents
+      const { data } = await api.get('/api/documents/', { params: { employee: id } })
+      setDocuments(Array.isArray(data) ? data : data.results || [])
+    } catch (err) {
+      toast.error('Failed to upload document.')
+    }
+  }
+
+  const handleDocDelete = async (docId) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return
+    try {
+      await api.delete(`/api/documents/${docId}/`)
+      toast.success('Document deleted successfully.')
+      setDocuments((prev) => prev.filter((d) => d.id !== docId))
+    } catch (err) {
+      toast.error('Failed to delete document.')
+    }
+  }
 
   const loadEmployee = useCallback(async () => {
     setLoading(true)
@@ -242,7 +272,7 @@ export default function EmployeeProfilePage() {
 
             {tab === 'workweek' && <EmployeeWorkWeekTab employee={employee} shiftTemplate={shiftTemplate} />}
 
-            {tab === 'documents' && <EmployeeDocumentsTab documents={documents} />}
+            {tab === 'documents' && <EmployeeDocumentsTab documents={documents} canUpload={canUploadDocs} onUpload={handleDocUpload} onDelete={handleDocDelete} />}
 
             {tab === 'attendance' && (
               <EmployeeAttendanceTab

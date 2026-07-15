@@ -269,7 +269,9 @@ def password_reset_request_view(request):
     user = User.objects.filter(email__iexact=email).first()
     payload = {"message": PASSWORD_RESET_SENT_MESSAGE}
     if user and user_can_reset_password(user):
-        _reset, _reset_url, ok, detail = issue_and_send_password_reset(user)
+        _reset, _reset_url, ok, detail = issue_and_send_password_reset(
+            user, frontend_origin=request.headers.get("Origin")
+        )
         if not ok:
             payload["email_status"] = detail
     return Response(payload, status=status.HTTP_200_OK)

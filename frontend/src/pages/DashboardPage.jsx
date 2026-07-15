@@ -289,7 +289,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 export default function DashboardPage() {
-  const { user, isManagerPlus } = useAuth()
+  const { user, isPrivileged } = useAuth()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const [data, setData] = useState(null)
@@ -304,8 +304,8 @@ export default function DashboardPage() {
     async function load() {
       setLoading(true)
       try {
-        const endpoint = isManagerPlus ? '/api/reports/dashboard/' : '/api/reports/me/'
-        if (isManagerPlus) {
+        const endpoint = isPrivileged ? '/api/reports/dashboard/' : '/api/reports/me/'
+        if (isPrivileged) {
           const params = {}
           if (user?.organization_id) params.organization = user.organization_id
           const res = await api.get(endpoint, { params })
@@ -331,7 +331,7 @@ export default function DashboardPage() {
       void load()
     }, 60000)
     return () => clearInterval(timer)
-  }, [isManagerPlus, user?.organization_id])
+  }, [isPrivileged, user?.organization_id])
 
   const firstName = user?.first_name || 'there'
   const quoteOfDay = DAILY_QUOTES[(dayjs().date() + dayjs().month()) % DAILY_QUOTES.length]
@@ -399,7 +399,7 @@ export default function DashboardPage() {
     }
   }
 
-  if (!isManagerPlus) {
+  if (!isPrivileged) {
     const trendChart = attTrend
       .filter((d) => d.status !== 'weekend')
       .map((d) => ({

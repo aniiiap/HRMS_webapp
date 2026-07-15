@@ -655,6 +655,185 @@ class EmployeeDocumentViewSet(viewsets.ModelViewSet):
         return qs.none()
 
     def get_permissions(self):
-        if self.action in ("create", "update", "partial_update", "destroy"):
+        if self.action in ("update", "partial_update"):
             return [permissions.IsAuthenticated(), IsAdminOrHR()]
         return [permissions.IsAuthenticated()]
+
+    def _proxy_file(self, request, inline=True):
+        """
+        Proxy a document file through Django so we control headers.
+        Uses Cloudinary's private download URL to bypass PDF restrictions on free accounts.
+        """
+        import requests as req_lib
+        import mimetypes
+        import os
+        from django.http import HttpResponse
+        import cloudinary.utils
+
+        doc = self.get_object()
+        file_url = doc.file if isinstance(doc.file, str) else str(doc.file)
+
+        filename = doc.title or ''
+        url_path = file_url.split('?')[0]
+        url_ext = os.path.splitext(url_path)[1]
+        title_ext = os.path.splitext(filename)[1]
+        if not title_ext and url_ext:
+            filename = filename + url_ext
+        if not filename:
+            filename = os.path.basename(url_path) or 'document'
+
+        mime_type, _ = mimetypes.guess_type(filename)
+        if not mime_type:
+            mime_type = 'application/octet-stream'
+
+        # Extract public_id from Cloudinary URL (either upload or private type)
+        # URL pattern: https://res.cloudinary.com/<cloud>/raw/<type>/<version>/<public_id>
+        # or with signature: https://res.cloudinary.com/<cloud>/raw/<type>/s--<sig>--/<version>/<public_id>
+        try:
+            parts = url_path.split('/raw/')
+            if len(parts) > 1:
+                after_raw = parts[-1]
+                # after_raw could be like: private/s--...--/v1234/employee_docs/file.pdf
+                # or: upload/v1234/employee_docs/file.pdf
+                segments = after_raw.split('/')
+                # Find the first segment that is NOT 'private', 'upload', 'authenticated', a signature (s--...--), or a version (v...)
+                idx = 0
+                while idx < len(segments):
+                    seg = segments[idx]
+                    if seg in ('private', 'upload', 'authenticated') or seg.startswith('s--') or (seg.startswith('v') and seg[1:].isdigit()):
+                        idx += 1
+                    else:
+                        break
+                public_id = '/'.join(segments[idx:])
+                
+                # If it's a legacy public file (not private), we can try regular URL first
+                # But since we want to be safe, let's always try the private download URL
+                format_arg = url_ext[1:] if url_ext else ''
+                dl_url = cloudinary.utils.private_download_url(
+                    public_id,
+                    format=format_arg,
+                    resource_type='raw'
+                )
+            else:
+                dl_url = file_url
+        except Exception:
+            dl_url = file_url
+
+        try:
+            resp = req_lib.get(dl_url, timeout=30, allow_redirects=True)
+            # If private download fails (e.g. legacy public file), fallback to the raw URL directly
+            if resp.status_code != 200:
+                resp = req_lib.get(file_url, timeout=30, allow_redirects=True)
+            resp.raise_for_status()
+        except Exception as e:
+            return HttpResponse(f'Could not fetch file: {e}', status=502)
+
+        ct = resp.headers.get('Content-Type', '').split(';')[0].strip()
+        if ct and ct not in ('application/octet-stream', ''):
+            mime_type = ct
+
+        disposition = 'inline' if inline else 'attachment'
+        safe_filename = filename.replace('"', '\\"')
+        http_resp = HttpResponse(resp.content, content_type=mime_type)
+        http_resp['Content-Disposition'] = f'{disposition}; filename="{safe_filename}"'
+        http_resp['Content-Length'] = len(resp.content)
+        return http_resp
+
+    @action(detail=True, methods=['get'], url_path='download')
+    def download(self, request, pk=None):
+        return self._proxy_file(request, inline=False)
+
+    @action(detail=True, methods=['get'], url_path='preview')
+    def preview(self, request, pk=None):
+        return self._proxy_file(request, inline=True)
+
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        emp_id = self.request.data.get("employee")
+        if not emp_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"employee": "Employee ID required."})
+
+        emp = Employee.objects.filter(pk=emp_id).first()
+        if not emp:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"employee": "Employee not found."})
+
+        is_admin_hr = user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR)
+        is_self = hasattr(user, 'employee_profile') and str(user.employee_profile.pk) == str(emp.pk)
+
+        if not (is_admin_hr or is_self):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You can only upload documents for yourself.")
+
+        org_id = organization_id_from_request(self.request)
+        if org_id and emp.organization_id != org_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Employee belongs to a different organization.")
+
+        # Upload the file directly via Cloudinary SDK (avoids django-cloudinary-storage
+        # tagging which causes ACL failures on free Cloudinary accounts)
+        import cloudinary.uploader
+        import os
+        upload_file = serializer.validated_data.pop('upload', None)
+        if upload_file:
+            original_name = upload_file.name or 'document'
+            ext = os.path.splitext(original_name)[1].lower()
+            result = cloudinary.uploader.upload(
+                upload_file,
+                resource_type='raw',
+                folder='employee_docs',
+                use_filename=True,
+                unique_filename=True,
+                overwrite=False,
+                type='private',
+            )
+            # Append file extension so browsers know the MIME type
+            secure_url = result.get('secure_url', '')
+            if ext and not secure_url.lower().endswith(ext):
+                secure_url = secure_url + ext
+            doc = serializer.save(file=secure_url)
+        else:
+            doc = serializer.save()
+
+        if not is_admin_hr:
+            from accounts.models import User
+            hr_users = User.objects.filter(role=UserRole.HR, is_active=True)
+            if emp.organization_id:
+                hr_users = hr_users.filter(employee_profile__organization_id=emp.organization_id)
+            hr_emails = list(hr_users.values_list('email', flat=True))
+            if not hr_emails:
+                admin_users = User.objects.filter(role=UserRole.ADMIN, is_active=True)
+                if emp.organization_id:
+                    admin_users = admin_users.filter(employee_profile__organization_id=emp.organization_id)
+                hr_emails = list(admin_users.values_list('email', flat=True))
+
+            if hr_emails:
+                from accounts.async_tasks import send_html_email_async
+                uploader_name = user.get_full_name() or user.email
+                html = f"""
+                <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                  <p>A new document has been uploaded by <b>{uploader_name}</b>.</p>
+                  <p><b>Document Title:</b> {doc.title}</p>
+                  <p>Log in to the HR Core admin panel to view the document.</p>
+                </div>
+                """
+                for email in hr_emails:
+                    if email:
+                        send_html_email_async(
+                            to_email=email,
+                            subject=f"New Document Uploaded: {uploader_name}",
+                            html=html,
+                        )
+
+
+    def perform_destroy(self, instance):
+        user = self.request.user
+        is_admin_hr = user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR)
+        is_self = hasattr(user, 'employee_profile') and str(user.employee_profile.pk) == str(instance.employee_id)
+        
+        if not (is_admin_hr or is_self):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You can only delete your own documents.")
+        instance.delete()

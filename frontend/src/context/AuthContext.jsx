@@ -17,8 +17,10 @@ export function AuthProvider({ children }) {
       try {
         const { data } = await api.get('/api/auth/me/')
         setUser(data)
-      } catch {
-        tokenStore.clear()
+      } catch (err) {
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          tokenStore.clear()
+        }
         setUser(null)
       } finally {
         setLoading(false)

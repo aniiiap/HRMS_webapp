@@ -126,7 +126,8 @@ class EmployeeDocument(models.Model):
         related_name="documents",
     )
     title = models.CharField(max_length=200)
-    file = models.FileField(upload_to="employee_docs/")
+    # Store the Cloudinary delivery URL directly (uploaded via SDK to avoid ACL issues)
+    file = models.URLField(max_length=1000)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

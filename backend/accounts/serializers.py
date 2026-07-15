@@ -101,6 +101,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 }
             )
 
+        if user.role == UserRole.ADMIN:
+            from employees.models import Employee
+            org_id = getattr(user, "organization_id", None)
+            if org_id and not hasattr(user, 'employee_profile'):
+                Employee.objects.create(
+                    user=user,
+                    organization_id=org_id,
+                    employee_code=f"ADMIN-{user.id}"
+                )
+
         data = super().validate(attrs)
         data["user"] = _user_payload(self.user)
         return data

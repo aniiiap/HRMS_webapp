@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, LocateFixed, MailPlus, MapPin, Pencil, Power, Trash2, X, Download } from 'lucide-react'
+import { Check, LocateFixed, MailPlus, MapPin, Pencil, Power, Trash2, X, Download, ChevronRight } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { api, messageFromError } from '../api/client'
@@ -599,17 +599,21 @@ export default function EmployeesPage() {
                   )}
                 </td>
                 <td className="w-[130px] px-4 py-3">
-                  <button
-                    type="button"
-                    disabled={busyId === r.id}
-                    onClick={() => void toggleLocationRestriction(r)}
-                    className={`inline-flex h-6 w-12 items-center rounded-full px-1 transition ${
-                      r.location_restriction_enabled !== false ? 'bg-blue-500 justify-end' : 'bg-slate-300 justify-start'
-                    }`}
-                    title="Toggle location restriction"
-                  >
-                    <span className="h-4 w-4 rounded-full bg-white shadow" />
-                  </button>
+                  {r.role !== 'admin' ? (
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => void toggleLocationRestriction(r)}
+                      className={`inline-flex h-6 w-12 items-center rounded-full px-1 transition ${
+                        r.location_restriction_enabled !== false ? 'bg-blue-500 justify-end' : 'bg-slate-300 justify-start'
+                      }`}
+                      title="Toggle location restriction"
+                    >
+                      <span className="h-4 w-4 rounded-full bg-white shadow" />
+                    </button>
+                  ) : (
+                    <span className="text-xs text-slate-400">N/A</span>
+                  )}
                 </td>
                 {isPrivileged && (
                   <td className="px-4 py-3">
@@ -636,35 +640,50 @@ export default function EmployeesPage() {
                           </button>
                         </>
                       ) : (
-                        <button
-                          type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700"
-                          disabled={busyId === r.id}
-                          onClick={() => startEdit(r)}
-                          title="Edit"
-                        >
-                          <Pencil size={14} />
-                        </button>
+                        r.role !== 'admin' ? (
+                          <button
+                            type="button"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700"
+                            disabled={busyId === r.id}
+                            onClick={() => startEdit(r)}
+                            title="Edit"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        ) : (
+                          <div className="h-8 w-8" />
+                        )
                       )}
                       {editingId !== r.id && (
                         <Link
                           to={`/employees/${r.id}?tab=compensation`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700 hover:border-slate-400"
                           title="Payroll"
                         >
                           ₹
                         </Link>
                       )}
-                      <button
-                        type="button"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700"
-                        disabled={busyId === r.id}
-                        onClick={() => toggleActive(r)}
-                        title={r.is_active !== false ? 'Deactivate' : 'Activate'}
-                      >
-                        <Power size={14} />
-                      </button>
-                      {(r.onboarding_pending || !r.is_active) && (
+                      {editingId !== r.id && (
+                        <Link
+                          to={`/employees/${r.id}`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700 hover:border-slate-400"
+                          title="View Profile"
+                        >
+                          <ChevronRight size={14} />
+                        </Link>
+                      )}
+                      {r.role !== 'admin' && (
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700"
+                          disabled={busyId === r.id}
+                          onClick={() => toggleActive(r)}
+                          title={r.is_active !== false ? 'Deactivate' : 'Activate'}
+                        >
+                          <Power size={14} className={r.is_active !== false ? 'text-red-600' : 'text-emerald-600'} />
+                        </button>
+                      )}
+                      {r.role !== 'admin' && (r.onboarding_pending || !r.is_active) && (
                         <button
                           type="button"
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-brand-200 text-brand-700"

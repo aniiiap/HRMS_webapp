@@ -81,7 +81,12 @@ export default function App() {
         <Route element={<CompanyRoute />}>
           <Route element={<Layout />}>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/employees" element={<EmployeesPage />} />
+          <Route element={<RoleRoute allowedRoles={['admin', 'hr']} />}>
+            <Route path="/employees" element={<EmployeesPage />} />
+            <Route path="/letters" element={<LetterTemplates />} />
+            <Route path="/letters/:id" element={<LetterEditor />} />
+          </Route>
+          
           <Route
             path="/employees/:id"
             element={
@@ -90,29 +95,29 @@ export default function App() {
               </Suspense>
             }
           />
+          
           <Route path="/attendance" element={<AttendancePage />} />
-          <Route
-            path="/announcements"
-            element={
-              <Suspense fallback={<RoutePageFallback />}>
-                <AnnouncementsPage />
-              </Suspense>
-            }
-          />
-          <Route path="/attendance" element={<AttendancePage />} />
-          <Route path="/payroll" element={<PayrollPage />} />
-          <Route path="/letters" element={<LetterTemplates />} />
-          <Route path="/letters/:id" element={<LetterEditor />} />
+          <Route element={<RoleRoute allowedRoles={['admin', 'hr', 'employee']} />}>
+            <Route
+              path="/announcements"
+              element={
+                <Suspense fallback={<RoutePageFallback />}>
+                  <AnnouncementsPage />
+                </Suspense>
+              }
+            />
+          </Route>
+          <Route element={<RoleRoute allowedRoles={['admin', 'hr', 'employee']} />}>
+            <Route path="/payroll" element={<PayrollPage />} />
+          </Route>
           <Route path="/leaves" element={<LeavesPage />} />
           
           {/* Expenses */}
-          <Route path="/expenses" element={
-            <Suspense fallback={<RoutePageFallback />}>
-              <ExpensesPage />
-            </Suspense>
-          } />
+          <Route element={<RoleRoute allowedRoles={['employee']} />}>
+            <Route path="/expenses" element={<Suspense fallback={<RoutePageFallback />}><ExpensesPage /></Suspense>} />
+          </Route>
           
-          <Route element={<RoleRoute allowedRoles={['admin', 'hr', 'manager']} />}>
+          <Route element={<RoleRoute allowedRoles={['admin', 'hr']} />}>
             <Route path="/expenses/approvals" element={
               <Suspense fallback={<RoutePageFallback />}>
                 <AdminExpensesPage />

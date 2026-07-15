@@ -1,7 +1,7 @@
 from django.conf import settings
 
 from .async_tasks import send_password_reset_email_async
-from .invite_service import frontend_url_for_email
+from .invite_service import _resolve_frontend_url
 from .models import PasswordResetToken
 
 
@@ -15,9 +15,10 @@ def user_can_reset_password(user) -> bool:
     return True
 
 
-def issue_and_send_password_reset(user):
+def issue_and_send_password_reset(user, frontend_origin: str | None = None):
     reset = PasswordResetToken.create_for_user(user, lifetime_hours=1)
-    reset_url = f"{frontend_url_for_email()}/reset-password?token={reset.token}"
+    base_url = _resolve_frontend_url(frontend_origin)
+    reset_url = f"{base_url}/reset-password?token={reset.token}"
     full_name = f"{user.first_name} {user.last_name}".strip()
 
     if not settings.RESEND_API_KEY or not settings.RESEND_FROM_EMAIL:

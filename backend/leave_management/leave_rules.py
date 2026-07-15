@@ -227,7 +227,7 @@ def employee_has_rule(employee, rule):
     if hasattr(employee, '_prefetched_objects_cache') and 'leave_rule_assignments' in employee._prefetched_objects_cache:
         assignments = employee.leave_rule_assignments.all()
         if not assignments:
-            return True
+            return False
         for asn in assignments:
             if asn.rule_id == rule.id:
                 return True

@@ -13,7 +13,6 @@ def frontend_url_for_email() -> str:
 def _resolve_frontend_url(origin: str | None = None) -> str:
     """
     Prefer explicit request origin for in-app/debug responses, fallback to FRONTEND_URL.
-    Do not use this for email links — use frontend_url_for_email() instead.
     """
     if origin:
         parsed = urlparse(origin.strip())
@@ -31,7 +30,8 @@ def issue_and_send_invite(
     organization_name: str | None = None,
 ):
     invite = InviteToken.create_for_user(user, created_by=created_by, lifetime_hours=24)
-    invite_url = f"{frontend_url_for_email()}/activate-account?token={invite.token}"
+    base_url = _resolve_frontend_url(frontend_origin)
+    invite_url = f"{base_url}/activate-account?token={invite.token}"
     full_name = f"{user.first_name} {user.last_name}".strip()
 
     if not settings.RESEND_API_KEY or not settings.RESEND_FROM_EMAIL:

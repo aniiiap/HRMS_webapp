@@ -42,10 +42,18 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 
 class EmployeeDocumentSerializer(serializers.ModelSerializer):
+    # Accept file upload; file will be uploaded to Cloudinary manually and stored as URL
+    upload = serializers.FileField(write_only=True, required=False)
+
     class Meta:
         model = EmployeeDocument
-        fields = ("id", "employee", "title", "file", "uploaded_at")
-        read_only_fields = ("id", "uploaded_at")
+        fields = ("id", "employee", "title", "file", "upload", "uploaded_at")
+        read_only_fields = ("id", "uploaded_at", "file")
+
+    def validate(self, attrs):
+        if not self.instance and not attrs.get('upload'):
+            raise serializers.ValidationError({"upload": "A file is required."})
+        return attrs
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
