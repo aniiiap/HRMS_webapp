@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactQuill, { Quill } from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
-import ImageResize from 'quill-image-resize-module-react'
 
-window.Quill = Quill
-Quill.register('modules/imageResize', ImageResize)
 import { api } from '../../api/client'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Save } from 'lucide-react'
@@ -70,11 +67,7 @@ export default function LetterEditor() {
       [{ 'align': [] }],
       ['link', 'image'],
       ['clean']
-    ],
-    imageResize: {
-      parchment: Quill.import('parchment'),
-      modules: ['Resize', 'DisplaySize']
-    }
+    ]
   }
 
   return (

@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { X, Send, Upload, Eye } from 'lucide-react'
 import ReactQuill, { Quill } from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
-import ImageResize from 'quill-image-resize-module-react'
 
-window.Quill = Quill
-Quill.register('modules/imageResize', ImageResize)
 import { api } from '../../api/client'
 import toast from 'react-hot-toast'
 
@@ -192,11 +189,7 @@ export default function SendLetterModal({ templates, onClose, onSent }) {
                       [{ 'align': [] }],
                       ['link', 'image'],
                       ['clean']
-                    ],
-                    imageResize: {
-                      parchment: Quill.import('parchment'),
-                      modules: ['Resize', 'DisplaySize']
-                    }
+                    ]
                   }}
                   className="bg-white dark:bg-slate-900 [&_.ql-editor]:min-h-[250px] [&_.ql-editor]:text-base [&_.ql-toolbar]:border-none [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-slate-200 [&_.ql-container]:border-none dark:[&_.ql-toolbar]:border-slate-700"
                 />

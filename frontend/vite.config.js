@@ -1,23 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Vite plugin to fix quill-image-resize-module-react ESM interop issue
-const fixQuillImageResize = () => {
-  return {
-    name: 'fix-quill-image-resize',
-    transform(code, id) {
-      if (id.includes('quill-image-resize-module-react')) {
-        return code.replace(
-          /Object\.defineProperty\(exports,\s*Symbol\.toStringTag,\s*\{\s*value:\s*'Module'\s*\}\);?/g,
-          ''
-        );
-      }
-    }
-  }
-}
-
 export default defineConfig({
-  plugins: [react(), fixQuillImageResize()],
+  plugins: [react()],
   build: {
     modulePreload: false,
     rollupOptions: {
