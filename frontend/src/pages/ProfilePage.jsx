@@ -2,20 +2,25 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { api, messageFromError } from '../api/client'
 import { useAuth } from '../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import EmployeeDocumentsTab from '../components/employee/EmployeeDocumentsTab'
 
 const TABS = [
   { id: 'personal', label: 'Personal' },
   { id: 'work', label: 'Work' },
   { id: 'team', label: 'Team' },
   { id: 'workweek', label: 'Work Week' },
+  { id: 'documents', label: 'Documents' },
 ]
 
 export default function ProfilePage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('personal')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabQuery = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(tabQuery || 'personal')
   const [profile, setProfile] = useState(null)
+  const [documents, setDocuments] = useState([])
   const [editMode, setEditMode] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
@@ -62,6 +67,47 @@ export default function ProfilePage() {
   useEffect(() => {
     setProfileImageBroken(false)
   }, [profile?.profile_image])
+
+  useEffect(() => {
+    if (activeTab === 'documents' && profile?.id) {
+      api.get('/api/documents/', { params: { employee: profile.id } })
+        .then(res => setDocuments(Array.isArray(res.data) ? res.data : res.data.results || []))
+        .catch(() => {})
+    }
+  }, [activeTab, profile?.id])
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId)
+    setSearchParams({ tab: tabId })
+  }
+
+  const handleDocUpload = async (file) => {
+    try {
+      const formData = new FormData()
+      formData.append('employee', profile.id)
+      formData.append('title', file.name)
+      formData.append('upload', file)
+      await api.post('/api/documents/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      toast.success('Document uploaded successfully.')
+      const { data } = await api.get('/api/documents/', { params: { employee: profile.id } })
+      setDocuments(Array.isArray(data) ? data : data.results || [])
+    } catch (err) {
+      toast.error('Failed to upload document.')
+    }
+  }
+
+  const handleDocDelete = async (docId) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return
+    try {
+      await api.delete(`/api/documents/${docId}/`)
+      toast.success('Document deleted successfully.')
+      setDocuments((prev) => prev.filter((d) => d.id !== docId))
+    } catch (err) {
+      toast.error('Failed to delete document.')
+    }
+  }
 
   async function save() {
     setError('')
@@ -153,6 +199,8 @@ export default function ProfilePage() {
       <div className="text-sm text-slate-600 dark:text-slate-300">
         <p><span className="font-semibold">Team lead:</span> {profile?.manager_name || 'Not assigned'}</p>
       </div>
+    ) : activeTab === 'documents' ? (
+      <EmployeeDocumentsTab documents={documents} canUpload={true} onUpload={handleDocUpload} onDelete={handleDocDelete} />
     ) : (
       <div className="text-sm text-slate-600 dark:text-slate-300">
         <p>Default work week: Monday - Friday</p>
@@ -206,7 +254,7 @@ export default function ProfilePage() {
             <button
               key={tab.id}
               className={`rounded-xl px-3 py-1.5 text-sm font-medium ${activeTab === tab.id ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
             >
               {tab.label}
             </button>

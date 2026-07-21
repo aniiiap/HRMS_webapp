@@ -69,7 +69,7 @@ export default function Layout() {
   const canViewReports = ['admin', 'hr'].includes(user?.role)
   const general = allGeneral.map((item) => {
     if (item.to === '/letters' && !['admin', 'hr'].includes(user?.role)) {
-      return { ...item, to: `/employees/${user?.employee_id}?tab=documents`, label: 'My Documents' }
+      return { ...item, to: `/profile?tab=documents`, label: 'My Documents' }
     }
     return item
   }).filter((item) => {

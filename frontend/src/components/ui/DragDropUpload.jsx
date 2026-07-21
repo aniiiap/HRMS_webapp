@@ -49,6 +49,7 @@ export default function DragDropUpload({ onFileSelect, file }) {
       >
         <input 
           type="file" 
+          accept="image/*"
           onChange={handleChange} 
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           required={!file}
@@ -79,7 +80,7 @@ export default function DragDropUpload({ onFileSelect, file }) {
             <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mt-2">
               <span className="text-brand-600 dark:text-brand-400">Click to upload</span> or drag and drop
             </p>
-            <p className="text-xs">SVG, PNG, JPG or PDF (max. 10MB)</p>
+            <p className="text-xs">SVG, PNG, JPG (max. 10MB)</p>
           </div>
         )}
       </div>
