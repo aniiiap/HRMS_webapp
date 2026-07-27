@@ -314,11 +314,20 @@ export default function DashboardPage() {
           const today = dayjs().format('YYYY-MM-DD')
           const [dashboardRes, attRes] = await Promise.all([
             api.get(endpoint),
-            api.get('/api/attendance/', { params: { date: today, ordering: '-date' } }),
+            api.get('/api/attendance/', { params: { ordering: '-date', limit: 5 } }),
           ])
           setData(dashboardRes.data)
           const rows = Array.isArray(attRes.data) ? attRes.data : attRes.data?.results || []
-          setTodayAttendance(rows[0] || null)
+          let activeAtt = null
+          if (rows.length > 0) {
+            const first = rows[0]
+            if (first.check_in && !first.check_out && dayjs(first.date).isAfter(dayjs().subtract(2, 'day'))) {
+              activeAtt = first
+            } else if (first.date === today) {
+              activeAtt = first
+            }
+          }
+          setTodayAttendance(activeAtt)
         }
       } catch (err) {
         setError(messageFromError(err))

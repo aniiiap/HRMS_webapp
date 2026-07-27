@@ -204,10 +204,24 @@ class CheckInSerializer(serializers.Serializer):
     def save(self, **kwargs):
         employee: Employee = self.context["employee"]
         validate_location_policy(employee, self.validated_data.get("latitude"), self.validated_data.get("longitude"))
+        
+        open_att = Attendance.objects.filter(
+            employee=employee,
+            check_in__isnull=False,
+            check_out__isnull=True
+        ).first()
+        if open_att:
+            raise serializers.ValidationError({"detail": "You have an open shift. Please clock out first."})
+            
+        settings = resolve_shift_rule(employee)
         today = timezone.localdate()
+        
+        if settings.is_night_shift and timezone.localtime().hour < 12:
+            today = today - timedelta(days=1)
+            
         att, _ = Attendance.objects.get_or_create(employee=employee, date=today)
         if att.check_in:
-            raise serializers.ValidationError({"detail": "Already checked in today."})
+            raise serializers.ValidationError({"detail": "Already checked in for this shift."})
         att.check_in = timezone.now()
         att.notes = self.validated_data.get("notes", "")
         att.save()
@@ -228,15 +242,19 @@ class CheckOutSerializer(serializers.Serializer):
     def save(self, **kwargs):
         employee: Employee = self.context["employee"]
         validate_location_policy(employee, self.validated_data.get("latitude"), self.validated_data.get("longitude"))
-        today = timezone.localdate()
-        try:
-            att = Attendance.objects.get(employee=employee, date=today)
-        except Attendance.DoesNotExist as exc:
-            raise serializers.ValidationError({"detail": "No check-in for today."}) from exc
-        if not att.check_in:
+        
+        att = Attendance.objects.filter(
+            employee=employee,
+            check_in__isnull=False,
+            check_out__isnull=True
+        ).order_by("-date").first()
+        
+        if not att:
+            today = timezone.localdate()
+            if Attendance.objects.filter(employee=employee, date=today, check_out__isnull=False).exists():
+                raise serializers.ValidationError({"detail": "Already checked out today."})
             raise serializers.ValidationError({"detail": "Check in first."})
-        if att.check_out:
-            raise serializers.ValidationError({"detail": "Already checked out today."})
+            
         att.check_out = timezone.now()
         if self.validated_data.get("notes"):
             att.notes = (att.notes + " " + self.validated_data["notes"]).strip()
