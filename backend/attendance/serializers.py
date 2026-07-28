@@ -205,7 +205,12 @@ class CheckInSerializer(serializers.Serializer):
         employee: Employee = self.context["employee"]
         validate_location_policy(employee, self.validated_data.get("latitude"), self.validated_data.get("longitude"))
         
+        settings = resolve_shift_rule(employee)
         today = timezone.localdate()
+        
+        if settings.is_night_shift and timezone.localtime().hour < 12:
+            today = today - timedelta(days=1)
+            
         recent_cutoff = today - timedelta(days=1)
         
         open_att = Attendance.objects.filter(
@@ -214,17 +219,16 @@ class CheckInSerializer(serializers.Serializer):
             check_out__isnull=True,
             date__gte=recent_cutoff
         ).first()
-        if open_att:
-            raise serializers.ValidationError({"detail": "You have an open shift. Please clock out first."})
-            
-        settings = resolve_shift_rule(employee)
         
-        if settings.is_night_shift and timezone.localtime().hour < 12:
-            today = today - timedelta(days=1)
+        if open_att:
+            if open_att.date == today:
+                raise serializers.ValidationError({"detail": "Already checked in today."})
+            else:
+                raise serializers.ValidationError({"detail": "You have an open shift. Please clock out first."})
             
         att, _ = Attendance.objects.get_or_create(employee=employee, date=today)
         if att.check_in:
-            raise serializers.ValidationError({"detail": "Already checked in for this shift."})
+            raise serializers.ValidationError({"detail": "Already checked in today."})
         att.check_in = timezone.now()
         att.notes = self.validated_data.get("notes", "")
         att.save()
