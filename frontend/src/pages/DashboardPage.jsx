@@ -321,7 +321,8 @@ export default function DashboardPage() {
           let activeAtt = null
           if (rows.length > 0) {
             const first = rows[0]
-            if (first.check_in && !first.check_out && dayjs(first.date).isAfter(dayjs().subtract(2, 'day'))) {
+            const hoursSinceCheckIn = first.check_in ? dayjs().diff(dayjs(first.check_in), 'hour') : 0
+            if (first.check_in && !first.check_out && hoursSinceCheckIn < 16) {
               activeAtt = first
             } else if (first.date === today) {
               activeAtt = first

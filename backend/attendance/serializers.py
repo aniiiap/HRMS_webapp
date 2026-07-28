@@ -211,21 +211,6 @@ class CheckInSerializer(serializers.Serializer):
         if settings.is_night_shift and timezone.localtime().hour < 12:
             today = today - timedelta(days=1)
             
-        recent_cutoff = today - timedelta(days=1)
-        
-        open_att = Attendance.objects.filter(
-            employee=employee,
-            check_in__isnull=False,
-            check_out__isnull=True,
-            date__gte=recent_cutoff
-        ).first()
-        
-        if open_att:
-            if open_att.date == today:
-                raise serializers.ValidationError({"detail": "Already checked in today."})
-            else:
-                raise serializers.ValidationError({"detail": "You have an open shift. Please clock out first."})
-            
         att, _ = Attendance.objects.get_or_create(employee=employee, date=today)
         if att.check_in:
             raise serializers.ValidationError({"detail": "Already checked in today."})
