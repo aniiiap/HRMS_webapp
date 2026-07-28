@@ -279,7 +279,7 @@ export default function Layout() {
                 )}
               </button>
               {notifOpen && (
-                <div className="absolute right-0 z-[120] mt-2 w-[330px] max-w-[90vw] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+                <div className="absolute right-[-3rem] sm:right-0 z-[120] mt-2 w-[330px] max-w-[90vw] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">Notifications</p>
                     <div className="flex items-center gap-3">
