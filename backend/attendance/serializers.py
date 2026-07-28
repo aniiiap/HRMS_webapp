@@ -205,16 +205,19 @@ class CheckInSerializer(serializers.Serializer):
         employee: Employee = self.context["employee"]
         validate_location_policy(employee, self.validated_data.get("latitude"), self.validated_data.get("longitude"))
         
+        today = timezone.localdate()
+        recent_cutoff = today - timedelta(days=1)
+        
         open_att = Attendance.objects.filter(
             employee=employee,
             check_in__isnull=False,
-            check_out__isnull=True
+            check_out__isnull=True,
+            date__gte=recent_cutoff
         ).first()
         if open_att:
             raise serializers.ValidationError({"detail": "You have an open shift. Please clock out first."})
             
         settings = resolve_shift_rule(employee)
-        today = timezone.localdate()
         
         if settings.is_night_shift and timezone.localtime().hour < 12:
             today = today - timedelta(days=1)
@@ -243,14 +246,17 @@ class CheckOutSerializer(serializers.Serializer):
         employee: Employee = self.context["employee"]
         validate_location_policy(employee, self.validated_data.get("latitude"), self.validated_data.get("longitude"))
         
+        today = timezone.localdate()
+        recent_cutoff = today - timedelta(days=1)
+        
         att = Attendance.objects.filter(
             employee=employee,
             check_in__isnull=False,
-            check_out__isnull=True
+            check_out__isnull=True,
+            date__gte=recent_cutoff
         ).order_by("-date").first()
         
         if not att:
-            today = timezone.localdate()
             if Attendance.objects.filter(employee=employee, date=today, check_out__isnull=False).exists():
                 raise serializers.ValidationError({"detail": "Already checked out today."})
             raise serializers.ValidationError({"detail": "Check in first."})
