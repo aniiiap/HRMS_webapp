@@ -21,6 +21,8 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
   const { isManagerPlus, isPrivileged } = useAuth()
   const [editModal, setEditModal] = useState(null) // { type, currentQuota, name }
   const [newQuota, setNewQuota] = useState('')
+  const [newApplied, setNewApplied] = useState('')
+  const [newRemaining, setNewRemaining] = useState('')
   const [saving, setSaving] = useState(false)
 
   const balances = leaveBalance?.balances || {}
@@ -34,12 +36,34 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
         employee_id: leaveBalance.employee_id,
         leave_type: editModal.type,
         quota: newQuota,
+        applied: newApplied
       })
       window.location.reload()
     } catch (err) {
       alert(err.response?.data?.quota || 'Failed to update quota')
     } finally {
       setSaving(false)
+    }
+  }
+
+  function handleQuotaChange(val) {
+    setNewQuota(val)
+    if (val !== '' && newApplied !== '') {
+      setNewRemaining(Math.max(0, parseFloat(val) - parseFloat(newApplied)))
+    }
+  }
+
+  function handleAppliedChange(val) {
+    setNewApplied(val)
+    if (val !== '' && newQuota !== '') {
+      setNewRemaining(Math.max(0, parseFloat(newQuota) - parseFloat(val)))
+    }
+  }
+
+  function handleRemainingChange(val) {
+    setNewRemaining(val)
+    if (val !== '' && newQuota !== '') {
+      setNewApplied(Math.max(0, parseFloat(newQuota) - parseFloat(val)))
     }
   }
 
@@ -99,6 +123,8 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
                           onClick={() => {
                             setEditModal({ type, name: b.name || LEAVE_LABELS[type] || type.replace(/_/g, ' '), currentQuota: b.quota })
                             setNewQuota(b.quota ?? '')
+                            setNewApplied(b.used ?? 0)
+                            setNewRemaining(b.remaining ?? 0)
                           }}
                           className="text-slate-400 hover:text-brand-600 transition"
                           title="Edit total quota"
@@ -194,7 +220,31 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
                   required
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-800"
                   value={newQuota}
-                  onChange={(e) => setNewQuota(e.target.value)}
+                  onChange={(e) => handleQuotaChange(e.target.value)}
+                />
+              </div>
+              <div className="mb-4">
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Applied</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  required
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-800"
+                  value={newApplied}
+                  onChange={(e) => handleAppliedChange(e.target.value)}
+                />
+              </div>
+              <div className="mb-4">
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Remaining</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  required
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-800"
+                  value={newRemaining}
+                  onChange={(e) => handleRemainingChange(e.target.value)}
                 />
               </div>
               <div className="flex justify-end gap-2">

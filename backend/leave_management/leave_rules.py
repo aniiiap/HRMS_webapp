@@ -384,7 +384,10 @@ def employee_leave_balance_rows(employee, year=None):
     on_probation = employee_on_probation(employee)
     
     overrides = {
-        o.leave_type: o.quota 
+        o.leave_type: {
+            "quota": o.quota,
+            "used_adjustment": o.used_adjustment
+        }
         for o in LeaveBalanceOverride.objects.filter(employee=employee, year=year)
     }
     
@@ -396,13 +399,15 @@ def employee_leave_balance_rows(employee, year=None):
             continue
             
         if rule.code in overrides:
-            quota = float(overrides[rule.code])
+            quota = float(overrides[rule.code]["quota"])
+            adjustment = float(overrides[rule.code]["used_adjustment"] or 0)
         else:
             quota = quota_for_rule(rule, on_probation, employee=employee, as_of=tz.localdate())
+            adjustment = 0
             
         if quota is None:
             continue
-        used = leave_days_in_year(employee, rule.code, year)
+        used = leave_days_in_year(employee, rule.code, year) + adjustment
         rows.append(
             {
                 "leave_type": rule.code,
