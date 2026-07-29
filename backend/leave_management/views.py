@@ -120,9 +120,9 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         if not all([employee_id, leave_type, quota is not None, applied is not None]):
             raise ValidationError("employee_id, leave_type, quota, and applied are required.")
 
-        from .models import LeaveBalanceOverride
+        from .models import LeaveBalanceOverride, LeaveTypeRule
         from employees.models import Employee
-        from .leave_rules import leave_days_in_year
+        from .leave_rules import leave_days_in_year, quota_for_rule, employee_on_probation
         try:
             quota_val = float(quota)
             applied_val = float(applied)
@@ -135,12 +135,25 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         dynamic_used = leave_days_in_year(emp, leave_type, year)
         used_adjustment = applied_val - dynamic_used
 
+        dynamic_quota = None
+        try:
+            rule = LeaveTypeRule.objects.get(organization_id=emp.organization_id, code=leave_type)
+            on_prob = employee_on_probation(emp)
+            dynamic_quota = quota_for_rule(rule, on_prob, employee=emp, as_of=timezone.localdate())
+        except Exception:
+            pass
+
+        quota_to_save = quota_val
+        if dynamic_quota is not None and abs(quota_val - float(dynamic_quota)) < 0.01:
+            # If the user left it at the exact dynamic quota, don't hardcode it
+            quota_to_save = None
+
         override, created = LeaveBalanceOverride.objects.update_or_create(
             employee_id=employee_id,
             leave_type=leave_type,
             year=year,
             defaults={
-                "quota": quota_val,
+                "quota": quota_to_save,
                 "used_adjustment": used_adjustment
             }
         )
@@ -216,7 +229,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             if o.employee_id not in overrides_dict:
                 overrides_dict[o.employee_id] = {}
             overrides_dict[o.employee_id][o.leave_type] = {
-                "quota": float(o.quota),
+                "quota": float(o.quota) if o.quota is not None else None,
                 "used_adjustment": float(o.used_adjustment or 0)
             }
 
@@ -237,6 +250,8 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
                     
                 if emp.id in overrides_dict and rule.code in overrides_dict[emp.id]:
                     quota = overrides_dict[emp.id][rule.code]["quota"]
+                    if quota is None:
+                        quota = quota_for_rule(rule, on_probation, employee=emp, as_of=timezone.localdate(), present_ratio=present_ratios.get(emp.id))
                     adjustment = overrides_dict[emp.id][rule.code]["used_adjustment"]
                 else:
                     quota = quota_for_rule(rule, on_probation, employee=emp, as_of=timezone.localdate(), present_ratio=present_ratios.get(emp.id))

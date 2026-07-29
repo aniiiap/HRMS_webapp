@@ -399,7 +399,11 @@ def employee_leave_balance_rows(employee, year=None):
             continue
             
         if rule.code in overrides:
-            quota = float(overrides[rule.code]["quota"])
+            quota = overrides[rule.code]["quota"]
+            if quota is not None:
+                quota = float(quota)
+            else:
+                quota = quota_for_rule(rule, on_probation, employee=employee, as_of=tz.localdate())
             adjustment = float(overrides[rule.code]["used_adjustment"] or 0)
         else:
             quota = quota_for_rule(rule, on_probation, employee=employee, as_of=tz.localdate())

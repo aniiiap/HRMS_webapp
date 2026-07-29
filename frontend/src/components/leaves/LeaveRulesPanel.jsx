@@ -313,7 +313,7 @@ export default function LeaveRulesPanel({ onChanged }) {
       </div>
 
       {rulesTab === 'rules' && (
-        <div className="grid min-h-[480px] gap-0 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/40 lg:grid-cols-[200px_1fr]">
+        <div className="grid h-[min(600px,calc(100vh-220px))] min-h-[480px] gap-0 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/40 lg:grid-cols-[200px_1fr]">
           <aside className="flex flex-col border-b border-slate-200 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-900/60 lg:border-b-0 lg:border-r">
             <div className="min-h-0 flex-1 overflow-y-auto p-2 scrollbar-thin">
               {rules.map((r) => {
