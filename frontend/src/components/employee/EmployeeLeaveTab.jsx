@@ -2,6 +2,9 @@ import { useState } from 'react'
 import dayjs from 'dayjs'
 import StatusBadge from '../ui/StatusBadge'
 import ProfileSectionCard from './ProfileSectionCard'
+import { Pencil, X, Check } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
+import { api } from '../../api/client'
 
 const LEAVE_LABELS = {
   annual: 'Annual leave',
@@ -11,10 +14,34 @@ const LEAVE_LABELS = {
   unpaid: 'Unpaid leave',
 }
 
+import { createPortal } from 'react-dom'
+
 export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
   const [subTab, setSubTab] = useState('balances')
+  const { isManagerPlus, isPrivileged } = useAuth()
+  const [editModal, setEditModal] = useState(null) // { type, currentQuota, name }
+  const [newQuota, setNewQuota] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const balances = leaveBalance?.balances || {}
+
+  async function handleSaveQuota(e) {
+    e.preventDefault()
+    if (!editModal || !leaveBalance?.employee_id) return
+    try {
+      setSaving(true)
+      await api.post('/api/leaves/balances/override/', {
+        employee_id: leaveBalance.employee_id,
+        leave_type: editModal.type,
+        quota: newQuota,
+      })
+      window.location.reload()
+    } catch (err) {
+      alert(err.response?.data?.quota || 'Failed to update quota')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -62,10 +89,23 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
                     key={type}
                     className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/40"
                   >
-                    <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
+                    <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-800/50 flex justify-between items-center">
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                         {b.name || LEAVE_LABELS[type] || type.replace(/_/g, ' ')}
                       </p>
+                      {isPrivileged && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditModal({ type, name: b.name || LEAVE_LABELS[type] || type.replace(/_/g, ' '), currentQuota: b.quota })
+                            setNewQuota(b.quota ?? '')
+                          }}
+                          className="text-slate-400 hover:text-brand-600 transition"
+                          title="Edit total quota"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      )}
                     </div>
                     <div className="flex">
                       <div className="flex-1 space-y-2 p-4 text-xs text-slate-600 dark:text-slate-400">
@@ -131,6 +171,49 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
           </div>
         </ProfileSectionCard>
       )}
+
+      {editModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+            <form
+              onSubmit={handleSaveQuota}
+              className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900 motion-safe:animate-fade-in-up"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit Quota: {editModal.name}</h3>
+                <button type="button" onClick={() => setEditModal(null)} className="text-slate-400 hover:text-slate-600">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="mb-4">
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Total Quota</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  required
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-800"
+                  value={newQuota}
+                  onChange={(e) => setNewQuota(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditModal(null)}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2">
+                  <Check size={16} />
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

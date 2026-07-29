@@ -372,6 +372,7 @@ def validate_leave_request_dates(rule, start, end, today):
 def employee_leave_balance_rows(employee, year=None):
     """Dashboard-friendly balance rows for one employee."""
     from django.utils import timezone as tz
+    from .models import LeaveBalanceOverride
 
     year = year or tz.localdate().year
     org_id = employee.organization_id
@@ -381,13 +382,24 @@ def employee_leave_balance_rows(employee, year=None):
         seed_org_leave_rules(org_id)
     rules = LeaveTypeRule.objects.filter(organization_id=org_id, is_active=True).order_by("sort_order")
     on_probation = employee_on_probation(employee)
+    
+    overrides = {
+        o.leave_type: o.quota 
+        for o in LeaveBalanceOverride.objects.filter(employee=employee, year=year)
+    }
+    
     rows = []
     for rule in rules:
         if not employee_has_rule(employee, rule):
             continue
         if rule.code == "loss_of_pay":
             continue
-        quota = quota_for_rule(rule, on_probation, employee=employee, as_of=tz.localdate())
+            
+        if rule.code in overrides:
+            quota = float(overrides[rule.code])
+        else:
+            quota = quota_for_rule(rule, on_probation, employee=employee, as_of=tz.localdate())
+            
         if quota is None:
             continue
         used = leave_days_in_year(employee, rule.code, year)

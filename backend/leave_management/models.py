@@ -219,3 +219,23 @@ class EmployeeLeaveProfile(models.Model):
 
     def __str__(self):
         return f"{self.employee.employee_code} probation={self.is_on_probation}"
+
+
+class LeaveBalanceOverride(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="leave_overrides")
+    leave_type = models.CharField(max_length=40)
+    year = models.PositiveIntegerField()
+    quota = models.DecimalField(max_digits=6, decimal_places=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["employee", "leave_type", "year"],
+                name="uniq_leave_override_emp_type_year",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.employee.employee_code} - {self.leave_type} ({self.year}): {self.quota}"
