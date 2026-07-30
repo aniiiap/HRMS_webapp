@@ -74,23 +74,27 @@ def _work_anniversaries(limit: int = 8, org_id: int | None = None) -> list[dict]
     emp_qs = filter_employees_by_org(emp_qs, org_id)
     for emp in emp_qs:
         doj = emp.date_of_joining
-        years = today.year - doj.year - ((today.month, today.day) < (doj.month, doj.day))
-        if years < 1:
-            continue
         this_year_anniv = date(today.year, doj.month, min(doj.day, 28 if doj.month == 2 else doj.day))
         if this_year_anniv < today:
             next_anniv = date(today.year + 1, doj.month, min(doj.day, 28 if doj.month == 2 else doj.day))
+            years_at_next_anniv = today.year + 1 - doj.year
         else:
             next_anniv = this_year_anniv
+            years_at_next_anniv = today.year - doj.year
+            
+        if years_at_next_anniv < 1:
+            continue
+            
         rows.append(
             {
                 "employee_code": emp.employee_code,
+                "user_id": emp.user_id,
                 "name": f"{emp.user.first_name} {emp.user.last_name}".strip() or emp.user.email,
                 "designation": emp.designation or "",
                 "department": emp.department or "",
                 "profile_image": emp.profile_image.url if getattr(emp, "profile_image", None) else None,
                 "date_of_joining": doj.isoformat(),
-                "years_completed": years,
+                "years_completed": years_at_next_anniv,
                 "next_anniversary": next_anniv.isoformat(),
                 "days_until": (next_anniv - today).days,
             }
@@ -875,6 +879,7 @@ class EmployeeDashboardView(APIView):
             "leave_balances": _leave_balances_for_employee(profile),
             "attendance_trend": _employee_attendance_trend(profile, days=14),
             "notifications": notifications,
+            "work_anniversaries": _work_anniversaries(limit=20, org_id=profile.organization_id),
             "upcoming_holidays": [],
             "profile": {
                 "employee_code": profile.employee_code,

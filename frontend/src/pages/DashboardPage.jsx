@@ -30,6 +30,7 @@ import EmptyState from '../components/ui/EmptyState'
 import PageSkeleton from '../components/ui/PageSkeleton'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import WorkAnniversaryModal from '../components/leaves/WorkAnniversaryModal'
 
 const LAST_LOCATION_KEY = 'hrms_last_location'
 const MAX_LOCATION_AGE_MS = 5 * 60 * 1000
@@ -536,6 +537,10 @@ export default function DashboardPage() {
             </div>
           </>
         )}
+        <WorkAnniversaryModal 
+          anniversaries={data?.work_anniversaries || []} 
+          currentUser={user}
+        />
       </div>
     )
   }
@@ -796,6 +801,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <WorkAnniversaryModal 
+        anniversaries={data?.work_anniversaries || []} 
+        currentUser={user}
+      />
     </div>
   )
 }
