@@ -14,20 +14,18 @@ export default function WorkAnniversaryModal({ anniversaries, currentUser }) {
 
     const currentYear = new Date().getFullYear()
     
-    // First try to find if it's the user's OWN anniversary today or recently
+    // First try to find if it's the user's OWN anniversary today
     let unseen = anniversaries.find((w) => {
-      const recent = w.days_until === 0 || w.days_until >= 351 // today or up to 14 days ago
-      if (!recent) return false
+      if (w.days_until !== 0) return false // exactly today only
       if (w.user_id !== currentUser?.id) return false
       const key = `anniversary_dismissed_${currentYear}_${w.employee_code}`
       return localStorage.getItem(key) !== 'true'
     })
 
-    // If not, find ANY unseen anniversary
+    // If not, find ANY unseen anniversary today
     if (!unseen) {
       unseen = anniversaries.find((w) => {
-        const recent = w.days_until === 0 || w.days_until >= 351
-        if (!recent) return false
+        if (w.days_until !== 0) return false // exactly today only
         const key = `anniversary_dismissed_${currentYear}_${w.employee_code}`
         return localStorage.getItem(key) !== 'true'
       })
