@@ -14,12 +14,24 @@ export default function WorkAnniversaryModal({ anniversaries, currentUser }) {
 
     const currentYear = new Date().getFullYear()
     
-    // Find the first anniversary today that hasn't been dismissed yet
-    const unseen = anniversaries.find((w) => {
-      if (w.days_until !== 0) return false // Only show exactly on the day
+    // First try to find if it's the user's OWN anniversary today or recently
+    let unseen = anniversaries.find((w) => {
+      const recent = w.days_until === 0 || w.days_until >= 351 // today or up to 14 days ago
+      if (!recent) return false
+      if (w.user_id !== currentUser?.id) return false
       const key = `anniversary_dismissed_${currentYear}_${w.employee_code}`
       return localStorage.getItem(key) !== 'true'
     })
+
+    // If not, find ANY unseen anniversary
+    if (!unseen) {
+      unseen = anniversaries.find((w) => {
+        const recent = w.days_until === 0 || w.days_until >= 351
+        if (!recent) return false
+        const key = `anniversary_dismissed_${currentYear}_${w.employee_code}`
+        return localStorage.getItem(key) !== 'true'
+      })
+    }
 
     if (unseen) {
       setActiveAnniversary(unseen)
@@ -27,7 +39,7 @@ export default function WorkAnniversaryModal({ anniversaries, currentUser }) {
       // Stop new confetti from falling after a few seconds, but let existing ones fall
       setTimeout(() => setShowConfetti(false), 5000)
     }
-  }, [anniversaries])
+  }, [anniversaries, currentUser])
 
   if (!activeAnniversary) return null
 
