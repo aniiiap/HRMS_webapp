@@ -81,7 +81,7 @@ export default function AnnouncementsPage() {
   const loadEmployees = useCallback(async () => {
     if (!isManagerPlus) return
     try {
-      const { data } = await api.get('/api/employees/')
+      const { data } = await api.get('/api/employees/?nopaginate=true')
       setEmployees(Array.isArray(data) ? data : data.results || [])
     } catch {
       setEmployees([])

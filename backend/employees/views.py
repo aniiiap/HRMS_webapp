@@ -74,7 +74,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         "designation",
         "phone",
     ]
-    ordering_fields = ["employee_code", "date_of_joining", "id"]
+    ordering_fields = ["user__first_name", "user__last_name", "employee_code", "date_of_joining", "id"]
+    ordering = ["user__first_name", "user__last_name"]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -97,6 +98,11 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if self.action in ("create", "update", "partial_update"):
             return EmployeeWriteSerializer
         return EmployeeSerializer
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get("nopaginate") == "true":
+            return None
+        return super().paginate_queryset(queryset)
 
     def get_permissions(self):
         base = [permissions.IsAuthenticated()]

@@ -125,7 +125,7 @@ export default function EmployeeProfilePage() {
     }
 
     if (tab === 'team') {
-      const { data } = await api.get('/api/employees/')
+      const { data } = await api.get('/api/employees/?nopaginate=true')
       const rows = Array.isArray(data) ? data : data.results || []
       setTeamEmployees(rows)
     }

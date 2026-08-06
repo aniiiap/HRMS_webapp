@@ -8,6 +8,7 @@ import PageHeader from '../components/ui/PageHeader'
 import { useAuth } from '../context/AuthContext'
 import { useConfirm } from '../context/ConfirmContext'
 import { useSearchParams } from 'react-router-dom'
+import Pagination from '../components/Pagination'
 
 function ImageModal({ employee, onClose }) {
   if (!employee || !employee.profile_image) return null;
@@ -63,8 +64,10 @@ function ImageModal({ employee, onClose }) {
 export default function EmployeesPage() {
   const { isPrivileged } = useAuth()
   const confirm = useConfirm()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [rows, setRows] = useState([])
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [templates, setTemplates] = useState([])
   const [activeTab, setActiveTab] = useState('employees')
   const [error, setError] = useState('')
@@ -105,11 +108,13 @@ export default function EmployeesPage() {
 
   async function load() {
     try {
+      const q = searchParams.get('q') || ''
       const [{ data }, tplRes] = await Promise.all([
-        api.get('/api/employees/'),
+        api.get('/api/employees/', { params: { page, search: q } }),
         isPrivileged ? api.get('/api/employees/shift-templates/') : Promise.resolve({ data: [] }),
       ])
       setRows(Array.isArray(data) ? data : data.results || [])
+      setTotalPages(Array.isArray(data) ? 1 : Math.max(Math.ceil((data.count || 0) / 20), 1))
       setTemplates(Array.isArray(tplRes.data) ? tplRes.data : tplRes.data.results || [])
       if (isPrivileged) {
         const { data: loc } = await api.get('/api/employees/location-settings/')
@@ -127,28 +132,10 @@ export default function EmployeesPage() {
     }
   }
 
-  useEffect(() => { void load() }, [])
+  useEffect(() => { void load() }, [page, searchParams])
 
-  const employeeRows = useMemo(() => {
-    const all = rows || []
-    const q = (searchParams.get('q') || '').trim().toLowerCase()
-    if (!q) return all
-    return all.filter((r) => {
-      const hay = [
-        r.employee_code,
-        r.first_name,
-        r.last_name,
-        r.email,
-        r.department,
-        r.designation,
-        r.role,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-      return hay.includes(q)
-    })
-  }, [rows, searchParams])
+  // Removed client-side search since we now do server-side pagination and search
+  const employeeRows = rows || []
   async function onboard(e) {
     e.preventDefault()
     setError('')
@@ -716,6 +703,10 @@ export default function EmployeesPage() {
           </tbody>
         </table>
       </div>
+      {activeTab === 'employees' && totalPages > 1 && (
+        <div className="mt-4">
+          <Pagination current={page} total={totalPages} onPageChange={setPage} />
+        </div>
       )}
       
       {viewingImage && (

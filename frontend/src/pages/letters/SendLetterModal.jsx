@@ -40,7 +40,7 @@ export default function SendLetterModal({ templates, onClose, onSent }) {
   }
 
   useEffect(() => {
-    api.get('/api/employees/').then(res => setEmployees(res.data.results || res.data))
+    api.get('/api/employees/?nopaginate=true').then(res => setEmployees(res.data.results || res.data))
   }, [])
 
   useEffect(() => {

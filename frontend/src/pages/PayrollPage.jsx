@@ -167,7 +167,7 @@ export default function PayrollPage() {
 
   const loadEmployees = useCallback(async () => {
     try {
-      const { data } = await api.get('/api/employees/')
+      const { data } = await api.get('/api/employees/?nopaginate=true')
       const list = Array.isArray(data) ? data : data.results || []
       if (orgId) setEmployees(list.filter((e) => String(e.organization) === String(orgId)))
       else setEmployees(list)
