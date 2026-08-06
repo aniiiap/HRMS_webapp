@@ -6,13 +6,23 @@ const REFRESH = 'hrms_refresh'
 export const tokenStore = {
   getAccess: () => localStorage.getItem(ACCESS),
   getRefresh: () => localStorage.getItem(REFRESH),
-  set: (access, refresh) => {
-    localStorage.setItem(ACCESS, access)
-    localStorage.setItem(REFRESH, refresh)
+  getUser: () => {
+    try {
+      const u = localStorage.getItem('hrms_user')
+      return u ? JSON.parse(u) : null
+    } catch {
+      return null
+    }
+  },
+  set: (access, refresh, user) => {
+    if (access) localStorage.setItem(ACCESS, access)
+    if (refresh) localStorage.setItem(REFRESH, refresh)
+    if (user) localStorage.setItem('hrms_user', JSON.stringify(user))
   },
   clear: () => {
     localStorage.removeItem(ACCESS)
     localStorage.removeItem(REFRESH)
+    localStorage.removeItem('hrms_user')
   },
 }
 
@@ -38,7 +48,7 @@ api.interceptors.response.use(
         refreshing = axios
           .post(`${baseURL}/api/auth/refresh/`, { refresh: tokenStore.getRefresh() })
           .then((res) => {
-            localStorage.setItem(ACCESS, res.data.access)
+            tokenStore.set(res.data.access, res.data.refresh)
             return res.data.access
           })
           .catch((err) => {

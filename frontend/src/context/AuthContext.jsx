@@ -4,9 +4,8 @@ import { api, tokenStore } from '../api/client'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  // Only block UI when we must validate an existing access token (logged-out users see login immediately).
-  const [loading, setLoading] = useState(() => Boolean(tokenStore.getAccess()))
+  const [user, setUser] = useState(() => tokenStore.getUser())
+  const [loading, setLoading] = useState(() => Boolean(tokenStore.getAccess()) && !tokenStore.getUser())
 
   useEffect(() => {
     async function init() {
@@ -17,11 +16,13 @@ export function AuthProvider({ children }) {
       try {
         const { data } = await api.get('/api/auth/me/')
         setUser(data)
+        tokenStore.set(null, null, data)
       } catch (err) {
         if (err.response?.status === 401 || err.response?.status === 403) {
           tokenStore.clear()
+          setUser(null)
         }
-        setUser(null)
+        // If it's a network error (no err.response), keep the cached user!
       } finally {
         setLoading(false)
       }
@@ -31,7 +32,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const { data } = await api.post('/api/auth/login/', { email, password })
-    tokenStore.set(data.access, data.refresh)
+    tokenStore.set(data.access, data.refresh, data.user)
     setUser(data.user)
     return data.user
   }
