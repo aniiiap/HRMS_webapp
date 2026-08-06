@@ -703,6 +703,7 @@ export default function EmployeesPage() {
           </tbody>
         </table>
       </div>
+      )}
       {activeTab === 'employees' && totalPages > 1 && (
         <div className="mt-4">
           <Pagination current={page} total={totalPages} onPageChange={setPage} />
