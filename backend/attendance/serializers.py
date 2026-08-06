@@ -133,6 +133,22 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "pending_requested_check_out",
         )
 
+    def validate(self, attrs):
+        check_in = attrs.get("check_in")
+        check_out = attrs.get("check_out")
+        
+        if self.instance:
+            if "check_in" not in attrs:
+                check_in = self.instance.check_in
+            if "check_out" not in attrs:
+                check_out = self.instance.check_out
+                
+        if check_in and check_out and check_out < check_in:
+            if "check_out" in attrs and attrs["check_out"]:
+                attrs["check_out"] = attrs["check_out"] + timedelta(days=1)
+                
+        return attrs
+
     def get_employee_name(self, obj):
         u = obj.employee.user
         return f"{u.first_name} {u.last_name}".strip() or u.email
@@ -404,7 +420,10 @@ class AttendanceCorrectionCreateSerializer(serializers.Serializer):
             if not check_in or not check_out:
                 raise serializers.ValidationError({"detail": "Please provide both clock-in and clock-out times."})
             if check_out <= check_in:
-                raise serializers.ValidationError({"detail": "Clock-out must be after clock-in."})
+                check_out = check_out + timedelta(days=1)
+                attrs["requested_check_out"] = check_out
+                if check_out <= check_in:
+                    raise serializers.ValidationError({"detail": "Clock-out must be after clock-in."})
 
         if request_type == AttendanceCorrectionType.MARK_LEAVE:
             start = attrs.get("leave_start_date")
