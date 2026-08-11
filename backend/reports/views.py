@@ -56,8 +56,10 @@ def _upcoming_birthdays(limit: int = 8, org_id: int | None = None) -> list[dict]
         rows.append(
             {
                 "employee_code": emp.employee_code,
+                "user_id": emp.user_id,
                 "name": name,
                 "designation": emp.designation or "",
+                "profile_image": emp.profile_image.url if getattr(emp, "profile_image", None) else None,
                 "date_of_birth": dob.isoformat(),
                 "next_birthday": nxt.isoformat(),
                 "days_until": (nxt - today).days,
@@ -880,6 +882,7 @@ class EmployeeDashboardView(APIView):
             "attendance_trend": _employee_attendance_trend(profile, days=14),
             "notifications": notifications,
             "work_anniversaries": _work_anniversaries(limit=20, org_id=profile.organization_id),
+            "upcoming_birthdays": _upcoming_birthdays(limit=20, org_id=profile.organization_id),
             "upcoming_holidays": [],
             "profile": {
                 "employee_code": profile.employee_code,
