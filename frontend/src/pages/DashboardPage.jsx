@@ -542,6 +542,10 @@ export default function DashboardPage() {
           anniversaries={data?.work_anniversaries || []} 
           currentUser={user}
         />
+        <BirthdayModal 
+          birthdays={data?.upcoming_birthdays || []} 
+          currentUser={user}
+        />
       </div>
     )
   }
