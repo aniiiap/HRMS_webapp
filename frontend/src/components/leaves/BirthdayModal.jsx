@@ -18,7 +18,7 @@ export default function BirthdayModal({ birthdays, currentUser }) {
     let unseen = birthdays.find((w) => {
       if (w.days_until !== 0) return false // exactly today only
       if (w.user_id !== currentUser?.id) return false
-      const key = `birthday_dismissed_${currentYear}_${w.employee_code}`
+      const key = `birthday_dismissed_${currentYear}_${currentUser?.id}_${w.employee_code}`
       return localStorage.getItem(key) !== 'true'
     })
 
@@ -26,7 +26,7 @@ export default function BirthdayModal({ birthdays, currentUser }) {
     if (!unseen) {
       unseen = birthdays.find((w) => {
         if (w.days_until !== 0) return false // exactly today only
-        const key = `birthday_dismissed_${currentYear}_${w.employee_code}`
+        const key = `birthday_dismissed_${currentYear}_${currentUser?.id}_${w.employee_code}`
         return localStorage.getItem(key) !== 'true'
       })
     }
@@ -45,7 +45,7 @@ export default function BirthdayModal({ birthdays, currentUser }) {
   
   const dismiss = () => {
     const currentYear = new Date().getFullYear()
-    const key = `birthday_dismissed_${currentYear}_${activeBirthday.employee_code}`
+    const key = `birthday_dismissed_${currentYear}_${currentUser?.id}_${activeBirthday.employee_code}`
     localStorage.setItem(key, 'true')
     setActiveBirthday(null)
   }
