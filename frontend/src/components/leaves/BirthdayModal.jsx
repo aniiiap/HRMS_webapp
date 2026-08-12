@@ -1,54 +1,53 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { PartyPopper, X, Award } from 'lucide-react'
+import { PartyPopper, X, Gift } from 'lucide-react'
 import Confetti from 'react-confetti'
 import { useWindowSize } from 'react-use'
 
-export default function WorkAnniversaryModal({ anniversaries, currentUser }) {
-  const [activeAnniversary, setActiveAnniversary] = useState(null)
+export default function BirthdayModal({ birthdays, currentUser }) {
+  const [activeBirthday, setActiveBirthday] = useState(null)
   const { width, height } = useWindowSize()
   const [showConfetti, setShowConfetti] = useState(false)
 
   useEffect(() => {
-    if (!anniversaries || anniversaries.length === 0) return
+    if (!birthdays || birthdays.length === 0) return
 
     const currentYear = new Date().getFullYear()
     
-    // First try to find if it's the user's OWN anniversary today
-    let unseen = anniversaries.find((w) => {
+    // First try to find if it's the user's OWN birthday today
+    let unseen = birthdays.find((w) => {
       if (w.days_until !== 0) return false // exactly today only
       if (w.user_id !== currentUser?.id) return false
-      const key = `anniversary_dismissed_${currentYear}_${currentUser?.id}_${w.employee_code}`
+      const key = `birthday_dismissed_${currentYear}_${currentUser?.id}_${w.employee_code}`
       return localStorage.getItem(key) !== 'true'
     })
 
-    // If not, find ANY unseen anniversary today
+    // If not, find ANY unseen birthday today
     if (!unseen) {
-      unseen = anniversaries.find((w) => {
+      unseen = birthdays.find((w) => {
         if (w.days_until !== 0) return false // exactly today only
-        const key = `anniversary_dismissed_${currentYear}_${currentUser?.id}_${w.employee_code}`
+        const key = `birthday_dismissed_${currentYear}_${currentUser?.id}_${w.employee_code}`
         return localStorage.getItem(key) !== 'true'
       })
     }
 
     if (unseen) {
-      setActiveAnniversary(unseen)
+      setActiveBirthday(unseen)
       setShowConfetti(true)
       // Stop new confetti from falling after a few seconds, but let existing ones fall
       setTimeout(() => setShowConfetti(false), 5000)
     }
-  }, [anniversaries, currentUser])
+  }, [birthdays, currentUser])
 
-  if (!activeAnniversary) return null
+  if (!activeBirthday) return null
 
-  const isSelf = activeAnniversary.user_id === currentUser?.id
-  const years = activeAnniversary.years_completed
+  const isSelf = activeBirthday.user_id === currentUser?.id
   
   const dismiss = () => {
     const currentYear = new Date().getFullYear()
-    const key = `anniversary_dismissed_${currentYear}_${currentUser?.id}_${activeAnniversary.employee_code}`
+    const key = `birthday_dismissed_${currentYear}_${currentUser?.id}_${activeBirthday.employee_code}`
     localStorage.setItem(key, 'true')
-    setActiveAnniversary(null)
+    setActiveBirthday(null)
   }
 
   return createPortal(
@@ -77,54 +76,54 @@ export default function WorkAnniversaryModal({ anniversaries, currentUser }) {
 
           <div className="relative z-10 flex flex-col items-center pt-2">
             <div className="relative mb-6">
-              {activeAnniversary.profile_image ? (
+              {activeBirthday.profile_image ? (
                 <img
-                  src={activeAnniversary.profile_image}
-                  alt={activeAnniversary.name}
+                  src={activeBirthday.profile_image}
+                  alt={activeBirthday.name}
                   className="h-28 w-28 rounded-full border-4 border-white object-cover shadow-lg dark:border-slate-800"
                 />
               ) : (
                 <div className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-brand-50 to-slate-100 shadow-lg dark:border-slate-800 dark:from-slate-800 dark:to-slate-900">
                   <span className="text-4xl font-bold text-brand-700 dark:text-brand-400">
-                    {activeAnniversary.name.charAt(0).toUpperCase()}
+                    {activeBirthday.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
-              <div className="absolute -bottom-2 -right-2 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-white shadow-lg ring-4 ring-white dark:ring-slate-800">
-                <Award size={20} className="fill-amber-100" />
+              <div className="absolute -bottom-2 -right-2 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white shadow-lg ring-4 ring-white dark:ring-slate-800">
+                <Gift size={20} className="fill-rose-100" />
               </div>
             </div>
 
-            <div className="mb-2 flex items-center justify-center gap-2 text-amber-500">
+            <div className="mb-2 flex items-center justify-center gap-2 text-rose-500">
               <PartyPopper size={22} className="animate-bounce" />
               <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                {isSelf ? 'Congratulations!' : 'Work Anniversary'}
+                {isSelf ? 'Happy Birthday!' : 'Birthday Celebration'}
               </h2>
               <PartyPopper size={22} className="animate-bounce" />
             </div>
 
             {isSelf ? (
               <>
-                <p className="mt-3 text-lg font-medium text-slate-700 dark:text-slate-300">
-                  You have successfully completed
-                </p>
-                <div className="my-3 bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-5xl font-black text-transparent">
-                  {years} {years === 1 ? 'Year' : 'Years'}
+                <div className="my-3 bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-4xl font-black text-transparent">
+                  Happy Birthday!
                 </div>
+                <p className="mt-3 text-lg font-medium text-slate-700 dark:text-slate-300">
+                  Wishing you a wonderful day
+                </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  with the organization! Thank you for your dedication and hard work.
+                  filled with joy, laughter, and great memories.
                 </p>
               </>
             ) : (
               <>
                 <p className="mt-3 text-lg font-medium text-slate-700 dark:text-slate-300">
-                  Let's celebrate <strong className="font-bold text-slate-900 dark:text-white">{activeAnniversary.name}</strong>!
+                  Let's wish <strong className="font-bold text-slate-900 dark:text-white">{activeBirthday.name}</strong>
                 </p>
                 <div className="my-3 bg-gradient-to-r from-brand-600 to-brand-500 bg-clip-text text-4xl font-black text-transparent dark:from-brand-400 dark:to-brand-300">
-                  {years} {years === 1 ? 'Year' : 'Years'} Completed
+                  A Happy Birthday!
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Join us in congratulating them on this amazing milestone.
+                  Join us in celebrating their special day today.
                 </p>
               </>
             )}
