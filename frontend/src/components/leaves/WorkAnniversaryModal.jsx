@@ -18,7 +18,7 @@ export default function WorkAnniversaryModal({ anniversaries, currentUser }) {
     let unseen = anniversaries.find((w) => {
       if (w.days_until !== 0) return false // exactly today only
       if (w.user_id !== currentUser?.id) return false
-      const key = `anniversary_dismissed_${currentYear}_${currentUser?.id}_${w.employee_code}`
+      const key = `anniversary_dismissed_${currentYear}_${w.employee_code}`
       return localStorage.getItem(key) !== 'true'
     })
 
@@ -26,7 +26,7 @@ export default function WorkAnniversaryModal({ anniversaries, currentUser }) {
     if (!unseen) {
       unseen = anniversaries.find((w) => {
         if (w.days_until !== 0) return false // exactly today only
-        const key = `anniversary_dismissed_${currentYear}_${currentUser?.id}_${w.employee_code}`
+        const key = `anniversary_dismissed_${currentYear}_${w.employee_code}`
         return localStorage.getItem(key) !== 'true'
       })
     }
@@ -46,7 +46,7 @@ export default function WorkAnniversaryModal({ anniversaries, currentUser }) {
   
   const dismiss = () => {
     const currentYear = new Date().getFullYear()
-    const key = `anniversary_dismissed_${currentYear}_${currentUser?.id}_${activeAnniversary.employee_code}`
+    const key = `anniversary_dismissed_${currentYear}_${activeAnniversary.employee_code}`
     localStorage.setItem(key, 'true')
     setActiveAnniversary(null)
   }
