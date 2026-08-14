@@ -1,10 +1,37 @@
-import { Eye, EyeOff, Moon, Sparkles, Sun, ArrowRight } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Eye, EyeOff, Moon, Sparkles, Sun, ArrowRight, CheckCircle2, Users, Building, ShieldCheck, Zap, LineChart, PieChart, Smartphone } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { messageFromError, tokenStore } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import SmartButton from '../components/ui/SmartButton'
 import { useTheme } from '../context/ThemeContext'
+
+const FEATURES = [
+  {
+    title: 'Core HR & People',
+    description: 'Centralize your employee data, documents, and directories in one secure platform.',
+    icon: Users,
+    color: 'bg-brand-500 text-white',
+  },
+  {
+    title: 'Smart Payroll',
+    description: 'Automate salary processing, tax calculations, and compliance without the headache.',
+    icon: Zap,
+    color: 'bg-purple-500 text-white',
+  },
+  {
+    title: 'Time & Attendance',
+    description: 'Track clock-ins, manage shifts, and handle leave requests with automated workflows.',
+    icon: ShieldCheck,
+    color: 'bg-rose-500 text-white',
+  },
+  {
+    title: 'Performance & Growth',
+    description: 'Align teams with goals, conduct reviews, and foster continuous feedback.',
+    icon: LineChart,
+    color: 'bg-amber-500 text-white',
+  },
+]
 
 export default function LoginPage() {
   const { login, user, loading: authLoading, defaultHome } = useAuth()
@@ -17,6 +44,15 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const redirectTo = location.state?.from?.pathname || defaultHome
+  const loginRef = useRef(null)
+
+  useEffect(() => {
+    if (loginRef.current) {
+      setTimeout(() => {
+        loginRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 500)
+    }
+  }, [])
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -44,8 +80,8 @@ export default function LoginPage() {
 
   if (authLoading && tokenStore.getAccess()) {
     return (
-      <div className="relative grid min-h-screen place-items-center bg-stone-50 p-4 dark:bg-stone-950">
-        <div className="flex flex-col items-center gap-4 text-stone-600 dark:text-stone-400">
+      <div className="relative grid min-h-screen place-items-center bg-slate-50 p-4 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-4 text-slate-600 dark:text-slate-400">
           <div className="h-11 w-11 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
           <p className="text-sm font-medium tracking-wide">Opening your workspace…</p>
         </div>
@@ -54,148 +90,267 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-brand-50/40 dark:bg-[#0a0f1c] font-sans">
-      {/* Premium Dynamic Outer Background */}
-      {/* Soft light grid pattern */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik00MCAwaC00MHY0MGg0MHoiIGZpbGw9InRyYW5zcGFyZW50Ii8+CjxwYXRoIGQ9Ik00MCAwaC00MHYxdjM5aDF2LTM5aDM5eiIgZmlsbD0icmdiYSgxMDAsIDEwMCwgMTAwLCAwLjAzKSIvPgo8L3N2Zz4=')] dark:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik00MCAwaC00MHY0MGg0MHoiIGZpbGw9InRyYW5zcGFyZW50Ii8+CjxwYXRoIGQ9Ik00MCAwaC00MHYxdjM5aDF2LTM5aDM5eiIgZmlsbD0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjAyKSIvPgo8L3N2Zz4=')] opacity-50" />
+    <div className="min-h-screen font-sans bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-white overflow-x-hidden selection:bg-brand-500/30">
       
-      {/* Floating Soft Orbs for lighting */}
-      <div className="absolute top-[10%] left-[15%] w-[500px] h-[500px] bg-brand-400/20 dark:bg-brand-600/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen motion-safe:animate-blob pointer-events-none" />
-      <div className="absolute top-[20%] right-[15%] w-[600px] h-[600px] bg-purple-400/20 dark:bg-purple-600/20 rounded-full blur-[130px] mix-blend-multiply dark:mix-blend-screen motion-safe:animate-blob animation-delay-2000 pointer-events-none" />
-      <div className="absolute -bottom-32 left-[30%] w-[500px] h-[500px] bg-accent-400/20 dark:bg-accent-600/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen motion-safe:animate-blob animation-delay-4000 pointer-events-none" />
+      {/* Navbar */}
+      <nav className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-6 py-4 lg:px-12 bg-white/80 dark:bg-[#0b0f19]/80 backdrop-blur-md border-b border-slate-200/50 dark:border-white/10 transition-colors">
+        <div className="flex items-center gap-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-400 text-white shadow-lg shadow-brand-500/30">
+            <Building size={20} className="fill-white/20" />
+          </div>
+          <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">WorkSphere</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={toggle}
+            className="rounded-full p-2.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white transition-colors"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </div>
+      </nav>
 
-      <button
-        type="button"
-        onClick={toggle}
-        className="fixed right-6 top-6 z-50 rounded-full border border-white/20 bg-white/50 p-3 text-stone-600 shadow-lg backdrop-blur-md transition-all hover:bg-white hover:scale-110 dark:border-stone-800/50 dark:bg-stone-900/50 dark:text-stone-300 dark:hover:bg-stone-800"
-        aria-label="Toggle theme"
-      >
-        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-      </button>
+      {/* Hero Section */}
+      <section className="relative pt-24 pb-20 lg:pt-32 lg:pb-32 px-6 lg:px-12 w-full overflow-hidden">
+        {/* Background Image & Overlays */}
+        <div className="absolute inset-0 z-0 hidden lg:block">
+          <img 
+            src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2000&auto=format&fit=crop" 
+            alt="Office background" 
+            className="w-full h-full object-cover object-center opacity-100"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-50/95 via-slate-50/80 to-slate-50/30 dark:from-[#0b0f19]/95 dark:via-[#0b0f19]/80 dark:to-[#0b0f19]/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-transparent to-transparent dark:from-[#0b0f19]" />
+        </div>
 
-      <div className="relative z-10 w-full max-w-5xl mx-4 overflow-hidden rounded-[2.5rem] border border-white/40 bg-white/60 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] backdrop-blur-xl dark:border-stone-800/50 dark:bg-stone-900/70 grid md:grid-cols-2 motion-safe:animate-fade-up">
-        
-        {/* Left Section - Hero Image & Branding */}
-        <div className="relative hidden md:flex flex-col justify-center items-center p-8 bg-stone-900 overflow-hidden dark:bg-stone-950 min-h-[480px]">
-          {/* Subtle Grid Background */}
-          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
+        {/* Subtle Background Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-teal-500/20 dark:bg-teal-500/10 rounded-full blur-[120px] pointer-events-none z-0" />
+
+        <div className="relative z-10 max-w-7xl mx-auto grid lg:grid-cols-2 gap-6 lg:gap-16 items-center">
           
-          {/* Animated Glowing Orbs */}
-          <div className="absolute -top-32 -right-32 w-80 h-80 bg-brand-500/30 rounded-full blur-[100px] animate-blob" />
-          <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-accent-500/30 rounded-full blur-[100px] animate-blob animation-delay-2000" />
-
-          {/* Typography */}
-          <div className="relative z-10 w-full text-center mb-6">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-md border border-white/10 shadow-lg mb-4">
-              <Sparkles className="h-3.5 w-3.5 text-brand-300" />
-              HR Core Platform
+          {/* Hero Content */}
+          <div className="max-w-2xl relative z-20">
+            <div className="inline-flex items-center gap-2 rounded-full bg-teal-50/80 dark:bg-teal-500/10 backdrop-blur-md px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-teal-800 dark:text-teal-300 ring-1 ring-inset ring-teal-600/20 dark:ring-teal-500/30 shadow-sm mb-8 motion-safe:animate-fade-up">
+              <Sparkles className="h-4 w-4 text-emerald-500" />
+              The Next-Gen HR Platform
             </div>
-            <h2 className="font-display text-2xl lg:text-3xl font-bold leading-tight text-white mb-3">
-              Empower your <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-300 to-accent-300">workforce.</span>
-            </h2>
-            <p className="text-stone-300 text-sm leading-relaxed max-w-[280px] mx-auto">
-              Manage your people, automate payroll, and track attendance in one unified workspace.
+            
+            <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.1] mb-2 lg:mb-6 motion-safe:animate-fade-up drop-shadow-sm" style={{ animationDelay: '100ms' }}>
+              Built for <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-emerald-500 dark:from-teal-400 dark:to-emerald-400">people.</span><br/>
+              Designed for growth.
+            </h1>
+            
+            <p className="hidden md:block text-lg lg:text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed motion-safe:animate-fade-up max-w-xl" style={{ animationDelay: '200ms' }}>
+              Automate your HR workflows, run payroll flawlessly, and empower your team with a platform they'll actually love using.
             </p>
+            
+            <div className="hidden md:flex flex-col sm:flex-row gap-4 mb-10 motion-safe:animate-fade-up" style={{ animationDelay: '300ms' }}>
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-white/5 shadow-sm">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Free Setup
+              </div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-white/5 shadow-sm">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Cancel Anytime
+              </div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-white/5 shadow-sm">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" /> 24/7 Support
+              </div>
+            </div>
+
+            <div className="hidden md:flex items-center gap-4 motion-safe:animate-fade-up" style={{ animationDelay: '400ms' }}>
+              <div className="flex -space-x-3">
+                <img className="w-10 h-10 rounded-full border-2 border-slate-50 dark:border-[#0b0f19] object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80" alt="User 1" />
+                <img className="w-10 h-10 rounded-full border-2 border-slate-50 dark:border-[#0b0f19] object-cover" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&q=80" alt="User 2" />
+                <img className="w-10 h-10 rounded-full border-2 border-slate-50 dark:border-[#0b0f19] object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80" alt="User 3" />
+                <img className="w-10 h-10 rounded-full border-2 border-slate-50 dark:border-[#0b0f19] object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80" alt="User 4" />
+                <div className="flex w-10 h-10 items-center justify-center rounded-full border-2 border-slate-50 dark:border-[#0b0f19] bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300">
+                  +2k
+                </div>
+              </div>
+              <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                Trusted by 2,000+ <br/>HR professionals.
+              </div>
+            </div>
           </div>
 
-          {/* Floating Illustration in a Glass Frame */}
-          <div className="relative z-10 w-full max-w-[280px] rounded-3xl bg-white/5 border border-white/10 backdrop-blur-3xl shadow-2xl p-6 motion-safe:animate-float-slow">
-            <div className="absolute inset-0 bg-gradient-to-tr from-brand-500/10 to-transparent rounded-3xl" />
-            <img
-              src="/illustrations/24070702_bwink_bld_03_single_03.webp"
-              alt="HR operations illustration"
-              loading="lazy"
-              fetchpriority="high"
-              decoding="async"
-              className="relative z-10 w-full h-auto object-contain drop-shadow-2xl brightness-110 contrast-125"
+          {/* Embedded Login Form */}
+          <div ref={loginRef} className="relative w-full max-w-md mx-auto lg:ml-auto motion-safe:animate-fade-up z-20" style={{ animationDelay: '200ms' }}>
+            <div className="relative rounded-[2.5rem] shadow-2xl shadow-slate-900/20 dark:shadow-black/40">
+              <div className="relative bg-white/80 dark:bg-[#0b0f19]/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-8 lg:p-10 h-full w-full overflow-hidden">
+              
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Welcome back</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Sign in to your workspace to continue.</p>
+              </div>
+
+              <form onSubmit={submit} className="space-y-5">
+                {error && !isPasswordError && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-900/20 dark:text-rose-200">
+                    <span className="font-semibold mr-2">Oops!</span>{error}
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Work Email</label>
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 transition-all focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-brand-500"
+                    placeholder="name@company.com"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Password</label>
+                  <div className="relative">
+                    <input
+                      className={`w-full rounded-xl border px-4 py-3 text-slate-900 placeholder-slate-400 transition-all focus:outline-none focus:ring-4 dark:text-white ${
+                        isPasswordError
+                          ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:border-rose-600 dark:bg-rose-900/20'
+                          : 'border-slate-200 bg-white focus:border-brand-500 focus:ring-brand-500/10 dark:border-slate-700 dark:bg-slate-900 dark:focus:border-brand-500'
+                      }`}
+                      placeholder="••••••••"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value)
+                        if (isPasswordError) setError('')
+                      }}
+                      required
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                      onClick={() => setShowPassword((s) => !s)}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {isPasswordError && (
+                    <p className="mt-2 text-sm font-medium text-rose-600 dark:text-rose-400 ml-1">
+                      {error}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+
+                <div className="pt-2">
+                  <SmartButton
+                    type="submit"
+                    loading={loading}
+                    className="w-full rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-brand-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    Sign in to workspace
+                  </SmartButton>
+                </div>
+              </form>
+            </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trusted By Section */}
+      <section className="hidden md:block py-12 border-y border-slate-200/50 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/20">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 text-center">
+          <p className="text-sm font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-8">
+            Trusted by modern forward-thinking companies
+          </p>
+          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+            {['Acme Corp', 'GlobalTech', 'Nexus Industries', 'Quantum Data', 'Stark Innovations'].map((brand) => (
+              <div key={brand} className="text-xl md:text-2xl font-bold font-display tracking-tight text-slate-800 dark:text-slate-200">
+                {brand}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="hidden md:block py-24 px-6 lg:px-12 max-w-7xl mx-auto relative">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6">
+            Everything you need to run your team effortlessly.
+          </h2>
+          <p className="text-lg text-slate-600 dark:text-slate-400">
+            From onboarding to offboarding, and everything in between. We provide the tools so you can focus on building a great culture.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {FEATURES.map((feature, idx) => {
+            const Icon = feature.icon
+            return (
+              <div key={idx} className="group relative p-8 rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2f] shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-md ${feature.color}`}>
+                  <Icon size={24} />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">{feature.title}</h3>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* UI Showcase Image Section */}
+      <section className="hidden md:block py-24 px-6 lg:px-12 bg-slate-900 text-white relative overflow-hidden">
+        {/* Abstract Backgrounds */}
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-brand-600/20 to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-brand-500/20 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
+          <div>
+            <h2 className="text-4xl lg:text-5xl font-bold mb-6">Beautifully designed for everyone.</h2>
+            <p className="text-xl text-slate-300 mb-8 leading-relaxed">
+              Whether you are an administrator running complex payroll, or an employee requesting time off, the experience is intuitive, fast, and stunning.
+            </p>
+            <ul className="space-y-4 text-slate-300">
+              <li className="flex items-center gap-3">
+                <PieChart className="text-brand-400" />
+                Real-time dashboard analytics
+              </li>
+              <li className="flex items-center gap-3">
+                <Smartphone className="text-brand-400" />
+                Mobile responsive workspace
+              </li>
+              <li className="flex items-center gap-3">
+                <ShieldCheck className="text-brand-400" />
+                Enterprise-grade security
+              </li>
+            </ul>
+          </div>
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-tr from-brand-500 to-indigo-500 rounded-3xl blur-2xl opacity-30" />
+            <img 
+              src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80" 
+              alt="Team collaborating" 
+              className="relative z-10 w-full h-auto rounded-3xl shadow-2xl border border-white/10 object-cover"
             />
           </div>
         </div>
+      </section>
 
-        <div className="flex flex-col justify-center p-8 sm:p-12 lg:p-16">
-          <div className="w-full max-w-md mx-auto">
-            <h2 className="font-display text-3xl font-bold tracking-tight text-stone-900 dark:text-white mb-2">Welcome back</h2>
-            <p className="text-stone-500 dark:text-stone-400 mb-8">Please enter your details to sign in.</p>
-
-            <form onSubmit={submit} className="space-y-5">
-              {error && !isPasswordError && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4 text-sm text-rose-800 backdrop-blur-sm motion-safe:animate-fade-up dark:border-rose-900/50 dark:bg-rose-900/20 dark:text-rose-200">
-                  <div className="flex gap-2">
-                    <span className="font-semibold">Oops!</span>
-                    {error}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <input
-                  className="w-full rounded-xl border border-stone-200 bg-white/50 px-4 py-3 text-stone-900 placeholder-stone-400 backdrop-blur-sm transition-all focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-stone-700/50 dark:bg-stone-900/50 dark:text-white dark:focus:bg-stone-900"
-                  placeholder="Work Email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="relative">
-                  <input
-                    className={`w-full rounded-xl border px-4 py-3 text-stone-900 placeholder-stone-400 backdrop-blur-sm transition-all focus:outline-none focus:ring-4 dark:text-white ${
-                      isPasswordError
-                        ? 'border-rose-400 bg-rose-50/50 focus:border-rose-500 focus:bg-white focus:ring-rose-500/20 dark:border-rose-600/50 dark:bg-rose-900/10'
-                        : 'border-stone-200 bg-white/50 focus:border-brand-500 focus:bg-white focus:ring-brand-500/10 dark:border-stone-700/50 dark:bg-stone-900/50 dark:focus:bg-stone-900'
-                    }`}
-                    placeholder="Password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value)
-                      if (isPasswordError) setError('')
-                    }}
-                    required
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition-colors dark:hover:bg-stone-800 dark:hover:text-stone-300"
-                    onClick={() => setShowPassword((s) => !s)}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {isPasswordError && (
-                  <p className="mt-2 text-sm font-medium text-rose-600 dark:text-rose-400 ml-1">
-                    {error}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-end pt-2">
-                <Link
-                  to="/forgot-password"
-                  className="text-sm font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
-              <div className="pt-4">
-                <SmartButton
-                  type="submit"
-                  loading={loading}
-                  className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-4 py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:scale-[1.02] hover:shadow-brand-500/25 active:scale-[0.98]"
-                >
-                  <span className="relative flex items-center justify-center gap-2">
-                    Sign in to workspace
-                    <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-                  </span>
-                </SmartButton>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
+      {/* Footer */}
+      <footer className="hidden md:block py-12 px-6 lg:px-12 border-t border-slate-200 dark:border-white/10 text-center">
+        <p className="text-slate-500 dark:text-slate-400">
+          © {new Date().getFullYear()} WorkSphere. All rights reserved.
+        </p>
+      </footer>
     </div>
   )
 }
