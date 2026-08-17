@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Moon, Sparkles, Sun, ArrowRight, CheckCircle2, Users, Building, ShieldCheck, Zap, LineChart, PieChart, Smartphone } from 'lucide-react'
+import { Eye, EyeOff, Moon, Sparkles, Sun, ArrowRight, CheckCircle2, Users, Building, ShieldCheck, Zap, LineChart, PieChart, Smartphone, Wallet, DollarSign, Heart } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { messageFromError, tokenStore } from '../api/client'
@@ -342,6 +342,86 @@ export default function LoginPage() {
               className="relative z-10 w-full h-auto rounded-3xl shadow-2xl border border-white/10 object-cover"
             />
           </div>
+        </div>
+      </section>
+
+      {/* Redesigned Payroll Section */}
+      <section className="hidden md:block py-32 px-6 lg:px-12 bg-slate-50 dark:bg-slate-900/40 relative border-b border-slate-200 dark:border-slate-800/50 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center">
+          
+          <div className="order-2 lg:order-1 relative">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-tr from-indigo-500/20 to-brand-500/20 rounded-full blur-[80px]" />
+            
+            {/* Professional HR/Payroll Image */}
+            <div className="relative z-10 w-full rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transform hover:-translate-y-2 transition-transform duration-500">
+              <img 
+                src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&q=80" 
+                alt="Professional working on Payroll" 
+                className="w-full h-[450px] lg:h-[500px] object-cover"
+              />
+            </div>
+          </div>
+
+          <div className="order-1 lg:order-2 relative z-10">
+            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-indigo-700 dark:text-indigo-300 ring-1 ring-inset ring-indigo-600/20 mb-6">
+              Smart Payroll
+            </div>
+            <h2 className="text-4xl lg:text-5xl font-bold mb-6 text-slate-900 dark:text-white leading-tight">
+              Run payroll in <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-brand-500">minutes</span>, not days.
+            </h2>
+            <p className="text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed">
+              Say goodbye to manual data entry, spreadsheets, and compliance headaches. Our automated payroll system handles taxes, deductions, and direct deposits with zero errors.
+            </p>
+            
+            <div className="space-y-6">
+              <div className="flex gap-4">
+                <div className="mt-1 w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+                  <Zap className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Automated Compliance</h4>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">We automatically calculate and file local, state, and federal taxes so you never have to worry about penalties.</p>
+                </div>
+              </div>
+              
+              <div className="flex gap-4">
+                <div className="mt-1 w-12 h-12 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center shrink-0">
+                  <Building className="w-6 h-6 text-brand-600 dark:text-brand-400" />
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Benefits Syncing</h4>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">Health insurance, 401(k), and other benefits are automatically deducted from employee paychecks seamlessly.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
+      <section className="hidden md:block py-32 px-6 lg:px-12 relative overflow-hidden">
+        <div className="absolute inset-0 z-0">
+           <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=2000&q=80" className="w-full h-full object-cover opacity-30 dark:opacity-20" alt="CTA background" />
+           <div className="absolute inset-0 bg-teal-900/90 dark:bg-[#0b0f19]/95 backdrop-blur-sm" />
+        </div>
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
+          <h2 className="text-4xl lg:text-6xl font-extrabold text-white mb-6">Ready to transform your workplace?</h2>
+          <p className="text-xl text-teal-100 dark:text-slate-300 mb-10 max-w-2xl mx-auto leading-relaxed">
+            Join thousands of modern companies who have upgraded their HR stack to WorkSphere. It takes less than 5 minutes to get started.
+          </p>
+          <button 
+            onClick={() => {
+              if (loginRef.current) {
+                loginRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }
+            }}
+            className="rounded-full bg-emerald-500 text-white hover:bg-emerald-400 px-10 py-5 text-lg font-bold shadow-xl shadow-emerald-900/20 hover:-translate-y-1 transition-all"
+          >
+            Get Started Now
+          </button>
         </div>
       </section>
 
