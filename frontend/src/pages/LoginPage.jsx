@@ -11,25 +11,41 @@ const FEATURES = [
     title: 'Core HR & People',
     description: 'Centralize your employee data, documents, and directories in one secure platform.',
     icon: Users,
-    color: 'bg-brand-500 text-white',
+    color: 'bg-[#0d9488] text-white shadow-teal-500/20',
+    cardBg: 'bg-[#f0fdfa] dark:bg-[#0d9488]/10 border-[#ccfbf1] dark:border-[#0d9488]/30',
+    textColor: 'text-[#042f2e] dark:text-[#ccfbf1]',
+    image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80',
+    hoverGlow: 'hover:shadow-teal-500/15 hover:border-teal-300/50'
   },
   {
     title: 'Smart Payroll',
     description: 'Automate salary processing, tax calculations, and compliance without the headache.',
     icon: Zap,
-    color: 'bg-purple-500 text-white',
+    color: 'bg-[#6366f1] text-white shadow-indigo-500/20',
+    cardBg: 'bg-[#eef2ff] dark:bg-[#6366f1]/10 border-[#e0e7ff] dark:border-[#6366f1]/30',
+    textColor: 'text-[#1e1b4b] dark:text-[#e0e7ff]',
+    image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80',
+    hoverGlow: 'hover:shadow-indigo-500/15 hover:border-indigo-300/50'
   },
   {
     title: 'Time & Attendance',
     description: 'Track clock-ins, manage shifts, and handle leave requests with automated workflows.',
     icon: ShieldCheck,
-    color: 'bg-rose-500 text-white',
+    color: 'bg-[#f43f5e] text-white shadow-rose-500/20',
+    cardBg: 'bg-[#fff1f2] dark:bg-[#f43f5e]/10 border-[#ffe4e6] dark:border-[#f43f5e]/30',
+    textColor: 'text-[#4c0519] dark:text-[#ffe4e6]',
+    image: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=800&q=80',
+    hoverGlow: 'hover:shadow-rose-500/15 hover:border-rose-300/50'
   },
   {
     title: 'Performance & Growth',
     description: 'Align teams with goals, conduct reviews, and foster continuous feedback.',
     icon: LineChart,
-    color: 'bg-amber-500 text-white',
+    color: 'bg-[#f59e0b] text-white shadow-amber-500/20',
+    cardBg: 'bg-[#fffbeb] dark:bg-[#f59e0b]/10 border-[#fef3c7] dark:border-[#f59e0b]/30',
+    textColor: 'text-[#451a03] dark:text-[#fef3c7]',
+    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
+    hoverGlow: 'hover:shadow-amber-500/15 hover:border-amber-300/50'
   },
 ]
 
@@ -94,12 +110,12 @@ export default function LoginPage() {
       
       {/* Navbar */}
       <nav className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-6 py-4 lg:px-12 bg-white/80 dark:bg-[#0b0f19]/80 backdrop-blur-md border-b border-slate-200/50 dark:border-white/10 transition-colors">
-        <div className="flex items-center gap-2">
+        <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2 hover:opacity-80 transition-opacity outline-none rounded-xl focus-visible:ring-2 focus-visible:ring-brand-500">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-400 text-white shadow-lg shadow-brand-500/30">
             <Building size={20} className="fill-white/20" />
           </div>
           <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">WorkSphere</span>
-        </div>
+        </button>
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -293,14 +309,30 @@ export default function LoginPage() {
           {FEATURES.map((feature, idx) => {
             const Icon = feature.icon
             return (
-              <div key={idx} className="group relative p-8 rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white dark:bg-[#131b2f] shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-md ${feature.color}`}>
-                  <Icon size={24} />
+              <div key={idx} className={`group relative p-8 rounded-[2rem] border overflow-hidden ${feature.cardBg} ${feature.hoverGlow} shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2`}>
+                
+                {/* Background Image with Overlay */}
+                <div className="absolute inset-0 z-0 pointer-events-none">
+                  <img 
+                    src={feature.image} 
+                    alt="" 
+                    className="w-full h-full object-cover opacity-[0.03] group-hover:opacity-[0.15] mix-blend-luminosity transition-all duration-700 group-hover:scale-110" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-white/40 via-transparent to-white/40 dark:from-black/40 dark:via-transparent dark:to-black/40" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">{feature.title}</h3>
-                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                  {feature.description}
-                </p>
+
+                {/* Decorative blob */}
+                <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-white/60 dark:bg-white/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-0" />
+
+                <div className="relative z-10">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-md ${feature.color} group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500`}>
+                    <Icon size={24} />
+                  </div>
+                  <h3 className={`text-[22px] font-bold tracking-tight mb-2.5 transition-colors duration-300 ${feature.textColor}`}>{feature.title}</h3>
+                  <p className="text-[15px] text-slate-700/80 dark:text-slate-300/90 leading-relaxed font-medium">
+                    {feature.description}
+                  </p>
+                </div>
               </div>
             )
           })}
