@@ -68,6 +68,7 @@ export default function EmployeesPage() {
   const [rows, setRows] = useState([])
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
   const [templates, setTemplates] = useState([])
   const [activeTab, setActiveTab] = useState('employees')
   const [error, setError] = useState('')
@@ -115,6 +116,7 @@ export default function EmployeesPage() {
       ])
       setRows(Array.isArray(data) ? data : data.results || [])
       setTotalPages(Array.isArray(data) ? 1 : Math.max(Math.ceil((data.count || 0) / 20), 1))
+      setTotalItems(Array.isArray(data) ? data.length : (data.count || 0))
       setTemplates(Array.isArray(tplRes.data) ? tplRes.data : tplRes.data.results || [])
       if (isPrivileged) {
         const { data: loc } = await api.get('/api/employees/location-settings/')
@@ -321,9 +323,9 @@ export default function EmployeesPage() {
         badge="People"
         action={
           <div className="rounded-2xl border border-brand-200/80 bg-brand-50 px-5 py-3 text-center dark:border-brand-800 dark:bg-brand-950/40">
-            <p className="text-3xl font-bold tabular-nums text-brand-700 dark:text-brand-300">{rows.length}</p>
+            <p className="text-3xl font-bold tabular-nums text-brand-700 dark:text-brand-300">{totalItems}</p>
             <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-              {rows.length === 1 ? 'Employee' : 'Employees'}
+              {totalItems === 1 ? 'Employee' : 'Employees'}
             </p>
           </div>
         }
@@ -706,7 +708,7 @@ export default function EmployeesPage() {
       )}
       {activeTab === 'employees' && totalPages > 1 && (
         <div className="mt-4">
-          <Pagination current={page} total={totalPages} onPageChange={setPage} />
+          <Pagination page={page} totalPages={totalPages} total={totalItems} pageSize={20} onPageChange={setPage} />
         </div>
       )}
       
