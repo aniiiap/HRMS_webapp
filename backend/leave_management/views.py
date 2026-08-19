@@ -452,7 +452,7 @@ class LeaveTypeRuleViewSet(viewsets.ModelViewSet):
         qs = qs.filter(organization_id=org_id)
         if self.request.query_params.get("active") == "1":
             qs = qs.filter(is_active=True)
-        return qs
+        return qs.order_by("sort_order", "id")
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()

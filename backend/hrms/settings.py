@@ -155,9 +155,8 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "hrms.pagination.CustomPagination",
     "PAGE_SIZE": 20,
-    "PAGE_SIZE_QUERY_PARAM": "page_size",
     "EXCEPTION_HANDLER": "hrms.exceptions.custom_exception_handler",
     "DEFAULT_THROTTLE_CLASSES": (
         "rest_framework.throttling.AnonRateThrottle",
