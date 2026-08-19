@@ -55,7 +55,7 @@ export default function AttendanceRulesPanel() {
       const [tplRes, assignRes, empRes] = await Promise.all([
         api.get('/api/employees/shift-templates/'),
         api.get('/api/employees/shift-template-assignments/'),
-        api.get('/api/employees/'),
+        api.get('/api/employees/', { params: { nopaginate: 'true' } }),
       ])
       const tplList = Array.isArray(tplRes.data) ? tplRes.data : tplRes.data.results || []
       const assignList = Array.isArray(assignRes.data) ? assignRes.data : assignRes.data.results || []

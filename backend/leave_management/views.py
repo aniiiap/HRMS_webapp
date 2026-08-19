@@ -428,6 +428,7 @@ class LeavePolicyViewSet(viewsets.ModelViewSet):
 class LeaveTypeRuleViewSet(viewsets.ModelViewSet):
     queryset = LeaveTypeRule.objects.all()
     serializer_class = LeaveTypeRuleSerializer
+    pagination_class = None
 
     def get_serializer_class(self):
         if self.action == "create":

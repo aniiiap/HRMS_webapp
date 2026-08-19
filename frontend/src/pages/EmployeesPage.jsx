@@ -69,6 +69,7 @@ export default function EmployeesPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalItems, setTotalItems] = useState(0)
+  const [pageSize, setPageSize] = useState(20)
   const [templates, setTemplates] = useState([])
   const [activeTab, setActiveTab] = useState('employees')
   const [error, setError] = useState('')
@@ -111,11 +112,11 @@ export default function EmployeesPage() {
     try {
       const q = searchParams.get('q') || ''
       const [{ data }, tplRes] = await Promise.all([
-        api.get('/api/employees/', { params: { page, search: q } }),
+        api.get('/api/employees/', { params: { page, page_size: pageSize, search: q } }),
         isPrivileged ? api.get('/api/employees/shift-templates/') : Promise.resolve({ data: [] }),
       ])
       setRows(Array.isArray(data) ? data : data.results || [])
-      setTotalPages(Array.isArray(data) ? 1 : Math.max(Math.ceil((data.count || 0) / 20), 1))
+      setTotalPages(Array.isArray(data) ? 1 : Math.max(Math.ceil((data.count || 0) / pageSize), 1))
       setTotalItems(Array.isArray(data) ? data.length : (data.count || 0))
       setTemplates(Array.isArray(tplRes.data) ? tplRes.data : tplRes.data.results || [])
       if (isPrivileged) {
@@ -134,7 +135,7 @@ export default function EmployeesPage() {
     }
   }
 
-  useEffect(() => { void load() }, [page, searchParams])
+  useEffect(() => { void load() }, [page, pageSize, searchParams])
 
   // Removed client-side search since we now do server-side pagination and search
   const employeeRows = rows || []
@@ -706,9 +707,9 @@ export default function EmployeesPage() {
         </table>
       </div>
       )}
-      {activeTab === 'employees' && totalPages > 1 && (
+      {activeTab === 'employees' && totalItems > 0 && (
         <div className="mt-4">
-          <Pagination page={page} totalPages={totalPages} total={totalItems} pageSize={20} onPageChange={setPage} />
+          <Pagination page={page} totalPages={totalPages} total={totalItems} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} />
         </div>
       )}
       

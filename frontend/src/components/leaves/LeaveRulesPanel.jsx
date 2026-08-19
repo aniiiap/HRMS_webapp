@@ -52,7 +52,7 @@ export default function LeaveRulesPanel({ onChanged }) {
       const [rulesRes, assignRes, empRes] = await Promise.all([
         api.get('/api/leave-rules/'),
         api.get('/api/leave-rules/assignments/'),
-        api.get('/api/employees/'),
+        api.get('/api/employees/', { params: { nopaginate: 'true' } }),
       ])
       const ruleList = Array.isArray(rulesRes.data) ? rulesRes.data : rulesRes.data.results || []
       const assignList = Array.isArray(assignRes.data) ? assignRes.data : assignRes.data.results || []
