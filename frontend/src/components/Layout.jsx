@@ -15,6 +15,7 @@ import {
   Users,
   FileText,
   Receipt,
+  Laptop,
   X
 } from 'lucide-react'
 import dayjs from 'dayjs'
@@ -43,6 +44,7 @@ const allMore = [
   { to: '/expenses/approvals', label: 'Expense Approvals', icon: Receipt, iconFx: 'icon-fx-rise' },
   { to: '/organizations', label: 'Organizations', icon: Building2, iconFx: 'icon-fx-pop' },
   { to: '/reports', label: 'Reports', icon: FileBarChart2, iconFx: 'icon-fx-rise' },
+  { to: '/assets', label: 'Assets', icon: Laptop, iconFx: 'icon-fx-nudge' },
 ]
 
 export default function Layout() {
@@ -83,6 +85,7 @@ export default function Layout() {
     if (item.to === '/reports') return canViewReports
     if (item.to === '/expenses/approvals') return ['admin', 'hr'].includes(user?.role)
     if (item.to === '/expenses') return ['employee'].includes(user?.role)
+    if (item.to === '/assets') return ['admin', 'hr'].includes(user?.role)
     return true
   })
 

@@ -14,6 +14,7 @@ urlpatterns = [
     path("api/platform/", include("saas_platform.urls")),
     path("api/letters/", include("letters.urls")),
     path("api/expenses/", include("expenses.urls")),
+    path("api/", include("assets.urls")),
 ]
 
 if settings.DEBUG:

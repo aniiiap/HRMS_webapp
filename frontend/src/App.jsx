@@ -25,6 +25,7 @@ const LetterTemplates = lazy(() => import('./pages/letters/LetterTemplates'))
 const LetterEditor = lazy(() => import('./pages/letters/LetterEditor'))
 const ExpensesPage = lazy(() => import('./pages/ExpensesPage'))
 const AdminExpensesPage = lazy(() => import('./pages/AdminExpensesPage'))
+const AssetsPage = lazy(() => import('./pages/AssetsPage'))
 import PlatformRoute from './components/PlatformRoute'
 import PlatformLayout from './components/PlatformLayout'
 import CompanyRoute from './components/CompanyRoute'
@@ -124,6 +125,11 @@ export default function App() {
               </Suspense>
             } />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/assets" element={
+              <Suspense fallback={<RoutePageFallback />}>
+                <AssetsPage />
+              </Suspense>
+            } />
           </Route>
           <Route element={<RoleRoute allowedRoles={['admin', 'hr']} />}>
             <Route path="/organizations" element={<OrganizationsPage />} />

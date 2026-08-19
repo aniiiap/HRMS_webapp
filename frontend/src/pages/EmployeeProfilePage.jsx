@@ -15,6 +15,7 @@ import EmployeeWorkWeekTab from '../components/employee/EmployeeWorkWeekTab'
 import { employeeDisplayName } from '../components/employee/profileUtils'
 import EmployeeCompensationSection from '../components/payroll/EmployeeCompensationSection'
 import SalaryStructureBuilder from '../components/payroll/SalaryStructureBuilder'
+import EmployeeAssetsTab from '../components/employee/EmployeeAssetsTab'
 
 const TABS = [
   { id: 'profile', label: 'Personal' },
@@ -26,6 +27,7 @@ const TABS = [
   { id: 'leave', label: 'Leave' },
   { id: 'compensation', label: 'Compensation' },
   { id: 'payroll', label: 'Payroll' },
+  { id: 'assets', label: 'Assets' },
 ]
 
 export default function EmployeeProfilePage() {
