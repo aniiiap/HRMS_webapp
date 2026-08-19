@@ -285,6 +285,8 @@ export default function EmployeeProfilePage() {
             )}
 
             {tab === 'leave' && <EmployeeLeaveTab leaves={leaves} leaveBalance={leaveBalance} />}
+            
+            {tab === 'assets' && <EmployeeAssetsTab employee={employee} isPrivileged={true} />}
 
             {tab === 'compensation' && (
               <EmployeeCompensationSection employeeId={employee.id} readOnly={!canEditPayroll} />

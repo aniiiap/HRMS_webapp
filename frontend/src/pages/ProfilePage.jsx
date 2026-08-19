@@ -4,6 +4,7 @@ import { api, messageFromError } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import EmployeeDocumentsTab from '../components/employee/EmployeeDocumentsTab'
+import EmployeeAssetsTab from '../components/employee/EmployeeAssetsTab'
 
 const TABS = [
   { id: 'personal', label: 'Personal' },
@@ -11,6 +12,7 @@ const TABS = [
   { id: 'team', label: 'Team' },
   { id: 'workweek', label: 'Work Week' },
   { id: 'documents', label: 'Documents' },
+  { id: 'assets', label: 'Assets' },
 ]
 
 export default function ProfilePage() {
@@ -201,6 +203,8 @@ export default function ProfilePage() {
       </div>
     ) : activeTab === 'documents' ? (
       <EmployeeDocumentsTab documents={documents} canUpload={true} onUpload={handleDocUpload} onDelete={handleDocDelete} />
+    ) : activeTab === 'assets' ? (
+      <EmployeeAssetsTab employee={profile} />
     ) : (
       <div className="text-sm text-slate-600 dark:text-slate-300">
         <p>Default work week: Monday - Friday</p>
