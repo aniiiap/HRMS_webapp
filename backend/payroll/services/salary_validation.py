@@ -86,6 +86,10 @@ def validate_run_ready_to_finalize(run) -> dict:
             critical.append("Payroll is on hold for this employee.")
         if critical:
             u = res.employee.user
+            # Allow admins and hr to skip structure validation
+            if u.role in ["admin", "hr"]:
+                continue
+                
             blockers.append(
                 {
                     "employee_id": res.employee_id,

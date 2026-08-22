@@ -35,7 +35,7 @@ export default function ExpensesPage() {
 
     const fetchData = async () => {
         try {
-            const claimsRes = await expensesApi.getClaims();
+            const claimsRes = await expensesApi.getClaims({ own: 'true' });
             const cData = claimsRes.data?.results || claimsRes.data;
             setClaims(Array.isArray(cData) ? cData : []);
         } catch (error) {

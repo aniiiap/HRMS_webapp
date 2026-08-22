@@ -11,7 +11,7 @@ import { fmtInr, fmtInrFull } from '../../utils/payrollFormat'
 export default function EmployeePayslipPortal({ employeeId: filterEmployeeId }) {
   const { isManagerPlus, isPrivileged } = useAuth()
   const [rows, setRows] = useState([])
-  const [runs, setRuns] = useState([])
+
   const [loading, setLoading] = useState(true)
   const [yearFilter, setYearFilter] = useState('all')
   const [expandedId, setExpandedId] = useState(null)
@@ -24,44 +24,30 @@ export default function EmployeePayslipPortal({ employeeId: filterEmployeeId }) 
       const { data } = await api.get('/api/payroll/results/', { params })
       const list = (Array.isArray(data) ? data : data.results || []).sort((a, b) => (b.run || 0) - (a.run || 0))
       setRows(list)
-      const runIds = [...new Set(list.map((r) => r.run))]
-      if (runIds.length && (isManagerPlus || isPrivileged)) {
-        const runRes = await api.get('/api/payroll/runs/')
-        const allRuns = Array.isArray(runRes.data) ? runRes.data : runRes.data.results || []
-        setRuns(allRuns.filter((r) => runIds.includes(r.id)))
-      } else {
-        setRuns([])
-      }
     } catch (err) {
       toast.error(messageFromError(err))
     } finally {
       setLoading(false)
     }
-  }, [filterEmployeeId, isManagerPlus, isPrivileged])
+  }, [filterEmployeeId])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const runMap = useMemo(() => Object.fromEntries(runs.map((r) => [r.id, r])), [runs])
-
   const filtered = useMemo(() => {
     if (yearFilter === 'all') return rows
-    return rows.filter((r) => {
-      const run = runMap[r.run]
-      return run && String(run.period_year) === yearFilter
-    })
-  }, [rows, runMap, yearFilter])
+    return rows.filter((r) => String(r.period_year) === yearFilter)
+  }, [rows, yearFilter])
 
   const years = useMemo(() => {
-    const ys = new Set(runs.map((r) => r.period_year))
+    const ys = new Set(rows.map((r) => r.period_year).filter(Boolean))
     return [...ys].sort((a, b) => b - a)
-  }, [runs])
+  }, [rows])
 
   const ytdNet = useMemo(() => {
-    if (yearFilter === 'all') return rows.reduce((s, r) => s + Number(r.net_pay || 0), 0)
     return filtered.reduce((s, r) => s + Number(r.net_pay || 0), 0)
-  }, [filtered, rows, yearFilter])
+  }, [filtered])
 
   async function downloadPdf(resultId, run) {
     try {
@@ -127,7 +113,7 @@ export default function EmployeePayslipPortal({ employeeId: filterEmployeeId }) 
         <SummaryTile
           icon={Download}
           label="Available downloads"
-          value={String(filtered.filter((r) => ['finalized', 'paid'].includes(runMap[r.run]?.status)).length)}
+          value={String(filtered.filter((r) => ['finalized', 'paid'].includes(r.status)).length)}
         />
       </div>
 
@@ -151,9 +137,10 @@ export default function EmployeePayslipPortal({ employeeId: filterEmployeeId }) 
             </thead>
             <tbody>
               {filtered.map((p) => {
-                const run = runMap[p.run]
-                const period = run ? `${dayjs(`${run.period_year}-${run.period_month}-01`).format('MMMM YYYY')}` : `#${p.run}`
-                const canPdf = run && ['finalized', 'paid'].includes(run.status)
+                const period = p.period_year && p.period_month 
+                  ? `${dayjs(`${p.period_year}-${p.period_month}-01`).format('MMMM YYYY')}` 
+                  : `#${p.run}`
+                const canPdf = ['finalized', 'paid'].includes(p.status)
                 return (
                   <Fragment key={p.id}>
                     <tr className="border-t border-slate-100 dark:border-slate-800">
@@ -162,7 +149,7 @@ export default function EmployeePayslipPortal({ employeeId: filterEmployeeId }) 
                       <td className="px-4 py-3 tabular-nums text-rose-600">{fmtInrFull(p.total_deductions)}</td>
                       <td className="px-4 py-3 font-semibold tabular-nums">{fmtInrFull(p.net_pay)}</td>
                       <td className="px-4 py-3">
-                        <StatusBadge status={run?.status || 'draft'} />
+                        <StatusBadge status={p.status || 'draft'} />
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-2">
@@ -174,7 +161,7 @@ export default function EmployeePayslipPortal({ employeeId: filterEmployeeId }) 
                               <button type="button" className="text-xs font-medium text-slate-600" onClick={() => void previewPdf(p.id)}>
                                 Preview
                               </button>
-                              <button type="button" className="text-xs font-medium text-brand-600" onClick={() => void downloadPdf(p.id, run)}>
+                              <button type="button" className="text-xs font-medium text-brand-600" onClick={() => void downloadPdf(p.id, p)}>
                                 PDF
                               </button>
                             </>

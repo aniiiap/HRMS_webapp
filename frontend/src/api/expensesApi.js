@@ -7,7 +7,7 @@ export const expensesApi = {
     deleteCategory: (id) => api.delete(`/api/expenses/categories/${id}/`),
 
     // Claims
-    getClaims: () => api.get('/api/expenses/claims/'),
+    getClaims: (params = {}) => api.get('/api/expenses/claims/', { params }),
     createClaim: (formData) => api.post('/api/expenses/claims/', formData, {
         headers: {
             'Content-Type': 'multipart/form-data',

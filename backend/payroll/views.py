@@ -561,10 +561,12 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
         rows = []
         blocking = 0
         for res in run.employee_results.select_related("employee", "employee__user"):
+            u = res.employee.user
+            if u.role in ["admin", "hr"]:
+                continue
             warnings = run_employee_warnings(res.employee, run)
             if warnings:
                 blocking += 1
-            u = res.employee.user
             rows.append(
                 {
                     "employee_id": res.employee_id,

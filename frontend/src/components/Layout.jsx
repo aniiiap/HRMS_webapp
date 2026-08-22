@@ -77,14 +77,14 @@ export default function Layout() {
   }).filter((item) => {
     if (item.to === '/employees') return ['admin', 'hr'].includes(user?.role)
     if (item.to === '/announcements') return ['admin', 'hr', 'employee'].includes(user?.role)
-    if (item.to === '/payroll') return ['admin', 'hr', 'employee'].includes(user?.role)
+    if (item.to === '/payroll') return ['admin', 'hr', 'employee', 'manager'].includes(user?.role)
     return true
   })
   const more = allMore.filter((item) => {
     if (item.to === '/organizations') return canViewPayrollAdmin && !user?.is_superuser
     if (item.to === '/reports') return canViewReports
     if (item.to === '/expenses/approvals') return ['admin', 'hr'].includes(user?.role)
-    if (item.to === '/expenses') return ['employee'].includes(user?.role)
+    if (item.to === '/expenses') return ['employee', 'manager'].includes(user?.role)
     if (item.to === '/assets') return ['admin', 'hr'].includes(user?.role)
     return true
   })

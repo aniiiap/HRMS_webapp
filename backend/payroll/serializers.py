@@ -129,6 +129,8 @@ class PayrollEmployeeResultSerializer(serializers.ModelSerializer):
     designation = serializers.CharField(source="employee.designation", read_only=True)
     working_days = serializers.SerializerMethodField()
     status = serializers.CharField(source="run.status", read_only=True)
+    period_year = serializers.IntegerField(source="run.period_year", read_only=True)
+    period_month = serializers.IntegerField(source="run.period_month", read_only=True)
     attendance_summary = serializers.SerializerMethodField()
     bank_account_number = serializers.SerializerMethodField()
     bank_ifsc = serializers.SerializerMethodField()
@@ -148,6 +150,8 @@ class PayrollEmployeeResultSerializer(serializers.ModelSerializer):
             "designation",
             "working_days",
             "status",
+            "period_year",
+            "period_month",
             "paid_days",
             "lop_days",
             "auto_paid_days",

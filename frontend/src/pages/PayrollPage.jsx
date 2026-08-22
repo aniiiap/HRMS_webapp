@@ -28,7 +28,7 @@ const tabsEmployee = [
 ]
 
 export default function PayrollPage() {
-  const { user, isManagerPlus, isPrivileged } = useAuth()
+  const { user, isPrivileged } = useAuth()
   const confirm = useConfirm()
   const [searchParams] = useSearchParams()
   const [orgs, setOrgs] = useState([])
@@ -95,14 +95,14 @@ export default function PayrollPage() {
     const validEmployee = ['portal', 'mytax', 'payslips']
     if (tab && validEmployee.includes(tab)) {
       setActiveTab(tab === 'payslips' ? 'portal' : tab)
-    } else if (!isManagerPlus && !isPrivileged) {
+    } else if (!isPrivileged) {
       setActiveTab('portal')
     }
-  }, [isManagerPlus, isPrivileged, searchParams])
+  }, [isPrivileged, searchParams])
 
   const loadOrgs = useCallback(async () => {
     // Employees should not call organizations listing (403 for non-admin users).
-    if (!isManagerPlus && !isPrivileged) {
+    if (!isPrivileged) {
       setOrgs([])
       setOrgId(user?.organization_id ? String(user.organization_id) : '')
       return
@@ -120,7 +120,7 @@ export default function PayrollPage() {
     } catch (err) {
       setError(messageFromError(err))
     }
-  }, [isManagerPlus, isPrivileged, user?.organization_id])
+  }, [isPrivileged, user?.organization_id])
 
   const loadRuns = useCallback(async () => {
     if (!orgId) return
@@ -193,7 +193,7 @@ export default function PayrollPage() {
       const { data } = await api.get('/api/payroll/tax-declarations/', { params })
       const list = Array.isArray(data) ? data : data.results || []
       setTaxRows(list)
-      if (!isManagerPlus && !isPrivileged && user?.employee_id) {
+      if (!isPrivileged && user?.employee_id) {
         const mine = list.find((t) => String(t.employee) === String(user.employee_id))
         if (mine) {
           setMyTax({
@@ -210,7 +210,7 @@ export default function PayrollPage() {
     } catch (err) {
       setError(messageFromError(err))
     }
-  }, [orgId, isManagerPlus, isPrivileged, user?.employee_id])
+  }, [orgId, isPrivileged, user?.employee_id])
 
   const loadPayslips = useCallback(async () => {
     try {
@@ -227,13 +227,13 @@ export default function PayrollPage() {
   }, [loadOrgs])
 
   useEffect(() => {
-    if (!isManagerPlus) return
+    if (!isPrivileged) return
     void loadRuns()
     void loadStatutory()
     void loadComponents()
     void loadEmployees()
     void loadCompensations()
-  }, [orgId, isManagerPlus, loadRuns, loadStatutory, loadComponents, loadEmployees, loadCompensations])
+  }, [orgId, isPrivileged, loadRuns, loadStatutory, loadComponents, loadEmployees, loadCompensations])
 
   useEffect(() => {
     if ((payrollSection === 'statutory' && payrollSubTab === 'tax') || activeTab === 'mytax') void loadTax()
@@ -554,7 +554,7 @@ export default function PayrollPage() {
         title="Payroll"
         badge="Finance"
         action={
-          isManagerPlus && orgs.length > 1 && user?.is_superuser ? (
+          isPrivileged && orgs.length > 1 && user?.is_superuser ? (
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-stone-500">Organization</label>
               <select
@@ -578,7 +578,7 @@ export default function PayrollPage() {
 
       {error && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-300">{error}</div>}
 
-      {!isManagerPlus && (
+      {!isPrivileged && (
         <div className="flex flex-wrap gap-2 rounded-2xl border border-warm-200/80 bg-warm-50/60 p-1.5 dark:border-stone-700 dark:bg-stone-900/50">
           {tabsEmployee.map((t) => (
             <button
@@ -600,7 +600,7 @@ export default function PayrollPage() {
         </div>
       )}
 
-      {isManagerPlus && orgId && (
+      {isPrivileged && orgId && (
         <PayrollModuleShell
           section={payrollSection}
           subTab={payrollSubTab}
@@ -876,9 +876,9 @@ export default function PayrollPage() {
           </PayrollModuleShell>
       )}
 
-      {isManagerPlus && !orgId && <div className="text-sm text-slate-500">Select an organization to manage payroll.</div>}
+      {isPrivileged && !orgId && <div className="text-sm text-slate-500">Select an organization to manage payroll.</div>}
 
-      {!isManagerPlus && activeTab === 'mytax' && (
+      {!isPrivileged && activeTab === 'mytax' && (
         <DeclarationPanel
           myTax={myTax}
           setMyTax={setMyTax}
@@ -887,7 +887,7 @@ export default function PayrollPage() {
         />
       )}
 
-      {!isManagerPlus && activeTab === 'portal' && <EmployeePayslipPortal />}
+      {!isPrivileged && activeTab === 'portal' && <EmployeePayslipPortal />}
     </div>
   )
 }

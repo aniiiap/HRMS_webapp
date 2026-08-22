@@ -41,7 +41,10 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
             )
             
         # If not HR/Admin/Manager, only show their own claims
-        if user.is_superuser or user.role in ["admin", "hr", "manager", "owner"]:
+        # Or if explicitly requested via own=true query parameter
+        if self.request.query_params.get('own') == 'true':
+            qs = qs.filter(employee__user=user)
+        elif user.is_superuser or user.role in ["admin", "hr", "owner"]:
             pass # Keep all claims
         else:
             qs = qs.filter(employee__user=user)
@@ -68,7 +71,7 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
     # Only admins can approve or reject
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
-        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "manager", "owner"]):
+        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "owner"]):
             return Response({"detail": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
             
         claim = self.get_object()
@@ -87,7 +90,7 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
-        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "manager", "owner"]):
+        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "owner"]):
             return Response({"detail": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
             
         claim = self.get_object()
@@ -104,7 +107,7 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def reimburse(self, request, pk=None):
-        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "manager", "owner"]):
+        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "owner"]):
             return Response({"detail": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
             
         claim = self.get_object()
@@ -118,7 +121,7 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def toggle_payroll(self, request, pk=None):
-        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "manager", "owner"]):
+        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "owner"]):
             return Response({"detail": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
             
         claim = self.get_object()
@@ -129,7 +132,7 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def bulk_approve(self, request):
-        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "manager", "owner"]):
+        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "owner"]):
             return Response({"detail": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
             
         claim_ids = request.data.get('claim_ids', [])
@@ -145,7 +148,7 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def bulk_reject(self, request):
-        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "manager", "owner"]):
+        if not (request.user.is_superuser or request.user.role in ["admin", "hr", "owner"]):
             return Response({"detail": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
             
         claim_ids = request.data.get('claim_ids', [])

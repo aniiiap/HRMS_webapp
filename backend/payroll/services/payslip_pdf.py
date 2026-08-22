@@ -15,7 +15,7 @@ from ..models import PayrollEmployeeResult, PayrollRun
 
 
 def _inr(amount) -> str:
-    return f"₹{Decimal(str(amount or 0)):,.2f}"
+    return f"Rs. {Decimal(str(amount or 0)):,.2f}"
 
 
 def build_payslip_pdf(result: PayrollEmployeeResult) -> bytes:

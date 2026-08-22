@@ -108,13 +108,13 @@ export default function App() {
               }
             />
           </Route>
-          <Route element={<RoleRoute allowedRoles={['admin', 'hr', 'employee']} />}>
+          <Route element={<RoleRoute allowedRoles={['admin', 'hr', 'employee', 'manager']} />}>
             <Route path="/payroll" element={<PayrollPage />} />
           </Route>
           <Route path="/leaves" element={<LeavesPage />} />
           
           {/* Expenses */}
-          <Route element={<RoleRoute allowedRoles={['employee']} />}>
+          <Route element={<RoleRoute allowedRoles={['employee', 'manager']} />}>
             <Route path="/expenses" element={<Suspense fallback={<RoutePageFallback />}><ExpensesPage /></Suspense>} />
           </Route>
           
