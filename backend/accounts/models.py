@@ -61,6 +61,11 @@ class User(AbstractUser):
         related_name="users",
         help_text="Company tenant for Admin/HR without an employee profile.",
     )
+    contact_email = models.EmailField(
+        null=True, 
+        blank=True, 
+        help_text="Alternate email for receiving platform notifications (used by Super Admins)."
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []

@@ -44,7 +44,7 @@ export default function ResetPasswordPage() {
       <form onSubmit={submit} className="card w-full max-w-md space-y-4 p-6 sm:p-8 motion-safe:animate-fade-up">
         <h1 className="font-display text-2xl font-bold text-stone-900 dark:text-white">Set new password</h1>
         <p className="text-sm text-stone-500 dark:text-stone-400">
-          Choose a new password for your HR Core account. This link expires in 1 hour.
+          Choose a new password for your Worksphere account. This link expires in 1 hour.
         </p>
         {error && (
           <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">

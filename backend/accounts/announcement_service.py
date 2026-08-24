@@ -198,7 +198,7 @@ def dispatch_announcement(announcement: CompanyAnnouncement) -> dict:
     sms_sent = 0
     sms_failed = 0
 
-    org_name = announcement.organization.name if announcement.organization_id else "HR Core"
+    org_name = announcement.organization.name if announcement.organization_id else "Worksphere"
     
     from accounts.announcement_mailer import build_announcement_email_html
     from accounts.invite_mailer import send_html_email_batch

@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "saas_platform",
     "letters",
     "expenses",
+    "helpdesk",
     "assets",
 ]
 

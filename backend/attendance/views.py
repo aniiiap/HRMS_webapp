@@ -523,14 +523,14 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         )
         send_html_email_async(
             to_email=employee_user.email,
-            subject=f"Attendance correction {decision.title()} - HR Core",
+            subject=f"Attendance correction {decision.title()} - Worksphere",
             html=f"""
             <div style="font-family: Arial, sans-serif; line-height:1.6;">
               <p>Dear {(employee_user.first_name or employee_user.email)},</p>
               <p>Your attendance correction request has been <b>{decision}</b>.</p>
               <p><b>Date:</b> {attendance.date.isoformat()}<br/>
               <b>Review note:</b> {note or "-"}</p>
-              <p>Regards,<br/>HR Core Team</p>
+              <p>Regards,<br/>Worksphere Team</p>
             </div>
             """,
         )

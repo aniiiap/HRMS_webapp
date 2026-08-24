@@ -35,20 +35,20 @@ def send_invite_email(
 
     if invite_kind == "org_admin":
         org_label = organization_name or "your company"
-        subject = f"Set up your {org_label} admin account on HR Core"
+        subject = f"Set up your {org_label} admin account on Worksphere"
         body = (
-            f"<p>Your company <strong>{org_label}</strong> has been added to HR Core. "
+            f"<p>Your company <strong>{org_label}</strong> has been added to Worksphere. "
             "Use the button below to create your Organization Admin password and sign in to your company dashboard.</p>"
             "<p>After activation you can onboard employees, run payroll, manage attendance, and more.</p>"
         )
         headline = "Welcome — set up your company admin"
     else:
-        subject = "Set your HR Core account password"
+        subject = "Set your Worksphere account password"
         body = (
             "<p>Your account has been created by HR/Admin. "
             "Click the button below to set your password and activate your account.</p>"
         )
-        headline = "Welcome to HR Core"
+        headline = "Welcome to Worksphere"
 
     html = _invite_email_html(
         full_name=full_name,

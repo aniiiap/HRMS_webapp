@@ -822,7 +822,7 @@ class EmployeeDocumentViewSet(viewsets.ModelViewSet):
                 <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                   <p>A new document has been uploaded by <b>{uploader_name}</b>.</p>
                   <p><b>Document Title:</b> {doc.title}</p>
-                  <p>Log in to the HR Core admin panel to view the document.</p>
+                  <p>Log in to the Worksphere admin panel to view the document.</p>
                 </div>
                 """
                 for email in hr_emails:

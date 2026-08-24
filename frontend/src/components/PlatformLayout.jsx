@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, LogOut, Moon, Sun } from 'lucide-react'
+import { Building2, LayoutDashboard, LogOut, Moon, Sun, LifeBuoy, Settings } from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -6,6 +6,8 @@ import { useTheme } from '../context/ThemeContext'
 const nav = [
   { to: '/platform', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/platform/organizations', label: 'Organizations', icon: Building2 },
+  { to: '/platform/support', label: 'Platform Support', icon: LifeBuoy },
+  { to: '/platform/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function PlatformLayout() {
@@ -21,9 +23,9 @@ export default function PlatformLayout() {
   return (
     <div className="min-h-[100dvh] bg-surface bg-mesh-light dark:bg-stone-950 dark:bg-mesh-dark">
       <header className="border-b border-warm-200/80 bg-white/85 px-4 py-4 shadow-sm backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/90">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 lg:px-8">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-brand-600 dark:text-brand-400">HR Core Platform</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-brand-600 dark:text-brand-400">Worksphere Platform</p>
             <h1 className="font-display text-lg font-bold text-stone-900 dark:text-white">Owner dashboard</h1>
           </div>
           <div className="flex items-center gap-2">
@@ -38,17 +40,17 @@ export default function PlatformLayout() {
           </div>
         </div>
       </header>
-      <div className="mx-auto grid max-w-6xl gap-6 p-4 md:grid-cols-[220px_1fr] md:p-6">
-        <nav className="card flex flex-row gap-2 p-2 md:flex-col md:p-3">
+      <div className="mx-auto grid max-w-[1600px] gap-6 p-4 md:grid-cols-[240px_1fr] md:p-6 lg:px-12">
+        <nav className="card flex flex-row gap-2 p-2 md:flex-col md:p-3 self-start sticky top-24">
           {nav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `inline-flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                `inline-flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
                   isActive
-                    ? 'nav-active pl-4'
+                    ? 'nav-active bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                     : 'text-stone-600 hover:bg-warm-100 dark:text-stone-300 dark:hover:bg-stone-800'
                 }`
               }

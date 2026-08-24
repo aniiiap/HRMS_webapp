@@ -310,7 +310,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         )
         send_html_email_async(
             to_email=emp_user.email,
-            subject=f"Your leave request was {decision_label} - HR Core",
+            subject=f"Your leave request was {decision_label} - Worksphere",
             html=f"""
             <div style="font-family: Arial, sans-serif; line-height: 1.6;">
               <p>Dear {(emp_user.first_name or emp_user.email)},</p>
@@ -321,7 +321,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
                 <b>Reason:</b> {leave.reason or "-"}<br/>
                 <b>Review note:</b> {leave.review_note or "-"}
               </p>
-              <p>Regards,<br/>HR Core Team</p>
+              <p>Regards,<br/>Worksphere Team</p>
             </div>
             """,
         )

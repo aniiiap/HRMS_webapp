@@ -12,6 +12,7 @@ def _user_payload(user):
     return {
         "id": user.id,
         "email": user.email,
+        "contact_email": user.contact_email,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "role": user.role,
@@ -31,6 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "email",
+            "contact_email",
             "first_name",
             "last_name",
             "role",

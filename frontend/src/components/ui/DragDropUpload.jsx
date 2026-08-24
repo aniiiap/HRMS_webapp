@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { UploadCloud, File, X } from 'lucide-react';
 
-export default function DragDropUpload({ onFileSelect, file }) {
+export default function DragDropUpload({ onFileSelect, file, required = false }) {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDragOver = useCallback((e) => {
@@ -52,7 +52,7 @@ export default function DragDropUpload({ onFileSelect, file }) {
           accept="image/*"
           onChange={handleChange} 
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          required={!file}
+          required={required && !file}
         />
         
         {file ? (

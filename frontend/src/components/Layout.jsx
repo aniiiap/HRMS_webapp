@@ -16,7 +16,9 @@ import {
   FileText,
   Receipt,
   Laptop,
-  X
+  X,
+  Inbox,
+  LifeBuoy
 } from 'lucide-react'
 import dayjs from 'dayjs'
 import { Suspense, useEffect, useRef, useState } from 'react'
@@ -41,6 +43,8 @@ const allGeneral = [
 const allMore = [
   { to: '/leaves', label: 'Leaves', icon: Briefcase, iconFx: 'icon-fx-tilt' },
   { to: '/expenses', label: 'Expenses', icon: Receipt, iconFx: 'icon-fx-rise' },
+  { to: '/helpdesk', label: 'Helpdesk', icon: LifeBuoy, iconFx: 'icon-fx-pop' },
+  { to: '/platform-support', label: 'Platform Support', icon: LifeBuoy, iconFx: 'icon-fx-pop' },
   { to: '/expenses/approvals', label: 'Expense Approvals', icon: Receipt, iconFx: 'icon-fx-rise' },
   { to: '/organizations', label: 'Organizations', icon: Building2, iconFx: 'icon-fx-pop' },
   { to: '/reports', label: 'Reports', icon: FileBarChart2, iconFx: 'icon-fx-rise' },
@@ -84,6 +88,7 @@ export default function Layout() {
     if (item.to === '/organizations') return canViewPayrollAdmin && !user?.is_superuser
     if (item.to === '/reports') return canViewReports
     if (item.to === '/expenses/approvals') return ['admin', 'hr'].includes(user?.role)
+    if (item.to === '/platform-support') return user?.is_superuser || ['admin', 'hr', 'owner'].includes(user?.role)
     if (item.to === '/expenses') return ['employee', 'manager'].includes(user?.role)
     if (item.to === '/assets') return ['admin', 'hr'].includes(user?.role)
     return true
@@ -143,11 +148,11 @@ export default function Layout() {
   const Sidebar = (
     <div className="flex h-full min-h-0 flex-col border-r border-warm-200/90 bg-gradient-to-b from-white via-surface-card to-warm-50/80 dark:border-stone-800 dark:from-stone-950 dark:via-stone-950 dark:to-stone-900">
       <div className="shrink-0 px-3 pb-1 pt-2 md:px-4 md:pb-1.5 md:pt-2.5">
-        {/* Full row width matches previous icon + “HR Core” + tagline footprint */}
+        {/* Full row width matches previous icon + “Worksphere” + tagline footprint */}
         <div className="flex w-full min-w-0 items-center">
           <img
             src="/illustrations/image-removebg-preview%20(1).png"
-            alt="HR Core"
+            alt="Worksphere"
             className="block h-auto w-full max-h-[5.25rem] object-contain object-left sm:max-h-[5.75rem]"
           />
         </div>
@@ -317,12 +322,25 @@ export default function Layout() {
                         className="cursor-pointer rounded-xl border border-slate-100 bg-slate-50 p-2.5 transition hover:border-brand-200 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-800/60"
                         onClick={() => {
                           const t = String(n.type || '').toLowerCase()
-                          if (t.includes('announcement')) navigate('/announcements')
-                          else if (t.includes('attendance')) navigate('/attendance')
-                          else if (t.includes('leave')) navigate('/leaves')
-                          else if (t.includes('payroll')) navigate('/payroll')
-                          else if (t.includes('report')) navigate('/reports')
-                          else navigate('/announcements')
+                          if (t.startsWith('helpdesk_')) {
+                            navigate(`/helpdesk/${t.split('_')[1]}`)
+                          } else if (t.startsWith('platform_')) {
+                            navigate(`/platform-support/${t.split('_')[1]}`)
+                          } else if (t.includes('announcement')) {
+                            navigate('/announcements')
+                          } else if (t.includes('attendance')) {
+                            navigate('/attendance')
+                          } else if (t.includes('leave')) {
+                            navigate('/leaves')
+                          } else if (t.includes('payroll')) {
+                            navigate('/payroll')
+                          } else if (t.includes('report')) {
+                            navigate('/reports')
+                          } else if (t === 'helpdesk') {
+                            navigate('/helpdesk')
+                          } else {
+                            navigate('/announcements')
+                          }
                           setNotifOpen(false)
                         }}
                       >

@@ -26,6 +26,11 @@ const LetterEditor = lazy(() => import('./pages/letters/LetterEditor'))
 const ExpensesPage = lazy(() => import('./pages/ExpensesPage'))
 const AdminExpensesPage = lazy(() => import('./pages/AdminExpensesPage'))
 const AssetsPage = lazy(() => import('./pages/AssetsPage'))
+const HelpdeskPage = lazy(() => import('./pages/helpdesk/HelpdeskPage'))
+const TicketDetailPage = lazy(() => import('./pages/helpdesk/TicketDetailPage'))
+const PlatformHelpdeskPage = lazy(() => import('./pages/helpdesk/PlatformHelpdeskPage'))
+const PlatformTicketDetailPage = lazy(() => import('./pages/helpdesk/PlatformTicketDetailPage'))
+const PlatformProfilePage = lazy(() => import('./pages/platform/PlatformProfilePage'))
 import PlatformRoute from './components/PlatformRoute'
 import PlatformLayout from './components/PlatformLayout'
 import CompanyRoute from './components/CompanyRoute'
@@ -74,6 +79,30 @@ export default function App() {
               element={
                 <Suspense fallback={<RoutePageFallback />}>
                   <PlatformOrganizationsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/platform/support"
+              element={
+                <Suspense fallback={<RoutePageFallback />}>
+                  <PlatformHelpdeskPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/platform/support/:id"
+              element={
+                <Suspense fallback={<RoutePageFallback />}>
+                  <PlatformTicketDetailPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/platform/settings"
+              element={
+                <Suspense fallback={<RoutePageFallback />}>
+                  <PlatformProfilePage />
                 </Suspense>
               }
             />
@@ -133,6 +162,28 @@ export default function App() {
           </Route>
           <Route element={<RoleRoute allowedRoles={['admin', 'hr']} />}>
             <Route path="/organizations" element={<OrganizationsPage />} />
+          </Route>
+          <Route path="/helpdesk" element={
+            <Suspense fallback={<RoutePageFallback />}>
+              <HelpdeskPage />
+            </Suspense>
+          } />
+          <Route path="/helpdesk/:id" element={
+            <Suspense fallback={<RoutePageFallback />}>
+              <TicketDetailPage />
+            </Suspense>
+          } />
+          <Route element={<RoleRoute allowedRoles={['admin', 'hr', 'owner']} />}>
+            <Route path="/platform-support" element={
+              <Suspense fallback={<RoutePageFallback />}>
+                <PlatformHelpdeskPage />
+              </Suspense>
+            } />
+            <Route path="/platform-support/:id" element={
+              <Suspense fallback={<RoutePageFallback />}>
+                <PlatformTicketDetailPage />
+              </Suspense>
+            } />
           </Route>
           <Route path="/profile" element={<ProfilePage />} />
           </Route>

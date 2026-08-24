@@ -17,7 +17,7 @@ def build_announcement_email_html(
       <h2 style="margin: 8px 0 16px; font-size: 20px;">{title}</h2>
       <p style="white-space: pre-wrap;">{message}</p>
       <p style="margin-top: 24px; font-size: 12px; color: #94a3b8;">
-        You received this because your HR team sent a company announcement via HR Core.
+        You received this because your HR team sent a company announcement via Worksphere.
       </p>
     </div>
     """
