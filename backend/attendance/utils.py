@@ -17,8 +17,16 @@ def attendance_anomaly(attendance: Attendance) -> str:
         try_auto_clock_out(attendance)
         attendance.refresh_from_db(fields=["check_out", "updated_at"])
 
-    if attendance.check_in and not attendance.check_out and attendance.date <= today:
-        return "missing_checkout"
+    if attendance.check_in and not attendance.check_out:
+        if attendance.date < today:
+            return "missing_checkout"
+        elif attendance.date == today:
+            settings = resolve_shift_rule(attendance.employee)
+            if settings and settings.shift_end:
+                end_dt = shift_end_datetime(attendance.date, settings)
+                if end_dt and timezone.localtime() > end_dt:
+                    return "missing_checkout"
+            return "in_progress"
 
     settings = resolve_shift_rule(attendance.employee)
     if not settings.enable_anomaly_tracking:

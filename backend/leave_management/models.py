@@ -227,6 +227,7 @@ class LeaveBalanceOverride(models.Model):
     year = models.PositiveIntegerField()
     quota = models.DecimalField(max_digits=6, decimal_places=1, null=True, blank=True)
     used_adjustment = models.DecimalField(max_digits=6, decimal_places=1, default=0)
+    carry_forward = models.DecimalField(max_digits=6, decimal_places=1, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

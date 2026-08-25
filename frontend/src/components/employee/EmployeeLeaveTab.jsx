@@ -23,6 +23,7 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
   const [newQuota, setNewQuota] = useState('')
   const [newApplied, setNewApplied] = useState('')
   const [newRemaining, setNewRemaining] = useState('')
+  const [newCarryForward, setNewCarryForward] = useState('')
   const [saving, setSaving] = useState(false)
 
   const balances = leaveBalance?.balances || {}
@@ -36,7 +37,8 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
         employee_id: leaveBalance.employee_id,
         leave_type: editModal.type,
         quota: newQuota,
-        applied: newApplied
+        applied: newApplied,
+        carry_forward: newCarryForward
       })
       window.location.reload()
     } catch (err) {
@@ -46,10 +48,21 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
     }
   }
 
-  function handleQuotaChange(val) {
+  function handleQuotaChange(val, carryForwardVal = newCarryForward) {
     setNewQuota(val)
     if (val !== '' && newApplied !== '') {
+      // Total effective is what they type in Total Quota, no automatic sum needed here if they manually edit Total
       setNewRemaining(Math.max(0, parseFloat(val) - parseFloat(newApplied)))
+    }
+  }
+
+  function handleCarryForwardChange(val) {
+    setNewCarryForward(val)
+    const baseQuota = Math.max(0, parseFloat(newQuota || 0) - parseFloat(newCarryForward || 0));
+    const newTotal = baseQuota + parseFloat(val || 0);
+    setNewQuota(newTotal);
+    if (newApplied !== '') {
+      setNewRemaining(Math.max(0, newTotal - parseFloat(newApplied)));
     }
   }
 
@@ -123,6 +136,7 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
                           onClick={() => {
                             setEditModal({ type, name: b.name || LEAVE_LABELS[type] || type.replace(/_/g, ' '), currentQuota: b.quota })
                             setNewQuota(b.quota ?? '')
+                            setNewCarryForward(b.carry_forward ?? 0)
                             setNewApplied(b.used ?? 0)
                             setNewRemaining(b.remaining ?? 0)
                           }}
@@ -136,6 +150,14 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
                     <div className="flex">
                       <div className="flex-1 space-y-2 p-4 text-xs text-slate-600 dark:text-slate-400">
                         <Row label="Total quota" value={b.quota ?? '—'} />
+                        {b.carry_forward > 0 && (
+                          <>
+                            <div className="pl-2 space-y-2 border-l-2 border-slate-100 dark:border-slate-800">
+                              <Row label="Regular" value={Number(b.quota - b.carry_forward).toFixed(b.quota % 1 ? 2 : 0)} />
+                              <Row label="Carry forward" value={b.carry_forward} />
+                            </div>
+                          </>
+                        )}
                         <Row label="Applied" value={b.used ?? 0} />
                         <Row label="Remaining" value={remaining ?? '—'} />
                       </div>
@@ -222,6 +244,18 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
                   value={newQuota}
                   onChange={(e) => handleQuotaChange(e.target.value)}
                 />
+              </div>
+              <div className="mb-4">
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Carry Forward / Probation</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-800"
+                  value={newCarryForward}
+                  onChange={(e) => handleCarryForwardChange(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-slate-500">Automatically adds to Total Quota</p>
               </div>
               <div className="mb-4">
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Applied</label>

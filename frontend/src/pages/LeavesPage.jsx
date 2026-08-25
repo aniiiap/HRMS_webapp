@@ -91,6 +91,14 @@ export default function LeavesPage() {
     [filteredRows, requestPage, requestPageSize],
   )
 
+  const getBalance = (employeeId, leaveType) => {
+    const empBalance = balances.find((b) => b.employee_id === employeeId);
+    if (!empBalance) return '—';
+    const b = empBalance.balances[leaveType];
+    if (!b || b.remaining == null) return '—';
+    return `${b.remaining} left`;
+  };
+
   const leaveLabel = (lt, name) => {
     if (name) return name
     const labels = {
@@ -196,6 +204,7 @@ export default function LeavesPage() {
                   <th className="px-4 py-3">Employee</th>
                   <th className="px-4 py-3">Type</th>
                   <th className="px-4 py-3">Policy</th>
+                  <th className="px-4 py-3">Balance</th>
                   <th className="px-4 py-3">Dates</th>
                   <th className="px-4 py-3">Days</th>
                   <th className="px-4 py-3">Reason</th>
@@ -209,6 +218,7 @@ export default function LeavesPage() {
                     <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-200">{r.employee_name}</td>
                     <td className="px-4 py-3">{r.leave_type_name || leaveLabel(r.leave_type)}</td>
                     <td className="px-4 py-3 text-xs">{r.policy_name || 'Unassigned'}</td>
+                    <td className="px-4 py-3 text-brand-700 dark:text-brand-300 font-semibold">{getBalance(r.employee, r.leave_type)}</td>
                     <td className="px-4 py-3">{dayjs(r.start_date).format('DD MMM YYYY')} to {dayjs(r.end_date).format('DD MMM YYYY')}</td>
                     <td className="px-4 py-3">
                       {dayjs(r.end_date).diff(dayjs(r.start_date), 'day') + (r.half_day === 'first_half' || r.half_day === 'second_half' ? 0.5 : 1)}
@@ -229,7 +239,7 @@ export default function LeavesPage() {
                     </td>
                   </tr>
                 ))}
-                {visibleRows.length === 0 && <tr><td className="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colSpan="8">No leave requests.</td></tr>}
+                {visibleRows.length === 0 && <tr><td className="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colSpan="9">No leave requests.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -273,6 +283,7 @@ export default function LeavesPage() {
                         <span key={code}>
                           {row.name || leaveLabel(code)}: {row.used || 0}
                           {row.quota === null ? ' / Unlimited' : ` / ${row.quota || 0}`}
+                          {row.carry_forward ? ` (incl. ${row.carry_forward} carry forward)` : ''}
                           {row.remaining !== null && row.remaining !== undefined ? ` (left ${row.remaining})` : ''}
                         </span>
                       ))}

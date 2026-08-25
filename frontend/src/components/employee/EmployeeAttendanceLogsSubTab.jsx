@@ -97,15 +97,18 @@ export default function EmployeeAttendanceLogsSubTab({ attendance = [] }) {
   const graceLeft = timelinePct(shiftStartFrac)
   const graceWidth = Math.max(0, timelinePct(graceEndFrac) - graceLeft)
 
-  const hasAnomaly = dailyRow?.anomaly && dailyRow.anomaly !== 'none'
-  const barColor = hasAnomaly ? 'bg-rose-500' : 'bg-brand-500'
+  const isWorking = dailyRow?.anomaly === 'in_progress'
+  const hasAnomaly = dailyRow?.anomaly && dailyRow.anomaly !== 'none' && !isWorking
+  const barColor = isWorking ? 'bg-blue-500' : hasAnomaly ? 'bg-rose-500' : 'bg-brand-500'
 
   const anomalyText =
     dailyRow?.anomaly === 'missing_checkout'
       ? 'Missing check-out'
-      : hasAnomaly
-        ? dailyRow.anomaly.replace(/_/g, ' ')
-        : ''
+      : dailyRow?.anomaly === 'in_progress'
+        ? 'In progress'
+        : hasAnomaly
+          ? dailyRow.anomaly.replace(/_/g, ' ')
+          : ''
 
   function shiftDay(delta) {
     setSelectedDate(dayjs(selectedDate).add(delta, 'day').format('YYYY-MM-DD'))
@@ -259,6 +262,9 @@ export default function EmployeeAttendanceLogsSubTab({ attendance = [] }) {
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="h-2 w-2 rounded-sm bg-amber-500" /> Missing check-out
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-sm bg-blue-500" /> In progress
                 </span>
               </div>
             </div>

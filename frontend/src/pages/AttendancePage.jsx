@@ -17,6 +17,7 @@ function anomalyBadge(anomaly) {
   if (anomaly === 'early_checkout') return <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-700">Early checkout</span>
   if (anomaly === 'short_hours') return <span className="rounded-full bg-fuchsia-50 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-700">Short hours</span>
   if (anomaly === 'missing_checkout') return <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700">Missing check-out</span>
+  if (anomaly === 'in_progress') return <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">In progress</span>
   return <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">OK</span>
 }
 
