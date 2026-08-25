@@ -165,14 +165,14 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.ScopedRateThrottle",
     ),
     "DEFAULT_THROTTLE_RATES": {
-        "anon": os.getenv("THROTTLE_ANON", "120/hour"),
-        "user": os.getenv("THROTTLE_USER", "1200/hour"),
-        "auth_login": os.getenv("THROTTLE_AUTH_LOGIN", "10/min"),
-        "auth_password_reset": os.getenv("THROTTLE_AUTH_PASSWORD_RESET", "5/hour"),
-        "attendance_punch": os.getenv("THROTTLE_ATTENDANCE_PUNCH", "20/min"),
-        "attendance_correction_request": os.getenv("THROTTLE_ATTENDANCE_CORRECTION_REQUEST", "12/hour"),
-        "attendance_correction_review": os.getenv("THROTTLE_ATTENDANCE_CORRECTION_REVIEW", "60/hour"),
-        "attendance_read": os.getenv("THROTTLE_ATTENDANCE_READ", "300/min"),
+        "anon": os.getenv("THROTTLE_ANON", "10000/hour"),
+        "user": os.getenv("THROTTLE_USER", "100000/hour"),
+        "auth_login": os.getenv("THROTTLE_AUTH_LOGIN", "100/min"),
+        "auth_password_reset": os.getenv("THROTTLE_AUTH_PASSWORD_RESET", "50/hour"),
+        "attendance_punch": os.getenv("THROTTLE_ATTENDANCE_PUNCH", "100/min"),
+        "attendance_correction_request": os.getenv("THROTTLE_ATTENDANCE_CORRECTION_REQUEST", "100/hour"),
+        "attendance_correction_review": os.getenv("THROTTLE_ATTENDANCE_CORRECTION_REVIEW", "100/hour"),
+        "attendance_read": os.getenv("THROTTLE_ATTENDANCE_READ", "1000/min"),
     },
 }
 
