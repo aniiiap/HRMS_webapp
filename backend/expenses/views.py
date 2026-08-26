@@ -138,6 +138,36 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
             email_attachments=email_attachments
         )
 
+    def _notify_expense_decision(self, claim, decision_label):
+        from accounts.notifications import notify_user
+        from accounts.async_tasks import send_html_email_async
+        emp_user = claim.employee.user
+        org_name = claim.employee.organization.name if claim.employee and claim.employee.organization else ""
+        org_block = f"<br/><b>{org_name}</b>" if org_name else ""
+        
+        notify_user(
+            user=emp_user,
+            title=f"Expense Claim {decision_label.capitalize()}",
+            message=f"Your expense claim '{claim.title}' for ₹ {claim.amount} was {decision_label}.",
+            type_value="expense_reviewed",
+        )
+        send_html_email_async(
+            to_email=emp_user.email,
+            subject=f"Your expense claim was {decision_label} - Worksphere",
+            html=f"""
+            <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+              <p>Dear {(emp_user.first_name or emp_user.email)},</p>
+              <p>Your expense claim has been <b>{decision_label}</b>.</p>
+              <p>
+                <b>Title:</b> {claim.title}<br/>
+                <b>Amount:</b> ₹ {claim.amount}<br/>
+                <b>Admin Note:</b> {claim.admin_note or "-"}<br/>
+              </p>
+              <p>Regards,<br/>Worksphere Team{org_block}</p>
+            </div>
+            """,
+        )
+
     # Only admins can approve or reject
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -156,6 +186,8 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
         claim.admin_note = admin_note
         claim.save()
         
+        self._notify_expense_decision(claim, "approved")
+        
         return Response(ExpenseClaimSerializer(claim).data)
 
     @action(detail=True, methods=['post'])
@@ -172,6 +204,8 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
         claim.status = ExpenseClaimStatus.REJECTED
         claim.admin_note = admin_note
         claim.save()
+        
+        self._notify_expense_decision(claim, "rejected")
         
         return Response(ExpenseClaimSerializer(claim).data)
 
@@ -210,10 +244,18 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
             return Response({"detail": "No claim IDs provided."}, status=status.HTTP_400_BAD_REQUEST)
             
         qs = self.get_queryset().filter(id__in=claim_ids, status=ExpenseClaimStatus.PENDING)
+        claims_to_notify = list(qs)
+        
         updated_count = qs.update(
             status=ExpenseClaimStatus.APPROVED,
             admin_note="Bulk approved by admin"
         )
+        
+        for claim in claims_to_notify:
+            claim.status = ExpenseClaimStatus.APPROVED
+            claim.admin_note = "Bulk approved by admin"
+            self._notify_expense_decision(claim, "approved")
+            
         return Response({"detail": f"{updated_count} claims approved."})
 
     @action(detail=False, methods=['post'])
@@ -226,8 +268,16 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
             return Response({"detail": "No claim IDs provided."}, status=status.HTTP_400_BAD_REQUEST)
             
         qs = self.get_queryset().filter(id__in=claim_ids, status=ExpenseClaimStatus.PENDING)
+        claims_to_notify = list(qs)
+        
         updated_count = qs.update(
             status=ExpenseClaimStatus.REJECTED,
             admin_note="Bulk rejected by admin"
         )
+        
+        for claim in claims_to_notify:
+            claim.status = ExpenseClaimStatus.REJECTED
+            claim.admin_note = "Bulk rejected by admin"
+            self._notify_expense_decision(claim, "rejected")
+            
         return Response({"detail": f"{updated_count} claims rejected."})
