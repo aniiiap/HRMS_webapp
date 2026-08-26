@@ -103,10 +103,38 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             if profile
             else (leave.employee.user.get_full_name() or leave.employee.user.email)
         )
+        
+        email_html = f"""
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #2563eb;">New Leave Request</h2>
+            <p><strong>{emp_name}</strong> has applied for leave.</p>
+            <table style="width: 100%; max-width: 500px; border-collapse: collapse; margin-top: 15px;">
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 35%;">Leave Type</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{leave.leave_type.replace('_', ' ').title()}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Dates</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{leave.start_date} to {leave.end_date}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Reason</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{leave.reason or 'Not provided'}</td>
+                </tr>
+            </table>
+            <p style="margin-top: 20px;">Please log in to the Worksphere dashboard to review and approve/reject this request.</p>
+        </div>
+        """
+
+        target_roles = (UserRole.ADMIN,) if user.role in [UserRole.HR, UserRole.MANAGER] else (UserRole.ADMIN, UserRole.HR)
         notify_roles(
             title="New leave request",
             message=f"{emp_name} applied for leave ({leave.start_date} to {leave.end_date}).",
             type_value="leave_applied",
+            roles=target_roles,
+            organization_id=leave.employee.organization_id if leave.employee else None,
+            send_email=True,
+            email_html=email_html,
         )
 
     @action(detail=False, methods=["post"], url_path="balances/override", permission_classes=[IsManagerOrAbove])
@@ -320,6 +348,9 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         days_count = (leave.end_date - leave.start_date).days + 1
         emp_user = leave.employee.user
         decision_label = "approved" if leave.status == LeaveStatus.APPROVED else "rejected"
+        org_name = leave.employee.organization.name if leave.employee and leave.employee.organization else ""
+        org_block = f"<br/><b>{org_name}</b>" if org_name else ""
+        
         notify_user(
             user=emp_user,
             title=f"Leave request {decision_label}",
@@ -339,7 +370,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
                 <b>Reason:</b> {leave.reason or "-"}<br/>
                 <b>Review note:</b> {leave.review_note or "-"}
               </p>
-              <p>Regards,<br/>Worksphere Team</p>
+              <p>Regards,<br/>Worksphere Team{org_block}</p>
             </div>
             """,
         )

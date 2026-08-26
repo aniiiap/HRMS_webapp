@@ -7,7 +7,7 @@ from accounts.async_tasks import send_html_email_async
 from .models import Ticket, TicketMessage, TicketStatus, PlatformTicket, PlatformTicketMessage
 from .serializers import TicketSerializer, TicketMessageSerializer, PlatformTicketSerializer, PlatformTicketMessageSerializer
 from employees.models import Employee
-from accounts.models import AppNotification, User
+from accounts.models import AppNotification, User, UserRole
 
 def notify_user(user, title, message, notif_type="helpdesk"):
     AppNotification.objects.create(
@@ -69,6 +69,40 @@ class TicketViewSet(viewsets.ModelViewSet):
                 raise ValidationError({"detail": "Employee profile required."})
                 
         ticket = serializer.save(employee=employee)
+        
+        from accounts.notifications import notify_roles
+        emp_name = user.get_full_name() or user.email
+        email_html = f"""
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #2563eb;">New Helpdesk Ticket</h2>
+            <p><strong>{emp_name}</strong> has raised a new helpdesk ticket.</p>
+            <table style="width: 100%; max-width: 500px; border-collapse: collapse; margin-top: 15px;">
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 35%;">Ticket Subject</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{ticket.title}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Category</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{ticket.category.replace('_', ' ').title()}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Priority</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{ticket.priority.title()}</td>
+                </tr>
+            </table>
+            <p style="margin-top: 20px;">Please log in to the Worksphere dashboard to view the ticket and respond.</p>
+        </div>
+        """
+        target_roles = (UserRole.ADMIN,) if user.role in [UserRole.HR, UserRole.MANAGER] else (UserRole.ADMIN, UserRole.HR)
+        notify_roles(
+            title="New Helpdesk Ticket",
+            message=f"{emp_name} raised a ticket: {ticket.title}",
+            type_value=f"helpdesk_{ticket.id}",
+            roles=target_roles,
+            organization_id=ticket.employee.organization_id if ticket.employee else None,
+            send_email=True,
+            email_html=email_html
+        )
         
         # Simulate AI support synchronously to avoid thread lifecycle issues in development servers
         _simulate_ai_l1_support(ticket.id)

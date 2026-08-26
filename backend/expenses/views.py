@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from .models import ExpenseCategory, ExpenseClaim, ExpenseClaimStatus
 from .serializers import ExpenseCategorySerializer, ExpenseClaimSerializer
 from employees.models import Employee
+from accounts.models import UserRole
 
 class ExpenseCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = ExpenseCategorySerializer
@@ -66,7 +67,76 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
             else:
                 raise serializers.ValidationError({"detail": "No employee profile found for the current user."})
         
-        serializer.save(employee=employee)
+        claim = serializer.save(employee=employee)
+        
+        from accounts.notifications import notify_roles
+        import base64
+        import mimetypes
+        import os
+        
+        emp_name = user.get_full_name() or user.email
+        category_name = claim.category.name if claim.category else 'General'
+        email_html = f"""
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #2563eb;">New Expense Claim</h2>
+            <p><strong>{emp_name}</strong> has submitted a new expense claim.</p>
+            <table style="width: 100%; max-width: 500px; border-collapse: collapse; margin-top: 15px;">
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 35%;">Title</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{claim.title}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Amount</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">₹ {claim.amount}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Category</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{category_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Date Incurred</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{claim.date_incurred}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Notes</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{claim.notes or 'No notes provided'}</td>
+                </tr>
+            </table>
+            <p style="margin-top: 20px;">Please log in to the Worksphere dashboard to review and approve/reject this expense.</p>
+        </div>
+        """
+        
+        email_attachments = []
+        if claim.receipt:
+            try:
+                claim.receipt.open('rb')
+                claim.receipt.seek(0)
+                file_bytes = claim.receipt.read()
+                if file_bytes:
+                    content_b64 = base64.b64encode(file_bytes).decode('utf-8')
+                    filename = os.path.basename(claim.receipt.name)
+                    mime_type, _ = mimetypes.guess_type(filename)
+                    email_attachments.append({
+                        "filename": filename,
+                        "content": content_b64,
+                        "content_type": mime_type or "application/octet-stream"
+                    })
+                claim.receipt.close()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning("Could not attach receipt: %s", e)
+
+        target_roles = (UserRole.ADMIN,) if user.role in [UserRole.HR, UserRole.MANAGER] else (UserRole.ADMIN, UserRole.HR)
+        notify_roles(
+            title="New Expense Claim",
+            message=f"{emp_name} submitted an expense claim for ₹ {claim.amount}.",
+            type_value=f"expense_{claim.id}",
+            roles=target_roles,
+            organization_id=claim.employee.organization_id if claim.employee else None,
+            send_email=True,
+            email_html=email_html,
+            email_attachments=email_attachments
+        )
 
     # Only admins can approve or reject
     @action(detail=True, methods=['post'])

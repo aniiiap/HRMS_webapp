@@ -108,14 +108,14 @@ export default function ExpensesPage() {
     return (
         <div className="w-full">
             <div className="max-w-5xl mx-auto space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Expenses & Reimbursements</h1>
                         <p className="text-slate-500 dark:text-slate-400">Track and manage your out-of-pocket business expenses.</p>
                     </div>
                     <button 
                         onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors"
+                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors w-full sm:w-auto justify-center"
                     >
                         <Plus className="w-4 h-4" />
                         Submit Expense
@@ -133,32 +133,34 @@ export default function ExpensesPage() {
                             <p>You haven't submitted any expense claims yet.</p>
                         </div>
                     ) : (
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
-                                <tr>
-                                    <th className="px-6 py-4 font-medium">Date</th>
-                                    <th className="px-6 py-4 font-medium">Title</th>
-                                    <th className="px-6 py-4 font-medium">Category</th>
-                                    <th className="px-6 py-4 font-medium">Amount</th>
-                                    <th className="px-6 py-4 font-medium">Status</th>
-                                    <th className="px-6 py-4 font-medium">Reimbursed?</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                                {claims.map(claim => (
-                                    <tr key={claim.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{format(new Date(claim.date_incurred), 'MMM dd, yyyy')}</td>
-                                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-200">{claim.title}</td>
-                                        <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{claim.category_name || '-'}</td>
-                                        <td className="px-6 py-4 text-slate-900 dark:text-slate-200 font-medium">₹{claim.amount}</td>
-                                        <td className="px-6 py-4">{getStatusBadge(claim.status)}</td>
-                                        <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
-                                            {claim.is_reimbursed ? <span className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold">Yes, via Payroll</span> : '-'}
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm whitespace-nowrap sm:whitespace-normal">
+                                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                                    <tr>
+                                        <th className="px-6 py-4 font-medium">Date</th>
+                                        <th className="px-6 py-4 font-medium">Title</th>
+                                        <th className="px-6 py-4 font-medium">Category</th>
+                                        <th className="px-6 py-4 font-medium">Amount</th>
+                                        <th className="px-6 py-4 font-medium">Status</th>
+                                        <th className="px-6 py-4 font-medium">Reimbursed?</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                                    {claims.map(claim => (
+                                        <tr key={claim.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                            <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{format(new Date(claim.date_incurred), 'MMM dd, yyyy')}</td>
+                                            <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-200">{claim.title}</td>
+                                            <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{claim.category_name || '-'}</td>
+                                            <td className="px-6 py-4 text-slate-900 dark:text-slate-200 font-medium">₹ {claim.amount}</td>
+                                            <td className="px-6 py-4">{getStatusBadge(claim.status)}</td>
+                                            <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
+                                                {claim.is_reimbursed ? <span className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold">Yes, via Payroll</span> : '-'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
             </div>

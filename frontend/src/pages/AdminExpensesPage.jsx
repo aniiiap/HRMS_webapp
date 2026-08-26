@@ -250,7 +250,8 @@ export default function AdminExpensesPage() {
                                 No {activeTab} claims to show.
                             </div>
                         ) : (
-                            <table className="w-full text-left text-sm">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap sm:whitespace-normal">
                                 <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
                                     <tr>
                                         {activeTab === 'pending' && (
@@ -367,6 +368,7 @@ export default function AdminExpensesPage() {
                                     ))}
                                 </tbody>
                             </table>
+                            </div>
                         )}
                     </div>
                 )}

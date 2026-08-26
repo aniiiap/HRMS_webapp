@@ -123,8 +123,8 @@ def send_html_email(*, to_email: str, subject: str, html: str) -> tuple[bool, st
 
 def send_html_email_batch(*, payloads: list[dict]) -> tuple[int, int]:
     """
-    Sends multiple emails in a single request using Resend's batch endpoint.
-    payloads: [{'to': '...', 'subject': '...', 'html': '...'}, ...]
+    Sends multiple emails iteratively using Resend's single email endpoint.
+    payloads: [{'to': '...', 'subject': '...', 'html': '...', 'attachments': [...]}, ...]
     Returns (emails_sent, emails_failed).
     """
     api_key = settings.RESEND_API_KEY
@@ -135,35 +135,37 @@ def send_html_email_batch(*, payloads: list[dict]) -> tuple[int, int]:
     sent = 0
     failed = 0
     
-    # Resend batch limit is 100 per request
-    for i in range(0, len(payloads), 100):
-        batch = payloads[i:i+100]
-        batch_data = []
-        for p in batch:
-            batch_data.append({
-                "from": from_email,
-                "to": [p["to"]],
-                "subject": p["subject"],
-                "html": p["html"]
-            })
+    for p in payloads:
+        email_payload = {
+            "from": from_email,
+            "to": [p["to"]],
+            "subject": p["subject"],
+            "html": p["html"]
+        }
+        if "attachments" in p:
+            email_payload["attachments"] = p["attachments"]
             
         req = request.Request(
-            "https://api.resend.com/emails/batch",
-            data=json.dumps(batch_data).encode("utf-8"),
+            "https://api.resend.com/emails",
+            data=json.dumps(email_payload).encode("utf-8"),
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "HRCore/1.0 (+https://hrms.staffdox.co.in)",
             },
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=30) as resp:
+            with request.urlopen(req, timeout=20) as resp:
                 if 200 <= resp.status < 300:
-                    sent += len(batch)
+                    sent += 1
                 else:
-                    failed += len(batch)
+                    failed += 1
         except Exception as exc:
-            logger.warning("Resend batch email failed: %s", exc)
-            failed += len(batch)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("Resend email failed: %s", exc)
+            failed += 1
             
     return sent, failed
