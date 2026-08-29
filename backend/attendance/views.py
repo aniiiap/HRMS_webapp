@@ -181,6 +181,22 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 leave_map.setdefault(eid, {})[cur.day] = row["leave_type"]
                 cur += timedelta(days=1)
 
+        from leave_management.models import Holiday
+        holidays_qs = Holiday.objects.filter(
+            organization_id=org_id,
+            date__gte=start,
+            date__lte=end,
+            is_optional=False,
+            is_active=True
+        ).prefetch_related('applicable_shifts')
+        
+        # Map date to a list of holidays
+        from collections import defaultdict
+        holidays_by_date = defaultdict(list)
+        for h in holidays_qs:
+            shifts = [s.id for s in h.applicable_shifts.all()]
+            holidays_by_date[h.date].append(shifts)
+
         rows = []
         for e in employees:
             eid = e.id
@@ -197,7 +213,13 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 day_date = date(year, month, d)
                 leave_type = leave_map.get(eid, {}).get(d)
                 att = att_map.get(eid, {}).get(d)
-                status_key, status_code = day_status_for_employee(e, day_date, att, leave_type)
+                is_holiday = False
+                if day_date in holidays_by_date:
+                    for shifts in holidays_by_date[day_date]:
+                        if not shifts or (e.shift_template_id and e.shift_template_id in shifts):
+                            is_holiday = True
+                            break
+                status_key, status_code = day_status_for_employee(e, day_date, att, leave_type, is_holiday)
                 day_status[str(d)] = status_key
                 day_status[f"{d}_code"] = status_code
             rows.append(
@@ -281,10 +303,22 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         ).values("employee_id", "leave_type"):
             leave_by_emp[row["employee_id"]] = row["leave_type"]
 
+        from leave_management.models import Holiday
+        log_date_holidays = Holiday.objects.filter(
+            organization_id=org_id,
+            date=log_date,
+            is_optional=False,
+            is_active=True
+        ).prefetch_related('applicable_shifts')
+        
+        log_date_shifts = []
+        for h in log_date_holidays:
+            log_date_shifts.append([s.id for s in h.applicable_shifts.all()])
+
         departments = sorted({e.department for e in employees if e.department})
 
         result_rows = []
-        summary = {"present": 0, "absent": 0, "leave": 0, "anomaly": 0, "wfh": 0, "weekend": 0}
+        summary = {"present": 0, "absent": 0, "leave": 0, "anomaly": 0, "wfh": 0, "weekend": 0, "holiday": 0, "holiday_worked": 0}
 
         for e in employees:
             name = f"{e.user.first_name} {e.user.last_name}".strip() or e.user.email
@@ -293,9 +327,15 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 if search not in hay:
                     continue
 
+            is_holiday = False
+            for shifts in log_date_shifts:
+                if not shifts or (e.shift_template_id and e.shift_template_id in shifts):
+                    is_holiday = True
+                    break
+
             att = att_by_emp.get(e.id)
             leave_type = leave_by_emp.get(e.id)
-            status_key, status_code = day_status_for_employee(e, log_date, att, leave_type)
+            status_key, status_code = day_status_for_employee(e, log_date, att, leave_type, is_holiday)
 
             if status_filter and status_filter != "all":
                 if status_filter != status_key:

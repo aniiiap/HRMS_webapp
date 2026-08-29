@@ -616,3 +616,46 @@ class LeaveTypeRuleViewSet(viewsets.ModelViewSet):
         if deleted == 0:
             return Response({"error": "No assignment found."}, status=status.HTTP_404_NOT_FOUND)
         return Response({"message": "Assignment removed."})
+
+from .models import Holiday
+from .serializers import HolidaySerializer
+
+class HolidayViewSet(viewsets.ModelViewSet):
+    serializer_class = HolidaySerializer
+    pagination_class = None
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), IsManagerOrAbove()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Holiday.objects.none()
+            
+        org_id = getattr(user, 'organization_id', None) or getattr(getattr(user, 'employee_profile', None), 'organization_id', None)
+        if not org_id:
+            return Holiday.objects.none()
+            
+        qs = Holiday.objects.filter(organization_id=org_id)
+        
+        # If user is admin/hr/owner, they see all. Otherwise, filter by employee shift
+        if not (user.is_superuser or getattr(user, 'role', '') in ['admin', 'owner', 'hr', 'hr_admin']):
+            profile = getattr(user, 'employee_profile', None)
+            if profile:
+                from django.db.models import Q
+                qs = qs.filter(
+                    Q(applicable_shifts__isnull=True) | Q(applicable_shifts=profile.shift_template_id),
+                    is_active=True
+                ).distinct()
+        
+        return qs
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        org_id = getattr(user, 'organization_id', None) or getattr(getattr(user, 'employee_profile', None), 'organization_id', None)
+        if not org_id:
+            raise ValidationError({'detail': 'User must be part of an organization to create holidays.'})
+        serializer.save(organization_id=org_id)
+

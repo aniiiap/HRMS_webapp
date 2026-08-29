@@ -15,6 +15,7 @@ const EmployeeProfilePage = lazy(() => import('./pages/EmployeeProfilePage'))
 const AttendancePage = lazy(() => import('./pages/AttendancePage'))
 const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage'))
 const LeavesPage = lazy(() => import('./pages/LeavesPage'))
+const HolidayCalendar = lazy(() => import('./pages/HolidayCalendar'))
 const PayrollPage = lazy(() => import('./pages/PayrollPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const OrganizationsPage = lazy(() => import('./pages/OrganizationsPage'))
@@ -141,6 +142,7 @@ export default function App() {
             <Route path="/payroll" element={<PayrollPage />} />
           </Route>
           <Route path="/leaves" element={<LeavesPage />} />
+          <Route path="/holidays" element={<HolidayCalendar />} />
           
           {/* Expenses */}
           <Route element={<RoleRoute allowedRoles={['employee', 'manager']} />}>

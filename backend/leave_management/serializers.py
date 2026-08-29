@@ -370,3 +370,12 @@ class LeavePolicyBulkAssignSerializer(serializers.Serializer):
     employee_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), allow_empty=False)
     is_on_probation = serializers.BooleanField(required=False, default=False)
     effective_from = serializers.DateField(required=False, allow_null=True)
+
+from .models import Holiday
+
+class HolidaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Holiday
+        fields = ['id', 'name', 'date', 'description', 'is_optional', 'is_active', 'applicable_shifts', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+

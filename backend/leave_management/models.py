@@ -241,3 +241,24 @@ class LeaveBalanceOverride(models.Model):
 
     def __str__(self):
         return f"{self.employee.employee_code} - {self.leave_type} ({self.year}): {self.quota}"
+
+class Holiday(models.Model):
+    organization = models.ForeignKey('employees.Organization', on_delete=models.CASCADE, related_name='holidays')
+    name = models.CharField(max_length=150)
+    date = models.DateField()
+    description = models.TextField(blank=True, null=True)
+    is_optional = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    applicable_shifts = models.ManyToManyField('employees.ShiftTemplate', blank=True, related_name='holidays', help_text="If empty, applies to all shifts")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['date']
+        constraints = [
+            models.UniqueConstraint(fields=['organization', 'name', 'date'], name='unique_holiday_per_org_name_date')
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.date})"
+

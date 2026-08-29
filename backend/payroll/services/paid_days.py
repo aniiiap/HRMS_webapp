@@ -44,9 +44,11 @@ def _working_days_in_month(employee: Employee, year: int, month: int) -> list[da
     return days
 
 
-def _leave_date_sets(employee: Employee, month_start: date, month_end: date) -> tuple[set[date], set[date]]:
-    unpaid: set[date] = set()
-    paid: set[date] = set()
+from employees.week_schedule import is_scheduled_working_day
+
+def _leave_date_sets(employee: Employee, month_start: date, month_end: date, mandatory_holidays: set[date]) -> tuple[dict[date, Decimal], dict[date, Decimal]]:
+    unpaid: dict[date, Decimal] = {}
+    paid: dict[date, Decimal] = {}
     leaves = LeaveRequest.objects.filter(
         employee=employee,
         status=LeaveStatus.APPROVED,
@@ -56,13 +58,16 @@ def _leave_date_sets(employee: Employee, month_start: date, month_end: date) -> 
     for leave in leaves:
         d = max(leave.start_date, month_start)
         end_d = min(leave.end_date, month_end)
+        
+        # Determine leave amount per day (1.0 for full day, 0.5 for half day)
+        leave_val = Decimal("0.5") if getattr(leave, "half_day", "none") in ("first_half", "second_half") else Decimal("1.0")
+        
         while d <= end_d:
-            # Payroll strictly considers Monday-Friday (0-4) as working days
-            if d.weekday() < 5:
+            if is_scheduled_working_day(employee, d) and d not in mandatory_holidays:
                 if leave.leave_type in (LeaveType.LOP, "unpaid", "loss_of_pay"):
-                    unpaid.add(d)
+                    unpaid[d] = unpaid.get(d, Decimal("0")) + leave_val
                 else:
-                    paid.add(d)
+                    paid[d] = paid.get(d, Decimal("0")) + leave_val
             d += timedelta(days=1)
     return unpaid, paid
 
@@ -99,7 +104,20 @@ def compute_paid_days_for_employee(
     month_start = date(period_year, period_month, 1)
     month_end = date(period_year, period_month, last)
 
-    unpaid_dates, paid_leave_dates = _leave_date_sets(employee, month_start, month_end)
+    from leave_management.models import Holiday
+    from django.db.models import Q
+    holidays = Holiday.objects.filter(
+        Q(applicable_shifts__isnull=True) | Q(applicable_shifts=employee.shift_template_id),
+        organization_id=employee.organization_id,
+        date__gte=month_start,
+        date__lte=month_end,
+        is_optional=False,
+        is_active=True
+    ).distinct().values_list('date', flat=True)
+    mandatory_holidays = set(holidays)
+
+    unpaid_dates, paid_leave_dates = _leave_date_sets(employee, month_start, month_end, mandatory_holidays)
+
     attendances = {
         a.date: a
         for a in Attendance.objects.filter(
@@ -126,33 +144,41 @@ def compute_paid_days_for_employee(
     day_credits: list[Decimal] = []
 
     for d in eval_days:
-        credit = Decimal("1")
-
-        if d in unpaid_dates:
-            credit = Decimal("0")
-            unpaid_leave_days += Decimal("1")
-        elif d in paid_leave_dates:
-            credit = Decimal("1")
-            paid_leave_days += Decimal("1")
-        elif d > today:
-            # Future days are assumed present (optimistic mid-month projection)
-            credit = Decimal("1")
-            present_days += Decimal("1")
-        elif not is_scheduled_working_day(employee, d):
-            # It's a weekend / non-scheduled day, so it counts as paid in a calendar-days model
-            credit = Decimal("1")
-            present_days += Decimal("1")
-        else:
-            att = attendances.get(d)
-            if not att or not att.check_in:
-                credit = Decimal("0")
-                absent_days += Decimal("1")
+        u_leave = unpaid_dates.get(d, Decimal("0"))
+        p_leave = paid_leave_dates.get(d, Decimal("0"))
+        
+        total_leave = min(u_leave + p_leave, Decimal("1.0"))
+        unpaid_leave_days += u_leave
+        paid_leave_days += p_leave
+        
+        remaining = Decimal("1.0") - total_leave
+        credit_for_remaining = Decimal("0")
+        
+        if remaining > Decimal("0"):
+            if d in mandatory_holidays:
+                # Mandatory holidays are counted as paid/present automatically
+                present_days += remaining
+                credit_for_remaining = remaining
+            elif d > today:
+                # Future days are assumed present (optimistic mid-month projection)
+                present_days += remaining
+                credit_for_remaining = remaining
+            elif not is_scheduled_working_day(employee, d):
+                # It's a weekend / non-scheduled day, so it counts as paid in a calendar-days model
+                present_days += remaining
+                credit_for_remaining = remaining
             else:
-                # If employee checked in, count as fully present regardless of anomaly
-                credit = Decimal("1")
-                present_days += Decimal("1")
+                att = attendances.get(d)
+                if not att or not att.check_in:
+                    absent_days += remaining
+                    credit_for_remaining = Decimal("0")
+                else:
+                    # If employee checked in, count as fully present for the remaining fraction regardless of anomaly
+                    present_days += remaining
+                    credit_for_remaining = remaining
 
-        day_credits.append(credit)
+        # Total credit for this day is the paid leave plus any earned credit from the remaining portion
+        day_credits.append(p_leave + credit_for_remaining)
 
     paid_from_attendance = sum(day_credits, Decimal("0"))
     

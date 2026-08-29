@@ -93,3 +93,58 @@ class PaidDaysWorkflowTests(TestCase):
         self.employee.save(update_fields=["date_of_joining"])
         b = compute_paid_days_for_employee(self.employee, 2026, 5, 22)
         self.assertLessEqual(b["absent_days"], Decimal("10"))
+
+    def test_holiday_on_working_day(self):
+        from leave_management.models import Holiday
+        # Make May 11 a holiday
+        Holiday.objects.create(
+            name="Test Holiday",
+            date=date(2026, 5, 11), # Monday
+            organization_id=self.org.id,
+            is_optional=False,
+            is_active=True
+        )
+        b = compute_paid_days_for_employee(self.employee, 2026, 5, 22)
+        # Assuming no attendance on May 11, it should NOT count as absent
+        self.assertEqual(b["absent_days"], Decimal(str(max(0, 22 - 1 - (b["paid_leave_days"] or 0) - (b["unpaid_leave_days"] or 0)))))
+        
+    def test_holiday_during_unpaid_leave(self):
+        from leave_management.models import Holiday
+        # May 11 (Mon) to May 13 (Wed) is unpaid leave
+        LeaveRequest.objects.create(
+            employee=self.employee,
+            leave_type=LeaveType.LOP,
+            start_date=date(2026, 5, 11),
+            end_date=date(2026, 5, 13),
+            status=LeaveStatus.APPROVED,
+        )
+        # May 12 is a holiday
+        Holiday.objects.create(
+            name="Test Holiday",
+            date=date(2026, 5, 12),
+            organization_id=self.org.id,
+            is_optional=False,
+            is_active=True
+        )
+        b = compute_paid_days_for_employee(self.employee, 2026, 5, 22)
+        # Out of 3 days leave, 1 is a holiday, so unpaid days should be 2.
+        self.assertEqual(b["unpaid_leave_days"], Decimal("2"))
+
+    def test_holiday_during_paid_leave(self):
+        from leave_management.models import Holiday
+        LeaveRequest.objects.create(
+            employee=self.employee,
+            leave_type=LeaveType.PAID,
+            start_date=date(2026, 5, 11),
+            end_date=date(2026, 5, 13),
+            status=LeaveStatus.APPROVED,
+        )
+        Holiday.objects.create(
+            name="Test Holiday",
+            date=date(2026, 5, 12),
+            organization_id=self.org.id,
+            is_optional=False,
+            is_active=True
+        )
+        b = compute_paid_days_for_employee(self.employee, 2026, 5, 22)
+        self.assertEqual(b["paid_leave_days"], Decimal("2"))

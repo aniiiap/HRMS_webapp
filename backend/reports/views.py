@@ -875,6 +875,17 @@ class EmployeeDashboardView(APIView):
             .values("id", "title", "message", "type", "is_read", "created_at")
         )
 
+        from leave_management.models import Holiday
+        from django.db.models import Q
+        upcoming_holidays = list(
+            Holiday.objects.filter(
+                Q(applicable_shifts__isnull=True) | Q(applicable_shifts=profile.shift_template_id),
+                organization_id=profile.organization_id,
+                date__gte=today,
+                is_active=True
+            ).distinct().order_by('date')[:5].values("id", "name", "date", "description", "is_optional")
+        )
+
         payload = {
             "attendance_days_this_month": att_qs.filter(check_in__isnull=False).count(),
             "pending_my_leaves": leave_qs.filter(status=LeaveStatus.PENDING).count(),
@@ -883,7 +894,7 @@ class EmployeeDashboardView(APIView):
             "notifications": notifications,
             "work_anniversaries": _work_anniversaries(limit=20, org_id=profile.organization_id),
             "upcoming_birthdays": _upcoming_birthdays(limit=20, org_id=profile.organization_id),
-            "upcoming_holidays": [],
+            "upcoming_holidays": upcoming_holidays,
             "profile": {
                 "employee_code": profile.employee_code,
                 "department": profile.department,

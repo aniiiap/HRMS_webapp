@@ -1,6 +1,7 @@
 import {
   Bell,
   Briefcase,
+  Calendar,
   Building2,
   CalendarDays,
   FileBarChart2,
@@ -42,6 +43,7 @@ const allGeneral = [
 
 const allMore = [
   { to: '/leaves', label: 'Leaves', icon: Briefcase, iconFx: 'icon-fx-tilt' },
+  { to: '/holidays', label: 'Holiday Calendar', icon: Calendar, iconFx: 'icon-fx-pop' },
   { to: '/expenses', label: 'Expenses', icon: Receipt, iconFx: 'icon-fx-rise' },
   { to: '/helpdesk', label: 'Helpdesk', icon: LifeBuoy, iconFx: 'icon-fx-pop' },
   { to: '/platform-support', label: 'Platform Support', icon: LifeBuoy, iconFx: 'icon-fx-pop' },
