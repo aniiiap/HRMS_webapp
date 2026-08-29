@@ -93,7 +93,11 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         profile = getattr(user, "employee_profile", None)
         employee_from_payload = serializer.validated_data.get("employee")
         if employee_from_payload is not None:
-            leave = serializer.save()
+            if (user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR, UserRole.MANAGER)) and self.request.data.get("status") == "approved":
+                from django.utils import timezone
+                leave = serializer.save(status="approved", reviewed_by=user, reviewed_at=timezone.now())
+            else:
+                leave = serializer.save()
         else:
             if not profile:
                 raise ValidationError({"employee": "No employee profile is linked to this account."})

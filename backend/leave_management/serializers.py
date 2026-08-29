@@ -97,23 +97,33 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
         if not employee_has_rule(employee, rule):
             raise serializers.ValidationError(f"{rule.name} is not assigned to you. Please contact HR.")
 
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        is_proxy = False
+        if user and user.is_authenticated:
+            from accounts.models import UserRole
+            if (user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR, UserRole.MANAGER)) and attrs.get("employee") is not None:
+                is_proxy = True
+
         on_probation = employee_on_probation(employee)
-        if on_probation and not rule.allowed_under_probation:
+        if on_probation and not rule.allowed_under_probation and not is_proxy:
             raise serializers.ValidationError(
                 f"{rule.name} is not allowed during probation under your leave rules."
             )
 
         today = timezone.localdate()
         date_errors = validate_leave_request_dates(rule, start, end, today)
-        if date_errors:
+        if date_errors and not is_proxy:
             raise serializers.ValidationError(date_errors[0])
 
         requested_days = (end - start).days + 1
-        if rule.max_per_month and requested_days > float(rule.max_per_month):
+        if attrs.get("half_day", "none") in ("first_half", "second_half"):
+            requested_days = 0.5
+        if rule.max_per_month and requested_days > float(rule.max_per_month) and not is_proxy:
             raise serializers.ValidationError(
                 f"Maximum {rule.max_per_month} days allowed per month for {rule.name}."
             )
-        if rule.continuous_allowed and requested_days > rule.continuous_allowed:
+        if rule.continuous_allowed and requested_days > rule.continuous_allowed and not is_proxy:
             raise serializers.ValidationError(
                 f"Maximum {rule.continuous_allowed} continuous days allowed for {rule.name}."
             )
@@ -128,7 +138,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
         if self.instance and self.instance.status == LeaveStatus.APPROVED:
             used -= (self.instance.end_date - self.instance.start_date).days + 1
         remaining = max(quota - used, 0)
-        if requested_days > remaining and not rule.negative_allowed:
+        if requested_days > remaining and not rule.negative_allowed and not is_proxy:
             raise serializers.ValidationError(
                 f"Insufficient {rule.name} balance. Requested {requested_days}, remaining {remaining:.0f}."
             )

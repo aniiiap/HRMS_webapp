@@ -3,7 +3,6 @@ import {
   ArrowRight,
   Cake,
   CalendarClock,
-  CalendarDays,
   Briefcase,
   LogIn,
   LogOut,
@@ -355,7 +354,6 @@ export default function DashboardPage() {
   }))
   const recentLeaves = data?.recent_leave_activity || []
   const upcomingBirthdays = data?.upcoming_birthdays || []
-  const upcomingHolidays = data?.upcoming_holidays || []
   const workAnniversaries = data?.work_anniversaries || []
   const weeklyTrend = data?.attendance_weekly_trend || []
   const leaveBalances = data?.leave_balances || []
@@ -695,7 +693,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3 md:grid-cols-2 md:items-stretch">
+              <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-2 md:items-stretch">
                 <div className={`card p-5 sm:p-6 ${DASHBOARD_BOTTOM_CARD}`}>
                   <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
                     <h3 className="text-[15px] font-semibold tracking-tight text-slate-900 dark:text-white">Recent leave activity</h3>
@@ -779,45 +777,6 @@ export default function DashboardPage() {
                     ))}
                   </ul>
                     )}
-                  </div>
-
-                  <div className={`card relative overflow-hidden p-5 sm:p-6 ${DASHBOARD_BOTTOM_CARD}`}>
-                    <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gradient-to-br from-brand-500/20 to-brand-500/10 blur-2xl dark:from-brand-500/10" />
-                    <div className="relative mb-3 flex shrink-0 items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-md">
-                          <CalendarDays size={18} strokeWidth={2} />
-                        </div>
-                        <div>
-                          <h3 className="text-[15px] font-semibold tracking-tight text-slate-900 dark:text-white">Upcoming Holidays</h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Public & restricted</p>
-                        </div>
-                      </div>
-                      <Link to="/holidays" className="text-xs font-semibold text-brand-600 hover:text-brand-500 dark:text-brand-400">View all</Link>
-                    </div>
-                    <div className="relative flex min-h-0 flex-1 flex-col">
-                      {upcomingHolidays.length === 0 ? (
-                        <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                          No upcoming holidays scheduled.
-                        </div>
-                      ) : (
-                        <ul className="relative min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5">
-                          {upcomingHolidays.map((h) => (
-                            <li key={h.id} className="flex gap-3 rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/80 p-3 dark:border-slate-700/80 dark:from-slate-900 dark:to-slate-800/80">
-                              <div className="flex flex-col items-center justify-center h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-brand-100 to-brand-50 text-xs font-bold text-brand-800 dark:from-brand-900/60 dark:to-brand-900/40 dark:text-brand-200 shadow-inner">
-                                <span className="text-[10px] leading-none uppercase">{dayjs(h.date).format('MMM')}</span>
-                                <span className="text-sm leading-none mt-0.5">{dayjs(h.date).format('DD')}</span>
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{h.name}</p>
-                                <p className="truncate text-xs text-slate-500 dark:text-slate-400">{dayjs(h.date).format('dddd')}</p>
-                                {h.is_optional && <p className="mt-1 text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">Optional</p>}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
                   </div>
                 </div>
               </div>
