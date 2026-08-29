@@ -317,6 +317,12 @@ function RegisterBreakdown({ g, row, canEdit, onUpdateResult, onOpenManageExpens
               <dt className="inline text-slate-500">Present </dt>
               <dd className="inline font-medium tabular-nums">{att.present_days}</dd>
             </div>
+            {(att.holiday_days !== undefined && Number(att.holiday_days) > 0) && (
+              <div>
+                <dt className="inline text-slate-500">Holiday(s) </dt>
+                <dd className="inline font-medium tabular-nums">{att.holiday_days}</dd>
+              </div>
+            )}
             <div>
               <dt className="inline text-slate-500">Paid leave </dt>
               <dd className="inline font-medium tabular-nums">{att.paid_leave_days}</dd>

@@ -30,6 +30,7 @@ class PaidDaysBreakdown(TypedDict):
     half_day_penalties: Decimal
     paid_leave_days: Decimal
     present_days: Decimal
+    holiday_days: Decimal
 
 
 def _working_days_in_month(employee: Employee, year: int, month: int) -> list[date]:
@@ -65,9 +66,9 @@ def _leave_date_sets(employee: Employee, month_start: date, month_end: date, man
         while d <= end_d:
             if is_scheduled_working_day(employee, d) and d not in mandatory_holidays:
                 if leave.leave_type in (LeaveType.LOP, "unpaid", "loss_of_pay"):
-                    unpaid[d] = unpaid.get(d, Decimal("0")) + leave_val
+                    unpaid[d] = min(unpaid.get(d, Decimal("0")) + leave_val, Decimal("1.0"))
                 else:
-                    paid[d] = paid.get(d, Decimal("0")) + leave_val
+                    paid[d] = min(paid.get(d, Decimal("0")) + leave_val, Decimal("1.0"))
             d += timedelta(days=1)
     return unpaid, paid
 
@@ -98,6 +99,7 @@ def compute_paid_days_for_employee(
             half_day_penalties=Decimal("0"),
             paid_leave_days=Decimal("0"),
             present_days=Decimal("0"),
+            holiday_days=Decimal("0"),
         )
 
     _, last = monthrange(period_year, period_month)
@@ -106,13 +108,21 @@ def compute_paid_days_for_employee(
 
     from leave_management.models import Holiday
     from django.db.models import Q
+    today = timezone.localdate()
+    weekdays = _working_days_in_month(employee, period_year, period_month)
+
+    if employee.date_of_joining:
+        weekdays = [d for d in weekdays if d >= employee.date_of_joining]
+
+    eval_days = weekdays[: int(working_days)] if len(weekdays) >= int(working_days) else weekdays
+
     holidays = Holiday.objects.filter(
-        Q(applicable_shifts__isnull=True) | Q(applicable_shifts=employee.shift_template_id),
-        organization_id=employee.organization_id,
+        organization=employee.organization_id,
+        is_active=True,
         date__gte=month_start,
         date__lte=month_end,
-        is_optional=False,
-        is_active=True
+    ).filter(
+        Q(applicable_shifts__isnull=True) | Q(applicable_shifts=employee.shift_template_id)
     ).distinct().values_list('date', flat=True)
     mandatory_holidays = set(holidays)
 
@@ -127,19 +137,12 @@ def compute_paid_days_for_employee(
         )
     }
 
-    today = timezone.localdate()
-    weekdays = _working_days_in_month(employee, period_year, period_month)
-
-    if employee.date_of_joining:
-        weekdays = [d for d in weekdays if d >= employee.date_of_joining]
-
-    eval_days = weekdays[: int(working_days)] if len(weekdays) >= int(working_days) else weekdays
-
     unpaid_leave_days = Decimal("0")
     absent_days = Decimal("0")
     half_day_penalties = Decimal("0")
     paid_leave_days = Decimal("0")
     present_days = Decimal("0")
+    holiday_days = Decimal("0")
 
     day_credits: list[Decimal] = []
 
@@ -147,7 +150,12 @@ def compute_paid_days_for_employee(
         u_leave = unpaid_dates.get(d, Decimal("0"))
         p_leave = paid_leave_dates.get(d, Decimal("0"))
         
-        total_leave = min(u_leave + p_leave, Decimal("1.0"))
+        # Ensure total leave for a single day cannot mathematically exceed 1.0
+        if u_leave + p_leave > Decimal("1.0"):
+            p_leave = min(p_leave, Decimal("1.0"))
+            u_leave = min(u_leave, Decimal("1.0") - p_leave)
+            
+        total_leave = u_leave + p_leave
         unpaid_leave_days += u_leave
         paid_leave_days += p_leave
         
@@ -156,8 +164,8 @@ def compute_paid_days_for_employee(
         
         if remaining > Decimal("0"):
             if d in mandatory_holidays:
-                # Mandatory holidays are counted as paid/present automatically
-                present_days += remaining
+                # Mandatory holidays are counted as paid automatically
+                holiday_days += remaining
                 credit_for_remaining = remaining
             elif d > today:
                 # Future days are assumed present (optimistic mid-month projection)
@@ -197,6 +205,7 @@ def compute_paid_days_for_employee(
         half_day_penalties=half_day_penalties,
         paid_leave_days=paid_leave_days,
         present_days=present_days,
+        holiday_days=holiday_days,
     )
 
 

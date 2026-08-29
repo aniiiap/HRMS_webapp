@@ -225,6 +225,7 @@ class PayrollEmployeeResultSerializer(serializers.ModelSerializer):
             "unpaid_leave_days": _f(b["unpaid_leave_days"]),
             "absent_days": _f(b["absent_days"]),
             "half_day_penalties": _f(b["half_day_penalties"]),
+            "holiday_days": _f(b.get("holiday_days", 0)),
             "computed_paid_days": _f(b["paid_days"]),
             "computed_lop_days": _f(b["lop_days"]),
         }
