@@ -8,7 +8,7 @@ import LeaveRulesPanel from '../components/leaves/LeaveRulesPanel'
 import { useAuth } from '../context/AuthContext'
 
 export default function LeavesPage() {
-  const { isManagerPlus } = useAuth()
+  const { isManagerPlus, user } = useAuth()
   const [searchParams] = useSearchParams()
   const [rows, setRows] = useState([])
   const [balances, setBalances] = useState([])
@@ -78,11 +78,17 @@ export default function LeavesPage() {
 
   const filteredRows = useMemo(() => {
     let list = rows
-    if (isManagerPlus && requestFilter !== 'all') {
-      list = rows.filter((r) => r.status === requestFilter)
+    if (activeTab === 'requests') {
+      list = list.filter((r) => r.employee === user?.employee_id)
+    } else if (activeTab === 'approvals') {
+      list = list.filter((r) => r.employee !== user?.employee_id)
+    }
+    
+    if (isManagerPlus && activeTab === 'approvals' && requestFilter !== 'all') {
+      list = list.filter((r) => r.status === requestFilter)
     }
     return list
-  }, [isManagerPlus, requestFilter, rows])
+  }, [isManagerPlus, requestFilter, rows, activeTab, user?.employee_id])
 
   const requestTotalPages = Math.max(Math.ceil(filteredRows.length / requestPageSize), 1)
 
@@ -129,14 +135,21 @@ export default function LeavesPage() {
       <div className="card overflow-hidden border border-slate-200/80 dark:border-slate-700/80">
         <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-800/90 px-3 py-2">
           {[
-            { id: 'requests', label: 'Requests' },
+            { id: 'requests', label: 'My Requests' },
+            ...(isManagerPlus ? [{ id: 'approvals', label: 'Approvals' }] : []),
             ...(isManagerPlus ? [{ id: 'rules', label: 'Rules' }] : []),
             { id: 'balances', label: 'Balances' },
           ].map((tab) => (
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                setActiveTab(tab.id)
+                if (tab.id === 'requests' || tab.id === 'approvals') {
+                  setRequestPage(1)
+                  setRequestFilter('all')
+                }
+              }}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                 activeTab === tab.id ? 'bg-white dark:bg-slate-700 text-brand-700 dark:text-brand-300 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-slate-700/70'
               }`}
@@ -147,33 +160,35 @@ export default function LeavesPage() {
         </div>
       </div>
 
-      {activeTab === 'requests' && (
+      {(activeTab === 'requests' || activeTab === 'approvals') && (
         <>
-          <form onSubmit={applyLeave} className="card grid gap-3 p-4 md:grid-cols-5">
-            <select className="rounded-xl border border-slate-300 px-3 py-2" value={form.leave_type} onChange={(e) => setForm({ ...form, leave_type: e.target.value })}>
-              {applicableRules.map((r) => (
-                <option key={r.id} value={r.code}>{r.name}</option>
-              ))}
-              {applicableRules.length === 0 && <option value="paid_leave">Paid Leave</option>}
-            </select>
-            <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.start_date} onChange={(e) => {
-              const start_date = e.target.value;
-              setForm(f => ({ ...f, start_date, end_date: f.half_day !== 'none' ? start_date : (f.end_date < start_date ? start_date : f.end_date) }))
-            }} required />
-            <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.end_date} min={form.start_date} disabled={form.half_day !== 'none'} onChange={(e) => setForm({ ...form, end_date: e.target.value })} required />
-            <select className="rounded-xl border border-slate-300 px-3 py-2" value={form.half_day} onChange={(e) => {
-              const half_day = e.target.value;
-              setForm(f => ({ ...f, half_day, end_date: half_day !== 'none' && f.start_date ? f.start_date : f.end_date }))
-            }}>
-              <option value="none">Full Day</option>
-              <option value="first_half">First Half</option>
-              <option value="second_half">Second Half</option>
-            </select>
-            <input className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Reason" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
-            <button className="btn-primary">Apply</button>
-          </form>
+          {activeTab === 'requests' && (
+            <form onSubmit={applyLeave} className="card grid gap-3 p-4 md:grid-cols-5">
+              <select className="rounded-xl border border-slate-300 px-3 py-2" value={form.leave_type} onChange={(e) => setForm({ ...form, leave_type: e.target.value })}>
+                {applicableRules.map((r) => (
+                  <option key={r.id} value={r.code}>{r.name}</option>
+                ))}
+                {applicableRules.length === 0 && <option value="paid_leave">Paid Leave</option>}
+              </select>
+              <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.start_date} onChange={(e) => {
+                const start_date = e.target.value;
+                setForm(f => ({ ...f, start_date, end_date: f.half_day !== 'none' ? start_date : (f.end_date < start_date ? start_date : f.end_date) }))
+              }} required />
+              <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.end_date} min={form.start_date} disabled={form.half_day !== 'none'} onChange={(e) => setForm({ ...form, end_date: e.target.value })} required />
+              <select className="rounded-xl border border-slate-300 px-3 py-2" value={form.half_day} onChange={(e) => {
+                const half_day = e.target.value;
+                setForm(f => ({ ...f, half_day, end_date: half_day !== 'none' && f.start_date ? f.start_date : f.end_date }))
+              }}>
+                <option value="none">Full Day</option>
+                <option value="first_half">First Half</option>
+                <option value="second_half">Second Half</option>
+              </select>
+              <input className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Reason" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
+              <button className="btn-primary">Apply</button>
+            </form>
+          )}
 
-          {isManagerPlus && (
+          {activeTab === 'approvals' && isManagerPlus && (
             <div className="card overflow-hidden border border-slate-200/80 dark:border-slate-700/80">
               <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-800/90 px-3 py-2">
                 {[
@@ -228,7 +243,7 @@ export default function LeavesPage() {
                     <td className="max-w-[260px] truncate px-4 py-3 text-xs text-slate-600 dark:text-slate-400">{r.reason || '-'}</td>
                     <td className="px-4 py-3 capitalize">{r.status}</td>
                     <td className="px-4 py-3">
-                      {isManagerPlus && r.status === 'pending' ? (
+                      {activeTab === 'approvals' && isManagerPlus && r.status === 'pending' ? (
                         <div className="flex gap-2">
                           <button className="btn-secondary" onClick={() => void review(r.id, 'approved')}>Approve</button>
                           <button className="btn-secondary" onClick={() => void review(r.id, 'rejected')}>Reject</button>

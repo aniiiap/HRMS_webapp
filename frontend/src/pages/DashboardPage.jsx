@@ -462,7 +462,7 @@ export default function DashboardPage() {
 
         {!loading && (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className={`grid grid-cols-1 gap-4 ${user?.role === 'manager' ? 'sm:grid-cols-4' : 'sm:grid-cols-2'}`}>
               <div className="card p-5">
                 <p className="text-sm text-slate-500 dark:text-slate-400">Attendance days (month)</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{data?.attendance_days_this_month ?? '—'}</p>
@@ -471,6 +471,20 @@ export default function DashboardPage() {
                 <p className="text-sm text-slate-500 dark:text-slate-400">Pending my leaves</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{data?.pending_my_leaves ?? '—'}</p>
               </div>
+              {user?.role === 'manager' && (
+                <>
+                  <div className="card p-5 relative overflow-hidden bg-brand-50/50 dark:bg-brand-900/10">
+                    <p className="text-sm text-brand-700 dark:text-brand-300">Pending team leaves</p>
+                    <p className="mt-2 text-2xl font-bold tabular-nums text-brand-800 dark:text-brand-100">{data?.pending_team_leaves ?? 0}</p>
+                    <Link to="/leaves?tab=approvals" className="absolute inset-0 z-10" aria-label="Review team leaves" />
+                  </div>
+                  <div className="card p-5 relative overflow-hidden bg-fuchsia-50/50 dark:bg-fuchsia-900/10">
+                    <p className="text-sm text-fuchsia-700 dark:text-fuchsia-300">Pending team attendance</p>
+                    <p className="mt-2 text-2xl font-bold tabular-nums text-fuchsia-800 dark:text-fuchsia-100">{data?.pending_team_attendance ?? 0}</p>
+                    <Link to="/attendance?tab=approvals" className="absolute inset-0 z-10" aria-label="Review team attendance" />
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

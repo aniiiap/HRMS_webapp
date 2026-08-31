@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import ProfileSectionCard, { ProfileField } from './ProfileSectionCard'
 
-export default function EmployeeWorkTab({ employee, editForm, setEditForm, canEdit, saving, onSave }) {
+export default function EmployeeWorkTab({ employee, teamEmployees = [], editForm, setEditForm, canEdit, saving, onSave }) {
   const doj = employee.date_of_joining ? dayjs(employee.date_of_joining).format('DD/MM/YYYY') : '—'
 
   return (
@@ -40,7 +40,23 @@ export default function EmployeeWorkTab({ employee, editForm, setEditForm, canEd
                 onChange={(e) => setEditForm({ ...editForm, date_of_joining: e.target.value })}
               />
             </label>
-            <ProfileField label="Reporting manager" value={employee.manager_name} />
+            <label className="block">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Reporting manager</p>
+              <select
+                className="input-field mt-1"
+                value={editForm.manager || ''}
+                onChange={(e) => setEditForm({ ...editForm, manager: e.target.value })}
+              >
+                <option value="">Not assigned</option>
+                {teamEmployees
+                  .filter((emp) => emp.id !== employee.id && emp.role === 'manager')
+                  .map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.first_name} {emp.last_name} ({emp.employee_code})
+                    </option>
+                  ))}
+              </select>
+            </label>
             <ProfileField label="Shift rule" value={employee.shift_template_name} />
             <ProfileField label="Organization" value={employee.organization_name} />
             <ProfileField label="Employee code" value={employee.employee_code} />

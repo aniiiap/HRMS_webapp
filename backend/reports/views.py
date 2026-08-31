@@ -886,9 +886,28 @@ class EmployeeDashboardView(APIView):
             ).distinct().order_by('date')[:5].values("id", "name", "date", "description", "is_optional")
         )
 
+        from accounts.models import UserRole
+        pending_team_leaves = 0
+        pending_team_attendance = 0
+        if user.role == UserRole.MANAGER:
+            team_leave_qs = LeaveRequest.objects.filter(
+                employee__manager=profile,
+                status=LeaveStatus.PENDING
+            )
+            pending_team_leaves = team_leave_qs.count()
+
+            from attendance.models import AttendanceCorrectionRequest, AttendanceCorrectionStatus
+            team_att_qs = AttendanceCorrectionRequest.objects.filter(
+                attendance__employee__manager=profile,
+                status=AttendanceCorrectionStatus.PENDING
+            )
+            pending_team_attendance = team_att_qs.count()
+
         payload = {
             "attendance_days_this_month": att_qs.filter(check_in__isnull=False).count(),
             "pending_my_leaves": leave_qs.filter(status=LeaveStatus.PENDING).count(),
+            "pending_team_leaves": pending_team_leaves,
+            "pending_team_attendance": pending_team_attendance,
             "leave_balances": _leave_balances_for_employee(profile),
             "attendance_trend": _employee_attendance_trend(profile, days=14),
             "notifications": notifications,

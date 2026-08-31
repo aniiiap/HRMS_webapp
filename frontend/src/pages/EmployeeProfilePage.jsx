@@ -94,6 +94,7 @@ export default function EmployeeProfilePage() {
         date_of_birth: data.date_of_birth || '',
         date_of_joining: data.date_of_joining || '',
         address: data.address || '',
+        manager: data.manager || '',
       })
     } catch (err) {
       toast.error(messageFromError(err))
@@ -126,7 +127,7 @@ export default function EmployeeProfilePage() {
       setDocuments(Array.isArray(data) ? data : data.results || [])
     }
 
-    if (tab === 'team') {
+    if (tab === 'team' || (tab === 'job' && isPrivileged)) {
       const { data } = await api.get('/api/employees/?nopaginate=true')
       const rows = Array.isArray(data) ? data : data.results || []
       setTeamEmployees(rows)
@@ -174,7 +175,10 @@ export default function EmployeeProfilePage() {
     if (!canEditProfile) return
     setSaving(true)
     try {
-      await api.patch(`/api/employees/${id}/`, editForm)
+      const payload = { ...editForm }
+      if (payload.manager === '') payload.manager = null
+      
+      await api.patch(`/api/employees/${id}/`, payload)
       toast.success('Profile updated.')
       await loadEmployee()
     } catch (err) {
@@ -260,6 +264,7 @@ export default function EmployeeProfilePage() {
             {tab === 'job' && (
               <EmployeeWorkTab
                 employee={employee}
+                teamEmployees={teamEmployees}
                 editForm={editForm}
                 setEditForm={setEditForm}
                 canEdit={canEditProfile}

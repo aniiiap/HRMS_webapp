@@ -74,6 +74,7 @@ export default function EmployeesPage() {
   const [activeTab, setActiveTab] = useState('employees')
   const [error, setError] = useState('')
   const [viewingImage, setViewingImage] = useState(null)
+  const [allEmployees, setAllEmployees] = useState([])
   const [form, setForm] = useState({
     email: '',
     first_name: '',
@@ -84,6 +85,7 @@ export default function EmployeesPage() {
     phone: '',
     date_of_birth: '',
     shift_template: '',
+    manager: '',
     location_restriction_enabled: true,
   })
   const [editingId, setEditingId] = useState(null)
@@ -111,14 +113,16 @@ export default function EmployeesPage() {
   async function load() {
     try {
       const q = searchParams.get('q') || ''
-      const [{ data }, tplRes] = await Promise.all([
+      const [{ data }, tplRes, allEmpRes] = await Promise.all([
         api.get('/api/employees/', { params: { page, page_size: pageSize, search: q } }),
         isPrivileged ? api.get('/api/employees/shift-templates/') : Promise.resolve({ data: [] }),
+        isPrivileged ? api.get('/api/employees/', { params: { nopaginate: 'true' } }) : Promise.resolve({ data: [] }),
       ])
       setRows(Array.isArray(data) ? data : data.results || [])
       setTotalPages(Array.isArray(data) ? 1 : Math.max(Math.ceil((data.count || 0) / pageSize), 1))
       setTotalItems(Array.isArray(data) ? data.length : (data.count || 0))
       setTemplates(Array.isArray(tplRes.data) ? tplRes.data : tplRes.data.results || [])
+      setAllEmployees(Array.isArray(allEmpRes.data) ? allEmpRes.data : allEmpRes.data.results || [])
       if (isPrivileged) {
         const { data: loc } = await api.get('/api/employees/location-settings/')
         setLocationForm({
@@ -146,6 +150,7 @@ export default function EmployeesPage() {
       const payload = {
         ...form,
         shift_template: form.shift_template ? Number(form.shift_template) : null,
+        manager: form.manager ? Number(form.manager) : null,
       }
       const { data } = await api.post('/api/employees/onboard/', payload)
       setForm({
@@ -391,6 +396,15 @@ export default function EmployeesPage() {
           </select>
           <select className="rounded-xl border border-slate-300 px-3 py-2" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
             <option value="employee">employee</option><option value="manager">manager</option><option value="hr">hr</option><option value="admin">admin</option>
+          </select>
+          <select className="rounded-xl border border-slate-300 px-3 py-2" value={form.manager} onChange={(e) => setForm({ ...form, manager: e.target.value })}>
+            <option value="">Reporting manager (Optional)</option>
+            {allEmployees
+              .filter(emp => emp.role === 'manager')
+              .map(emp => (
+                <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
+              ))
+            }
           </select>
           <label className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700">
             <input type="checkbox" checked={form.location_restriction_enabled} onChange={(e) => setForm({ ...form, location_restriction_enabled: e.target.checked })} />

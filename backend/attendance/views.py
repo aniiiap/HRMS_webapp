@@ -71,16 +71,21 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_authenticated:
             return qs.none()
-        if user.is_superuser or user.role in (
-            UserRole.ADMIN,
-            UserRole.HR,
-            UserRole.MANAGER,
-        ):
-            org_id = organization_id_from_request(self.request)
-            return filter_by_employee_org(qs, org_id)
+            
+        org_id = organization_id_from_request(self.request)
         profile = getattr(user, "employee_profile", None)
+        
+        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
+            return filter_by_employee_org(qs, org_id)
+            
         if profile:
+            if user.role == UserRole.MANAGER:
+                from django.db.models import Q
+                return filter_by_employee_org(qs, org_id).filter(
+                    Q(employee=profile) | Q(employee__manager=profile)
+                )
             return qs.filter(employee=profile)
+            
         return qs.none()
 
     def get_permissions(self):
@@ -140,13 +145,20 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         user = request.user
         org_id = organization_id_from_request(request)
         emp_qs = Employee.objects.select_related("user", "shift_template", "manager", "manager__user")
-        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR, UserRole.MANAGER):
+        profile = getattr(user, "employee_profile", None)
+        
+        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
             emp_qs = filter_employees_by_org(emp_qs, org_id)
+        elif profile:
+            if user.role == UserRole.MANAGER:
+                from django.db.models import Q
+                emp_qs = filter_employees_by_org(emp_qs, org_id).filter(
+                    Q(id=profile.id) | Q(manager=profile)
+                )
+            else:
+                emp_qs = emp_qs.filter(pk=profile.pk)
         else:
-            profile = getattr(user, "employee_profile", None)
-            if not profile:
-                return Response({"year": year, "month": month, "days_in_month": last_day, "rows": [], "legend": {}})
-            emp_qs = emp_qs.filter(pk=profile.pk)
+            return Response({"year": year, "month": month, "days_in_month": last_day, "rows": [], "legend": {}})
 
         employees = list(emp_qs)
         employee_ids = [e.id for e in employees]
@@ -274,7 +286,19 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
         org_id = organization_id_from_request(request)
         emp_qs = Employee.objects.select_related("user", "shift_template", "manager", "manager__user")
-        emp_qs = filter_employees_by_org(emp_qs, org_id)
+        
+        user = request.user
+        profile = getattr(user, "employee_profile", None)
+        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
+            emp_qs = filter_employees_by_org(emp_qs, org_id)
+        elif profile and user.role == UserRole.MANAGER:
+            from django.db.models import Q
+            emp_qs = filter_employees_by_org(emp_qs, org_id).filter(
+                Q(id=profile.id) | Q(manager=profile)
+            )
+        else:
+            emp_qs = emp_qs.none()
+            
         if department:
             emp_qs = emp_qs.filter(department__iexact=department)
         if manager_id:
@@ -428,7 +452,19 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             .filter(date__gte=start, date__lte=end)
             .order_by("date", "employee__employee_code")
         )
-        qs = filter_by_employee_org(qs, org_id)
+        
+        user = request.user
+        profile = getattr(user, "employee_profile", None)
+        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
+            qs = filter_by_employee_org(qs, org_id)
+        elif profile and user.role == UserRole.MANAGER:
+            from django.db.models import Q
+            qs = filter_by_employee_org(qs, org_id).filter(
+                Q(employee=profile) | Q(employee__manager=profile)
+            )
+        else:
+            qs = qs.none()
+            
         buffer = io.StringIO()
         buffer.write("\ufeff")
         writer = csv.writer(buffer)
@@ -463,12 +499,39 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         correction = ser.save()
 
         emp_name = f"{request.user.first_name} {request.user.last_name}".strip() or request.user.email
+        email_html = f"""
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #2563eb;">New Attendance Correction Request</h2>
+            <p><strong>{emp_name}</strong> requested {correction.request_type.replace('_', ' ')} for {attendance.date.isoformat()}.</p>
+            <p style="margin-top: 20px;">Please log in to the Worksphere dashboard to review and approve/reject this request.</p>
+        </div>
+        """
+        
+        target_roles = (UserRole.ADMIN,) if request.user.role in [UserRole.HR, UserRole.MANAGER] else (UserRole.ADMIN, UserRole.HR)
         notify_roles(
             title="Attendance correction request",
             message=f"{emp_name} requested {correction.request_type.replace('_', ' ')} for {attendance.date.isoformat()}.",
             type_value="attendance_correction",
+            roles=target_roles,
             organization_id=attendance.employee.organization_id,
+            send_email=True,
+            email_html=email_html,
         )
+        
+        manager = attendance.employee.manager
+        if manager and manager.user:
+            notify_user(
+                user=manager.user,
+                title="Attendance correction request",
+                message=f"{emp_name} requested {correction.request_type.replace('_', ' ')} for {attendance.date.isoformat()}.",
+                type_value="attendance_correction"
+            )
+            send_html_email_async(
+                to_email=manager.user.email,
+                subject="New attendance correction request",
+                html=email_html
+            )
+        
         return Response(AttendanceCorrectionRequestSerializer(correction).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated, IsManagerOrAbove])
@@ -481,11 +544,16 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             "attendance__employee__manager__user",
             "reviewed_by",
         ).all()
-        qs = filter_by_employee_org(
-            qs,
-            organization_id_from_request(request),
-            employee_prefix="attendance__employee",
-        )
+        org_id = organization_id_from_request(request)
+        qs = filter_by_employee_org(qs, org_id, employee_prefix="attendance__employee")
+        
+        user = request.user
+        profile = getattr(user, "employee_profile", None)
+        if profile and user.role == UserRole.MANAGER and not user.is_superuser:
+            # Manager only sees their own requests and direct reports
+            from django.db.models import Q
+            qs = qs.filter(Q(attendance__employee=profile) | Q(attendance__employee__manager=profile))
+
         status_filter = request.query_params.get("status")
         if status_filter:
             qs = qs.filter(status=status_filter)
@@ -499,11 +567,15 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         correction_qs = AttendanceCorrectionRequest.objects.select_related(
             "attendance", "attendance__employee", "attendance__employee__user"
         )
-        correction_qs = filter_by_employee_org(
-            correction_qs,
-            organization_id_from_request(request),
-            employee_prefix="attendance__employee",
-        )
+        org_id = organization_id_from_request(request)
+        correction_qs = filter_by_employee_org(correction_qs, org_id, employee_prefix="attendance__employee")
+        
+        user = request.user
+        profile = getattr(user, "employee_profile", None)
+        if profile and user.role == UserRole.MANAGER and not user.is_superuser:
+            from django.db.models import Q
+            correction_qs = correction_qs.filter(Q(attendance__employee=profile) | Q(attendance__employee__manager=profile))
+
         correction = correction_qs.filter(pk=correction_id).first()
         if not correction:
             return Response({"error": "Correction request not found."}, status=status.HTTP_404_NOT_FOUND)

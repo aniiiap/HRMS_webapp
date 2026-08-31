@@ -76,16 +76,23 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_authenticated:
             return qs.none()
-        if user.is_superuser or user.role in (
-            UserRole.ADMIN,
-            UserRole.HR,
-            UserRole.MANAGER,
-        ):
-            org_id = organization_id_from_request(self.request)
-            return filter_by_employee_org(qs, org_id)
+        
+        org_id = organization_id_from_request(self.request)
         profile = getattr(user, "employee_profile", None)
+        
+        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
+            return filter_by_employee_org(qs, org_id)
+            
         if profile:
+            if user.role == UserRole.MANAGER:
+                # Managers see their own requests and their direct reports' requests
+                from django.db.models import Q
+                return filter_by_employee_org(qs, org_id).filter(
+                    Q(employee=profile) | Q(employee__manager=profile)
+                )
+            # Regular employees see only their own
             return qs.filter(employee=profile)
+            
         return qs.none()
 
     def perform_create(self, serializer):
@@ -140,6 +147,20 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             send_email=True,
             email_html=email_html,
         )
+        
+        manager = leave.employee.manager if leave.employee else None
+        if manager and manager.user:
+            notify_user(
+                user=manager.user,
+                title="New leave request",
+                message=f"{emp_name} applied for leave ({leave.start_date} to {leave.end_date}).",
+                type_value="leave_applied"
+            )
+            send_html_email_async(
+                to_email=manager.user.email,
+                subject="New leave request",
+                html=email_html
+            )
 
     @action(detail=False, methods=["post"], url_path="balances/override", permission_classes=[IsManagerOrAbove])
     def override_balance(self, request):
@@ -197,15 +218,22 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
     def balances(self, request):
         user = request.user
-        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR, UserRole.MANAGER):
-            emp_qs = Employee.objects.select_related("user", "leave_profile").prefetch_related("leave_rule_assignments", "leave_rule_assignments__rule").all()
-            org_id = organization_id_from_request(request)
+        emp_qs = Employee.objects.select_related("user", "leave_profile").prefetch_related("leave_rule_assignments", "leave_rule_assignments__rule").all()
+        org_id = organization_id_from_request(request)
+        
+        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
             emp_qs = filter_employees_by_org(emp_qs, org_id)
         else:
             profile = getattr(user, "employee_profile", None)
             if not profile:
                 return Response([])
-            emp_qs = Employee.objects.select_related("user", "leave_profile").prefetch_related("leave_rule_assignments", "leave_rule_assignments__rule").filter(pk=profile.pk)
+            if user.role == UserRole.MANAGER:
+                from django.db.models import Q
+                emp_qs = filter_employees_by_org(emp_qs, org_id).filter(
+                    Q(id=profile.id) | Q(manager=profile)
+                )
+            else:
+                emp_qs = emp_qs.filter(pk=profile.pk)
 
         year = int(request.query_params.get("year") or timezone.localdate().year)
         
