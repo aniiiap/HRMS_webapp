@@ -33,10 +33,13 @@ def _leave_days_in_month(employee, leave_type: str, year: int, month: int) -> in
         end_date__gte=month_start,
     ).only("start_date", "end_date")
     total = 0
+    from leave_management.leave_rules import calculate_leave_duration, resolve_leave_rule
     for row in rows:
         start = max(row.start_date, month_start)
         end = min(row.end_date, month_end)
-        total += (end - start).days + 1
+        if start <= end:
+            rule = resolve_leave_rule(employee, row.leave_type)
+            total += calculate_leave_duration(start, end, rule, getattr(row, "half_day", "none"))
     return total
 
 

@@ -116,9 +116,9 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
         if date_errors and not is_proxy:
             raise serializers.ValidationError(date_errors[0])
 
-        requested_days = (end - start).days + 1
-        if attrs.get("half_day", "none") in ("first_half", "second_half"):
-            requested_days = 0.5
+        from .leave_rules import calculate_leave_duration
+        requested_days = calculate_leave_duration(start, end, rule, attrs.get("half_day", "none"))
+
         if rule.max_per_month and requested_days > float(rule.max_per_month) and not is_proxy:
             raise serializers.ValidationError(
                 f"Maximum {rule.max_per_month} days allowed per month for {rule.name}."
@@ -136,7 +136,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             return attrs
         used = leave_days_in_year(employee, code, year)
         if self.instance and self.instance.status == LeaveStatus.APPROVED:
-            used -= (self.instance.end_date - self.instance.start_date).days + 1
+            used -= calculate_leave_duration(self.instance.start_date, self.instance.end_date, rule, self.instance.half_day)
         remaining = max(quota - used, 0)
         if requested_days > remaining and not rule.negative_allowed and not is_proxy:
             raise serializers.ValidationError(

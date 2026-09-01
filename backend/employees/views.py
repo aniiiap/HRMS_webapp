@@ -147,8 +147,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         data["invite_sent"] = ok
         data["message"] = "Employee created and invite email sent." if ok else "Employee created but invite email failed."
         data["email_status"] = detail
-        if settings.DEBUG:
-            data["invite_url"] = invite_url
+        data["invite_url"] = invite_url
         return Response(data, status=status.HTTP_201_CREATED)
 
     @action(

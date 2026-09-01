@@ -170,7 +170,7 @@ export default function LeavesPage() {
                 ))}
                 {applicableRules.length === 0 && <option value="paid_leave">Paid Leave</option>}
               </select>
-              <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.start_date} onChange={(e) => {
+              <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.start_date} min={new Date(new Date().setMonth(new Date().getMonth() - 2)).toISOString().split('T')[0]} onChange={(e) => {
                 const start_date = e.target.value;
                 setForm(f => ({ ...f, start_date, end_date: f.half_day !== 'none' ? start_date : (f.end_date < start_date ? start_date : f.end_date) }))
               }} required />

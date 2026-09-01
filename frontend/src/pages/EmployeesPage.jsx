@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, LocateFixed, MailPlus, MapPin, Pencil, Power, Trash2, X, Download, ChevronRight } from 'lucide-react'
+import { Check, LocateFixed, MailPlus, MapPin, Pencil, Power, Trash2, X, Download, ChevronRight, Link as LinkIcon } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { api, messageFromError } from '../api/client'
@@ -258,6 +258,27 @@ export default function EmployeesPage() {
     try {
       const { data } = await api.post('/api/auth/invite/resend/', { employee_id: row.id })
       toast.success(data?.message || 'Invite resent.')
+      await load()
+    } catch (err) {
+      const m = messageFromError(err)
+      setError(m)
+      toast.error(m)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function copyInviteLink(row) {
+    setError('')
+    setBusyId(row.id)
+    try {
+      const { data } = await api.post('/api/auth/invite/resend/', { employee_id: row.id })
+      if (data.invite_url) {
+        await navigator.clipboard.writeText(data.invite_url)
+        toast.success('Invite link copied to clipboard.')
+      } else {
+        toast.error('Invite link could not be generated.')
+      }
       await load()
     } catch (err) {
       const m = messageFromError(err)
@@ -688,15 +709,26 @@ export default function EmployeesPage() {
                         </button>
                       )}
                       {r.role !== 'admin' && (r.onboarding_pending || !r.is_active) && (
-                        <button
-                          type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-brand-200 text-brand-700"
-                          disabled={busyId === r.id}
-                          onClick={() => resendInvite(r)}
-                          title="Resend invite"
-                        >
-                          <MailPlus size={14} />
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-brand-200 text-brand-700 hover:bg-brand-50"
+                            disabled={busyId === r.id}
+                            onClick={() => resendInvite(r)}
+                            title="Resend invite"
+                          >
+                            <MailPlus size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700 hover:border-slate-400"
+                            disabled={busyId === r.id}
+                            onClick={() => copyInviteLink(r)}
+                            title="Copy invite link"
+                          >
+                            <LinkIcon size={14} />
+                          </button>
+                        </>
                       )}
                       <button
                         type="button"

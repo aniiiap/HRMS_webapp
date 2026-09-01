@@ -332,7 +332,5 @@ def invite_resend_view(request):
         created_by=request.user,
         frontend_origin=request.headers.get("Origin"),
     )
-    payload = {"message": "Invite resent." if ok else "Invite created but email failed to send.", "email_status": detail}
-    if settings.DEBUG:
-        payload["invite_url"] = invite_url
+    payload = {"message": "Invite resent." if ok else "Invite created but email failed to send.", "email_status": detail, "invite_url": invite_url}
     return Response(payload, status=status.HTTP_200_OK if ok else status.HTTP_202_ACCEPTED)

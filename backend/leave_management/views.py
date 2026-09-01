@@ -239,13 +239,16 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         
         # PRE-CALCULATE USAGES to avoid N+1 queries
         precalculated_usages = {}
-        leave_qs = LeaveRequest.objects.filter(
+        leave_qs = LeaveRequest.objects.select_related("employee").filter(
             employee__in=emp_qs,
             status=LeaveStatus.APPROVED,
             start_date__year=year
-        ).only("employee_id", "leave_type", "start_date", "end_date")
+        ).only("employee_id", "leave_type", "start_date", "end_date", "half_day", "employee__organization_id", "employee__leave_policy_assignment")
+        
+        from .leave_rules import calculate_leave_duration, resolve_leave_rule
         for req in leave_qs:
-            days = (req.end_date - req.start_date).days + 1
+            rule = resolve_leave_rule(req.employee, req.leave_type)
+            days = calculate_leave_duration(req.start_date, req.end_date, rule, req.half_day)
             if req.employee_id not in precalculated_usages:
                 precalculated_usages[req.employee_id] = {}
             if req.leave_type not in precalculated_usages[req.employee_id]:
@@ -377,7 +380,11 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             )
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        days_count = (leave.end_date - leave.start_date).days + 1
+        
+        from .leave_rules import calculate_leave_duration, resolve_leave_rule
+        rule = resolve_leave_rule(leave.employee, leave.leave_type)
+        days_count = calculate_leave_duration(leave.start_date, leave.end_date, rule, leave.half_day)
+        
         emp_user = leave.employee.user
         decision_label = "approved" if leave.status == LeaveStatus.APPROVED else "rejected"
         org_name = leave.employee.organization.name if leave.employee and leave.employee.organization else ""

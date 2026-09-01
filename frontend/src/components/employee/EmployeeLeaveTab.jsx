@@ -431,6 +431,7 @@ export default function EmployeeLeaveTab({ leaves = [], leaveBalance }) {
                     <input
                       type="date"
                       required
+                      min={new Date(new Date().setMonth(new Date().getMonth() - 2)).toISOString().split('T')[0]}
                       className="w-full rounded-xl border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800"
                       value={applyForm.start_date}
                       onChange={(e) => {
