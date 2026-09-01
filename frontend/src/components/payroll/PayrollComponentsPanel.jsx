@@ -201,7 +201,7 @@ function ComponentTable({ title, tone, rows, onDelete, isPrivileged }) {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
       <div className={`px-4 py-2.5 text-sm font-semibold ${headBg}`}>{title} ({rows.length})</div>
-      <table className="min-w-full text-sm">
+      <div className="overflow-x-auto"><table className="min-w-full text-sm">
         <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500 dark:bg-slate-800">
           <tr>
             <th className="px-4 py-2">Code</th>
@@ -235,7 +235,7 @@ function ComponentTable({ title, tone, rows, onDelete, isPrivileged }) {
             </tr>
           )}
         </tbody>
-      </table>
+      </table></div>
     </div>
   )
 }

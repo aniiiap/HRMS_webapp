@@ -98,7 +98,7 @@ export default function DeclarationPanel({
       </p>
 
       <div className="card overflow-x-auto">
-        <table className="min-w-full text-sm">
+        <div className="overflow-x-auto"><table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left dark:bg-slate-800">
             <tr>
               <th className="px-3 py-2">Employee</th>
@@ -157,7 +157,7 @@ export default function DeclarationPanel({
               </tr>
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   )

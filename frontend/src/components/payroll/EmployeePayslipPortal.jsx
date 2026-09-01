@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
-import { Download, FileText, TrendingUp } from 'lucide-react'
+import { Download, FileText, TrendingUp, ChevronDown, ChevronUp, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api, messageFromError } from '../../api/client'
 import StatusBadge from '../ui/StatusBadge'
@@ -124,7 +124,7 @@ export default function EmployeePayslipPortal({ employeeId: filterEmployeeId }) 
         />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/30">
-          <table className="min-w-full text-sm">
+          <div className="overflow-x-auto"><table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800">
               <tr>
                 <th className="px-4 py-3">Pay period</th>
@@ -153,16 +153,16 @@ export default function EmployeePayslipPortal({ employeeId: filterEmployeeId }) 
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-2">
-                          <button type="button" className="text-xs font-medium text-brand-600" onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}>
-                            {expandedId === p.id ? 'Hide' : 'Breakdown'}
+                          <button type="button" title={expandedId === p.id ? 'Hide' : 'Breakdown'} className="p-1 text-brand-600 hover:text-brand-700" onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}>
+                            {expandedId === p.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                           </button>
                           {canPdf && (
                             <>
-                              <button type="button" className="text-xs font-medium text-slate-600" onClick={() => void previewPdf(p.id)}>
-                                Preview
+                              <button type="button" title="Preview" className="p-1 text-slate-500 hover:text-slate-700" onClick={() => void previewPdf(p.id)}>
+                                <Eye className="h-4 w-4" />
                               </button>
-                              <button type="button" className="text-xs font-medium text-brand-600" onClick={() => void downloadPdf(p.id, p)}>
-                                PDF
+                              <button type="button" title="Download PDF" className="p-1 text-brand-600 hover:text-brand-700" onClick={() => void downloadPdf(p.id, p)}>
+                                <Download className="h-4 w-4" />
                               </button>
                             </>
                           )}
@@ -193,7 +193,7 @@ export default function EmployeePayslipPortal({ employeeId: filterEmployeeId }) 
                 )
               })}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 

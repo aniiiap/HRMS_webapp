@@ -60,7 +60,7 @@ export default function PayRunsPanel({
       </form>
 
       <div className="card overflow-x-auto">
-        <table className="min-w-full text-sm">
+        <div className="overflow-x-auto"><table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left text-slate-600 dark:bg-slate-800 dark:text-slate-300">
             <tr>
               <th className="px-4 py-3">Period</th>
@@ -140,7 +140,7 @@ export default function PayRunsPanel({
               </tr>
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   )

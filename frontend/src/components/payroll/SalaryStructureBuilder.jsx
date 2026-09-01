@@ -472,7 +472,7 @@ export default function SalaryStructureBuilder({
                 </button>
               </div>
               <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
-                <table className="min-w-full text-sm">
+                <div className="overflow-x-auto"><table className="min-w-full text-sm">
                   <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500 dark:bg-slate-800">
                     <tr>
                       <th className="px-4 py-3">Component</th>
@@ -556,14 +556,14 @@ export default function SalaryStructureBuilder({
                       </tr>
                     )}
                   </tbody>
-                </table>
+                </table></div>
               </div>
 
               {revisions.length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold">Salary revision history</h4>
                   <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
-                    <table className="min-w-full text-sm">
+                    <div className="overflow-x-auto"><table className="min-w-full text-sm">
                       <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800">
                         <tr>
                           <th className="px-4 py-2 text-left">Effective</th>
@@ -591,7 +591,7 @@ export default function SalaryStructureBuilder({
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                    </table></div>
                   </div>
                 </div>
               )}

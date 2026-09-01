@@ -179,7 +179,7 @@ export default function PayRegisterPanel({
         </button>
       </div>
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/30">
-        <table className="min-w-full text-sm">
+        <div className="overflow-x-auto"><table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800">
             <tr>
               <th className="w-10 px-3 py-3" />
@@ -282,7 +282,7 @@ export default function PayRegisterPanel({
               </tr>
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       <PayslipPreviewModal

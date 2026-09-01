@@ -181,7 +181,7 @@ export default function EmployeeCompensationSection({ employeeId, readOnly = fal
             <p className="mt-2 text-sm text-slate-500">No revisions yet.</p>
           ) : (
             <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
-              <table className="min-w-full text-sm">
+              <div className="overflow-x-auto"><table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800">
                   <tr>
                     <th className="px-4 py-3">Effective</th>
@@ -210,7 +210,7 @@ export default function EmployeeCompensationSection({ employeeId, readOnly = fal
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </div>
           )}
         </div>
