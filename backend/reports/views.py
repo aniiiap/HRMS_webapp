@@ -673,13 +673,11 @@ class DashboardSummaryView(APIView):
 
     def get(self, request):
         today = timezone.localdate()
-        cache_key = f"dashboard:summary:{request.user.role}:{today.isoformat()}"
+        org_id = organization_id_from_request(request)
+        cache_key = f"dashboard:summary:{request.user.role}:{org_id}:{today.isoformat()}"
         cached = cache.get(cache_key)
         if cached:
             return Response(cached)
-
-        today = timezone.localdate()
-        org_id = organization_id_from_request(request)
         active_employees = Employee.objects.filter(user__is_active=True, user__onboarding_pending=False)
         active_employees = filter_employees_by_org(active_employees, org_id)
         active_employee_ids = list(active_employees.values_list("id", flat=True))
