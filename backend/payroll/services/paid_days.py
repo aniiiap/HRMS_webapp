@@ -31,6 +31,8 @@ class PaidDaysBreakdown(TypedDict):
     paid_leave_days: Decimal
     present_days: Decimal
     holiday_days: Decimal
+    scheduled_working_days: Decimal
+    scheduled_weekends: Decimal
 
 
 def _working_days_in_month(employee: Employee, year: int, month: int) -> list[date]:
@@ -100,6 +102,8 @@ def compute_paid_days_for_employee(
             paid_leave_days=Decimal("0"),
             present_days=Decimal("0"),
             holiday_days=Decimal("0"),
+            scheduled_working_days=Decimal("0"),
+            scheduled_weekends=Decimal("0"),
         )
 
     _, last = monthrange(period_year, period_month)
@@ -113,6 +117,9 @@ def compute_paid_days_for_employee(
 
     if employee.date_of_joining:
         weekdays = [d for d in weekdays if d >= employee.date_of_joining]
+        
+    scheduled_working_days = sum(1 for d in weekdays if is_scheduled_working_day(employee, d))
+    scheduled_weekends = len(weekdays) - scheduled_working_days
 
     eval_days = weekdays[: int(working_days)] if len(weekdays) >= int(working_days) else weekdays
 
@@ -206,6 +213,8 @@ def compute_paid_days_for_employee(
         paid_leave_days=paid_leave_days,
         present_days=present_days,
         holiday_days=holiday_days,
+        scheduled_working_days=Decimal(str(scheduled_working_days)),
+        scheduled_weekends=Decimal(str(scheduled_weekends)),
     )
 
 
@@ -220,7 +229,9 @@ def apply_auto_paid_days_to_result(result, *, force: bool = False) -> PaidDaysBr
     )
     result.auto_paid_days = breakdown["paid_days"]
     result.auto_lop_days = breakdown["lop_days"]
-    update_fields = ["auto_paid_days", "auto_lop_days", "updated_at"]
+    result.scheduled_working_days = breakdown["scheduled_working_days"]
+    result.scheduled_weekends = breakdown["scheduled_weekends"]
+    update_fields = ["auto_paid_days", "auto_lop_days", "scheduled_working_days", "scheduled_weekends", "updated_at"]
 
     if force or not result.paid_days_overridden:
         result.paid_days = breakdown["paid_days"]

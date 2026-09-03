@@ -717,8 +717,8 @@ class PayrollEmployeeResultViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], url_path="payslip-pdf")
     def payslip_pdf(self, request, pk=None):
         result = self.get_object()
-        if result.run.status not in (PayrollRunStatus.FINALIZED, PayrollRunStatus.PAID):
-            raise ValidationError("Payslip PDF is available after payroll is finalized.")
+        if result.run.status not in (PayrollRunStatus.READY, PayrollRunStatus.FINALIZED, PayrollRunStatus.PAID):
+            raise ValidationError("Payslip PDF is available after payroll is generated.")
         pdf = build_payslip_pdf(result)
         code = result.employee.employee_code
         period = f"{result.run.period_year}_{result.run.period_month:02d}"

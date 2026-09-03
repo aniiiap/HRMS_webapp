@@ -249,3 +249,20 @@ class AnnouncementDismissal(models.Model):
                 name="uniq_announcement_dismissal_per_user",
             ),
         ]
+
+class ActionLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="action_logs")
+    user_name = models.CharField(max_length=255, blank=True)
+    action_type = models.CharField(max_length=50) # e.g. "UPDATE", "CREATE", "DELETE"
+    resource_type = models.CharField(max_length=100) # e.g. "PayrollRun", "LeaveRequest"
+    resource_id = models.CharField(max_length=100, blank=True)
+    description = models.TextField(blank=True)
+    payload = models.JSONField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"{self.user_name} did {self.action_type} on {self.resource_type} at {self.timestamp}"

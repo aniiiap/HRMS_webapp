@@ -291,3 +291,10 @@ class CompanyAnnouncementSerializer(serializers.ModelSerializer):
             return "System"
         name = f"{obj.created_by.first_name} {obj.created_by.last_name}".strip()
         return name or obj.created_by.email
+
+from .models import ActionLog
+
+class ActionLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ActionLog
+        fields = '__all__'

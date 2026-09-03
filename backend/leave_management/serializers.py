@@ -117,7 +117,10 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(date_errors[0])
 
         from .leave_rules import calculate_leave_duration
-        requested_days = calculate_leave_duration(start, end, rule, attrs.get("half_day", "none"))
+        requested_days = calculate_leave_duration(start, end, employee, rule, attrs.get("half_day", "none"))
+        
+        if requested_days <= 0 and not is_proxy:
+            raise serializers.ValidationError("Leave request duration cannot be 0 days (e.g. applying only on non-working days).")
 
         if rule.max_per_month and requested_days > float(rule.max_per_month) and not is_proxy:
             raise serializers.ValidationError(
@@ -131,12 +134,24 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
         year = start.year
         today = timezone.localdate()
         as_of = min(today, start)
-        quota = quota_for_rule(rule, on_probation, employee=employee, as_of=as_of)
+        
+        from .models import LeaveBalanceOverride
+        override = LeaveBalanceOverride.objects.filter(employee=employee, year=year, leave_type=code).first()
+        
+        if override and override.quota is not None:
+            quota = float(override.quota)
+        else:
+            quota = quota_for_rule(rule, on_probation, employee=employee, as_of=as_of)
+            
         if quota is None:
             return attrs
+            
         used = leave_days_in_year(employee, code, year)
+        if override and override.used_adjustment:
+            used += float(override.used_adjustment)
+            
         if self.instance and self.instance.status == LeaveStatus.APPROVED:
-            used -= calculate_leave_duration(self.instance.start_date, self.instance.end_date, rule, self.instance.half_day)
+            used -= calculate_leave_duration(self.instance.start_date, self.instance.end_date, employee, rule, self.instance.half_day)
         remaining = max(quota - used, 0)
         if requested_days > remaining and not rule.negative_allowed and not is_proxy:
             raise serializers.ValidationError(

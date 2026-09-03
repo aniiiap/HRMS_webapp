@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom'
 import { api, messageFromError } from '../api/client'
 import AttendanceRulesPanel from '../components/attendance/AttendanceRulesPanel'
 import AttendanceLogsPanel from '../components/attendance/AttendanceLogsPanel'
+import AuditLogPanel from '../components/AuditLogPanel'
 import Pagination from '../components/Pagination'
 import { useAuth } from '../context/AuthContext'
 
@@ -78,7 +79,7 @@ export default function AttendancePage() {
 
   useEffect(() => {
     const tab = searchParams.get('tab')
-    const valid = ['overview', 'logs', 'approvals', ...(isPrivileged ? ['rules'] : [])]
+    const valid = ['overview', 'logs', 'approvals', ...(isPrivileged ? ['rules', 'history'] : [])]
     if (tab && valid.includes(tab)) setActiveTab(tab)
   }, [searchParams, isPrivileged])
 
@@ -486,6 +487,7 @@ export default function AttendancePage() {
               { id: 'logs', label: 'Logs' },
               { id: 'approvals', label: 'Approvals' },
               ...(isPrivileged ? [{ id: 'rules', label: 'Rules' }] : []),
+              ...(isPrivileged ? [{ id: 'history', label: 'History' }] : []),
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -844,6 +846,7 @@ export default function AttendancePage() {
           )}
 
           {activeTab === 'rules' && isPrivileged && <AttendanceRulesPanel />}
+          {activeTab === 'history' && isPrivileged && <AuditLogPanel resourceType="Attendance" />}
         </div>
       </div>
     )

@@ -522,6 +522,8 @@ class PayrollEmployeeResult(models.Model):
         on_delete=models.CASCADE,
         related_name="payroll_run_results",
     )
+    scheduled_working_days = models.DecimalField(max_digits=7, decimal_places=2, default=Decimal("0"))
+    scheduled_weekends = models.DecimalField(max_digits=7, decimal_places=2, default=Decimal("0"))
     paid_days = models.DecimalField(max_digits=7, decimal_places=2, default=Decimal("0"))
     lop_days = models.DecimalField(max_digits=7, decimal_places=2, default=Decimal("0"))
     auto_paid_days = models.DecimalField(

@@ -334,3 +334,43 @@ def invite_resend_view(request):
     )
     payload = {"message": "Invite resent." if ok else "Invite created but email failed to send.", "email_status": detail, "invite_url": invite_url}
     return Response(payload, status=status.HTTP_200_OK if ok else status.HTTP_202_ACCEPTED)
+
+from .models import ActionLog
+from .serializers import ActionLogSerializer
+from rest_framework import viewsets, mixins
+
+class ActionLogViewSet(mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ActionLogSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = ActionLog.objects.all().order_by("-timestamp")
+        resource_type = self.request.query_params.get("resource_type")
+        date_from = self.request.query_params.get("date_from")
+        date_to = self.request.query_params.get("date_to")
+        search = self.request.query_params.get("search")
+        
+        if resource_type:
+            queryset = queryset.filter(resource_type__icontains=resource_type)
+        if date_from:
+            queryset = queryset.filter(timestamp__date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(timestamp__date__lte=date_to)
+        if search:
+            queryset = queryset.filter(
+                Q(user_name__icontains=search) |
+                Q(description__icontains=search) |
+                Q(action_type__icontains=search) |
+                Q(resource_id__icontains=search)
+            )
+            
+        if user.is_superuser or user.role == UserRole.ADMIN:
+            return queryset
+        return queryset
+        
+    def destroy(self, request, *args, **kwargs):
+        if not (request.user.is_superuser or request.user.role == UserRole.ADMIN):
+            return Response({"error": "Only admins can delete logs."}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
+

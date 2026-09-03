@@ -95,7 +95,7 @@ export default function PayRegisterPanel({
   const [manageExpensesFor, setManageExpensesFor] = useState(null)
 
   const canEdit = selectedRun && (selectedRun.status === 'draft' || selectedRun.status === 'ready') && isPrivileged
-  const canPayslip = selectedRun && ['finalized', 'paid'].includes(selectedRun.status)
+  const canPayslip = selectedRun && ['ready', 'finalized', 'paid'].includes(selectedRun.status)
 
   async function openPayslipPreview(row) {
     try {
@@ -142,6 +142,7 @@ export default function PayRegisterPanel({
         'Employee Code': row.employee_code,
         'Department': row.department || '',
         'Designation': row.designation || '',
+        'Working Days': getWorkingDays(row),
         'Paid Days': row.paid_days,
         'Weekend Days': getWeekendDaysCount(row),
         'LOP Days': row.lop_days,
@@ -149,7 +150,8 @@ export default function PayRegisterPanel({
         'HRA': row.hra,
         'Allowances': row.other_allowances,
         'Reimbursements': row.total_reimbursements,
-        'Gross Pay': row.gross_prorated,
+        'Gross Pay': row.gross_monthly_full,
+        'Earned Gross': row.gross_prorated,
         'Deductions': row.total_deductions,
         'Net Pay': row.net_pay,
         'Status': row.status || selectedRun?.status || 'draft'
@@ -160,11 +162,21 @@ export default function PayRegisterPanel({
   }
 
   function getWeekendDaysCount(row) {
-    if (!selectedRun || !selectedRun.period_year || !selectedRun.period_month || !selectedRun.working_days) return 0;
-    const year = Number(selectedRun.period_year);
-    const month = Number(selectedRun.period_month);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    return Math.max(0, daysInMonth - Number(selectedRun.working_days));
+    if (row.scheduled_weekends !== undefined && row.scheduled_weekends !== null) {
+      return Number(row.scheduled_weekends);
+    }
+    if (!selectedRun || !selectedRun.period_year || !selectedRun.period_month || !selectedRun.working_days) return 0
+    const year = Number(selectedRun.period_year)
+    const month = Number(selectedRun.period_month)
+    const daysInMonth = new Date(year, month, 0).getDate()
+    return Math.max(0, daysInMonth - Number(selectedRun.working_days))
+  }
+
+  function getWorkingDays(row) {
+    if (row.scheduled_working_days !== undefined && row.scheduled_working_days !== null) {
+      return Number(row.scheduled_working_days);
+    }
+    return selectedRun ? selectedRun.working_days : 0;
   }
 
   return (
@@ -185,6 +197,7 @@ export default function PayRegisterPanel({
               <th className="w-10 px-3 py-3" />
               <th className="px-3 py-3">Employee</th>
               <th className="px-3 py-3">Department</th>
+              <th className="px-3 py-3">Working Days</th>
               <th className="px-3 py-3">Paid</th>
               <th className="px-3 py-3">Weekends</th>
               <th className="px-3 py-3">LOP</th>
@@ -215,6 +228,7 @@ export default function PayRegisterPanel({
                       <div className="text-xs text-slate-500">{row.employee_code}</div>
                     </td>
                     <td className="px-3 py-3 text-slate-600">{row.department || '—'}</td>
+                    <td className="px-3 py-3">{getWorkingDays(row)}</td>
                     <td className="px-3 py-3">
                       {canEdit ? (
                         <input
@@ -234,7 +248,7 @@ export default function PayRegisterPanel({
                     </td>
                     <td className="px-3 py-3">{getWeekendDaysCount(row)}</td>
                     <td className="px-3 py-3">{row.lop_days}</td>
-                    <td className="px-3 py-3 tabular-nums font-medium">{fmtInr(row.gross_prorated)}</td>
+                    <td className="px-3 py-3 tabular-nums font-medium">{fmtInr(row.gross_monthly_full)}</td>
                     <td className="px-3 py-3 tabular-nums font-bold text-emerald-700 dark:text-emerald-400">{fmtInr(row.net_pay)}</td>
                     <td className="px-3 py-3">
                       {row.is_on_hold ? (
@@ -267,6 +281,7 @@ export default function PayRegisterPanel({
                           canEdit={canEdit} 
                           onUpdateResult={onUpdateResult} 
                           onOpenManageExpenses={setManageExpensesFor}
+                          workingDays={getWorkingDays(row)}
                         />
                       </td>
                     </tr>
@@ -305,7 +320,7 @@ export default function PayRegisterPanel({
   )
 }
 
-function RegisterBreakdown({ g, row, canEdit, onUpdateResult, onOpenManageExpenses }) {
+function RegisterBreakdown({ g, row, canEdit, onUpdateResult, onOpenManageExpenses, workingDays }) {
   const att = row.attendance_summary
   return (
     <div className="space-y-4">
@@ -354,8 +369,21 @@ function RegisterBreakdown({ g, row, canEdit, onUpdateResult, onOpenManageExpens
             </div>
           </dl>
           <p className="mt-2 text-[11px] text-slate-500">
-            Net pay = salary structure × (paid days ÷ {row.working_days} working days) minus PF/ESI/PT/TDS where applicable.
+            Net pay = salary structure × (paid days ÷ {workingDays} working days) minus PF/ESI/PT/TDS where applicable.
           </p>
+          {row.leave_balances && row.leave_balances.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-sky-200/50 dark:border-sky-800/50">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-800/80 dark:text-sky-300/80 mb-2">Leave Balances</p>
+              <dl className="flex flex-wrap gap-x-6 gap-y-1 text-slate-700 dark:text-slate-300">
+                {row.leave_balances.map(lb => (
+                  <div key={lb.leave_type}>
+                    <dt className="inline text-slate-500">{lb.leave_type} </dt>
+                    <dd className="inline font-medium tabular-nums">{lb.balance}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
         </div>
       )}
     <div className="grid gap-6 lg:grid-cols-2">

@@ -12,6 +12,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from ..models import PayrollEmployeeResult, PayrollRun
+from leave_management.leave_rules import employee_leave_balance_rows
 
 
 def _inr(amount) -> str:
@@ -126,6 +127,33 @@ def build_payslip_pdf(result: PayrollEmployeeResult) -> bytes:
     )
     story.append(net_table)
     story.append(Spacer(1, 20))
+
+    balances = employee_leave_balance_rows(emp, run.period_year)
+    if balances:
+        leave_data = [["Leave Type", "Quota", "Used", "Balance"]]
+        for row in balances:
+            leave_data.append([
+                row["label"],
+                str(row["quota"]),
+                str(row["used"]),
+                str(row["remaining"]),
+            ])
+        leave_table = Table(leave_data, colWidths=[65 * mm, 25 * mm, 25 * mm, 25 * mm])
+        leave_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f1f5f9")),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("GRID", (0, 0), (-1, -1), 0.25, colors.lightgrey),
+                    ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+                ]
+            )
+        )
+        story.append(Paragraph("Leave Balances", styles["Heading3"]))
+        story.append(leave_table)
+        story.append(Spacer(1, 20))
+
     story.append(Paragraph("This is a system-generated payslip. Amounts are estimates until verified by Finance.", sub_style))
 
     doc.build(story)

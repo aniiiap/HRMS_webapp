@@ -39,7 +39,7 @@ def _leave_days_in_month(employee, leave_type: str, year: int, month: int) -> in
         end = min(row.end_date, month_end)
         if start <= end:
             rule = resolve_leave_rule(employee, row.leave_type)
-            total += calculate_leave_duration(start, end, rule, getattr(row, "half_day", "none"))
+            total += calculate_leave_duration(start, end, employee, rule, getattr(row, "half_day", "none"))
     return total
 
 

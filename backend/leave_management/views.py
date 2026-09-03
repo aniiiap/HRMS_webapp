@@ -248,7 +248,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         from .leave_rules import calculate_leave_duration, resolve_leave_rule
         for req in leave_qs:
             rule = resolve_leave_rule(req.employee, req.leave_type)
-            days = calculate_leave_duration(req.start_date, req.end_date, rule, req.half_day)
+            days = calculate_leave_duration(req.start_date, req.end_date, req.employee, rule, req.half_day)
             if req.employee_id not in precalculated_usages:
                 precalculated_usages[req.employee_id] = {}
             if req.leave_type not in precalculated_usages[req.employee_id]:
@@ -383,7 +383,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         
         from .leave_rules import calculate_leave_duration, resolve_leave_rule
         rule = resolve_leave_rule(leave.employee, leave.leave_type)
-        days_count = calculate_leave_duration(leave.start_date, leave.end_date, rule, leave.half_day)
+        days_count = calculate_leave_duration(leave.start_date, leave.end_date, leave.employee, rule, leave.half_day)
         
         emp_user = leave.employee.user
         decision_label = "approved" if leave.status == LeaveStatus.APPROVED else "rejected"

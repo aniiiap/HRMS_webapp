@@ -51,6 +51,7 @@ const allMore = [
   { to: '/organizations', label: 'Organizations', icon: Building2, iconFx: 'icon-fx-pop' },
   { to: '/reports', label: 'Reports', icon: FileBarChart2, iconFx: 'icon-fx-rise' },
   { to: '/assets', label: 'Assets', icon: Laptop, iconFx: 'icon-fx-nudge' },
+
 ]
 
 export default function Layout() {
@@ -93,6 +94,7 @@ export default function Layout() {
     if (item.to === '/platform-support') return user?.is_superuser || ['admin', 'hr', 'owner'].includes(user?.role)
     if (item.to === '/expenses') return ['employee', 'manager'].includes(user?.role)
     if (item.to === '/assets') return ['admin', 'hr'].includes(user?.role)
+
     return true
   })
 
@@ -338,6 +340,8 @@ export default function Layout() {
                             navigate('/payroll')
                           } else if (t.includes('report')) {
                             navigate('/reports')
+                          } else if (t.includes('audit')) {
+
                           } else if (t === 'helpdesk') {
                             navigate('/helpdesk')
                           } else {

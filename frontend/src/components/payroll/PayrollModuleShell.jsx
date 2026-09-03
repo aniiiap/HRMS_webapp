@@ -33,6 +33,7 @@ export const PAYROLL_SECTIONS = [
     subs: [
       { id: 'compliance', label: 'PF / ESI / PT' },
       { id: 'tax', label: 'Tax Declarations' },
+      { id: 'history', label: 'History' },
     ],
   },
 ]

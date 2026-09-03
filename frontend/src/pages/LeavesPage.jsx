@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom'
 import { api, messageFromError } from '../api/client'
 import Pagination from '../components/Pagination'
 import LeaveRulesPanel from '../components/leaves/LeaveRulesPanel'
+import AuditLogPanel from '../components/AuditLogPanel'
 import { useAuth } from '../context/AuthContext'
 
 export default function LeavesPage() {
@@ -139,6 +140,7 @@ export default function LeavesPage() {
             ...(isManagerPlus ? [{ id: 'approvals', label: 'Approvals' }] : []),
             ...(isManagerPlus ? [{ id: 'rules', label: 'Rules' }] : []),
             { id: 'balances', label: 'Balances' },
+            ...(user?.role === 'admin' || user?.role === 'hr' ? [{ id: 'history', label: 'History' }] : []),
           ].map((tab) => (
             <button
               key={tab.id}
@@ -310,6 +312,10 @@ export default function LeavesPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {(user?.role === 'admin' || user?.role === 'hr') && activeTab === 'history' && (
+        <AuditLogPanel resourceType="Leave" />
       )}
     </div>
   )

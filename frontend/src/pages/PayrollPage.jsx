@@ -18,6 +18,7 @@ import SetupPayrollSettingsPanel from '../components/payroll/SetupPayrollSetting
 import StatutoryConfigHistory from '../components/payroll/StatutoryConfigHistory'
 import StatutoryReportsPanel from '../components/payroll/StatutoryReportsPanel'
 import PageHeader from '../components/ui/PageHeader'
+import AuditLogPanel from '../components/AuditLogPanel'
 import { useAuth } from '../context/AuthContext'
 import { useConfirm } from '../context/ConfirmContext'
 import { indiaFY } from '../utils/payrollFormat'
@@ -873,6 +874,9 @@ export default function PayrollPage() {
               </button>
             </form>
           )}
+            {payrollSection === 'statutory' && payrollSubTab === 'history' && (
+              <AuditLogPanel resourceType="Payroll" />
+            )}
           </PayrollModuleShell>
       )}
 

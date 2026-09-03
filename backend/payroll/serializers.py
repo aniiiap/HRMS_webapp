@@ -137,6 +137,7 @@ class PayrollEmployeeResultSerializer(serializers.ModelSerializer):
     bank_name = serializers.SerializerMethodField()
     account_holder_name = serializers.SerializerMethodField()
     payment_mode = serializers.SerializerMethodField()
+    leave_balances = serializers.SerializerMethodField()
 
     class Meta:
         model = PayrollEmployeeResult
@@ -149,6 +150,8 @@ class PayrollEmployeeResultSerializer(serializers.ModelSerializer):
             "department",
             "designation",
             "working_days",
+            "scheduled_working_days",
+            "scheduled_weekends",
             "status",
             "period_year",
             "period_month",
@@ -157,6 +160,7 @@ class PayrollEmployeeResultSerializer(serializers.ModelSerializer):
             "auto_paid_days",
             "auto_lop_days",
             "attendance_summary",
+            "leave_balances",
             "paid_days_overridden",
             "is_on_hold",
             "tds_override",
@@ -204,6 +208,11 @@ class PayrollEmployeeResultSerializer(serializers.ModelSerializer):
             "auto_lop_days",
             "attendance_summary",
         )
+
+    def get_leave_balances(self, obj):
+        from leave_management.leave_rules import employee_leave_balance_rows
+        rows = employee_leave_balance_rows(obj.employee)
+        return [{"leave_type": r["label"], "balance": r["remaining"]} for r in rows if r["remaining"] is not None]
 
     def get_attendance_summary(self, obj):
         from .services.paid_days import compute_paid_days_for_employee

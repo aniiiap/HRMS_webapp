@@ -21,6 +21,9 @@ router.register("users", UserViewSet, basename="user")
 router.register("notifications", NotificationViewSet, basename="notification")
 router.register("announcements", CompanyAnnouncementViewSet, basename="announcement")
 
+from .views import ActionLogViewSet
+router.register("action-logs", ActionLogViewSet, basename="action-log")
+
 urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/refresh/", RefreshView.as_view(), name="refresh"),

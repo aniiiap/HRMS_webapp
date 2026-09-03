@@ -156,6 +156,7 @@ export default function App() {
               </Suspense>
             } />
             <Route path="/reports" element={<ReportsPage />} />
+            
             <Route path="/assets" element={
               <Suspense fallback={<RoutePageFallback />}>
                 <AssetsPage />

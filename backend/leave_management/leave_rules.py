@@ -6,7 +6,8 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-def calculate_leave_duration(start_date, end_date, rule=None, half_day="none"):
+def calculate_leave_duration(start_date, end_date, employee, rule=None, half_day="none"):
+    from employees.week_schedule import is_scheduled_working_day
     if half_day in ("first_half", "second_half"):
         return 0.5
     total_days = (end_date - start_date).days + 1
@@ -18,14 +19,14 @@ def calculate_leave_duration(start_date, end_date, rule=None, half_day="none"):
     if count_weekends:
         return total_days
         
-    # Skip weekends
-    weekdays = 0
+    # Skip weekends (non-working days) based on employee's shift
+    working_days = 0
     current = start_date
     while current <= end_date:
-        if current.weekday() < 5:
-            weekdays += 1
+        if is_scheduled_working_day(employee, current):
+            working_days += 1
         current += timedelta(days=1)
-    return weekdays
+    return working_days
 
 from .models import (
     AccrualFrequency,
@@ -215,7 +216,7 @@ def leave_days_in_year(employee, leave_type_code, year, precalculated_usages=Non
     total = 0
     for row in rows:
         rule = resolve_leave_rule(employee, row.leave_type)
-        days = calculate_leave_duration(row.start_date, row.end_date, rule, row.half_day)
+        days = calculate_leave_duration(row.start_date, row.end_date, employee, rule, getattr(row, "half_day", "none"))
         total += days
     return total
 
