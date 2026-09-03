@@ -14,7 +14,7 @@ export default function LeavesPage() {
   const [rows, setRows] = useState([])
   const [balances, setBalances] = useState([])
   const [error, setError] = useState('')
-  const [form, setForm] = useState({ leave_type: 'paid_leave', start_date: '', end_date: '', half_day: 'none', reason: '' })
+  const [form, setForm] = useState({ leave_type: '', start_date: '', end_date: '', half_day: 'none', reason: '' })
   const [activeTab, setActiveTab] = useState('requests')
   const [requestFilter, setRequestFilter] = useState('pending')
   const [requestPage, setRequestPage] = useState(1)
@@ -47,19 +47,11 @@ export default function LeavesPage() {
 
   useEffect(() => { void load() }, [])
 
-  useEffect(() => {
-    if (!applicableRules.length) return
-    setForm((f) => {
-      if (applicableRules.some((r) => r.code === f.leave_type)) return f
-      return { ...f, leave_type: applicableRules[0].code }
-    })
-  }, [applicableRules])
-
   async function applyLeave(e) {
     e.preventDefault()
     try {
       await api.post('/api/leaves/', form)
-      setForm({ leave_type: applicableRules[0]?.code || 'paid_leave', start_date: '', end_date: '', half_day: 'none', reason: '' })
+      setForm({ leave_type: '', start_date: '', end_date: '', half_day: 'none', reason: '' })
       toast.success('Leave request submitted.')
       await load()
     } catch (err) {
@@ -166,7 +158,8 @@ export default function LeavesPage() {
         <>
           {activeTab === 'requests' && (
             <form onSubmit={applyLeave} className="card grid gap-3 p-4 md:grid-cols-5">
-              <select className="rounded-xl border border-slate-300 px-3 py-2" value={form.leave_type} onChange={(e) => setForm({ ...form, leave_type: e.target.value })}>
+              <select required className="rounded-xl border border-slate-300 px-3 py-2" value={form.leave_type} onChange={(e) => setForm({ ...form, leave_type: e.target.value })}>
+                <option value="">Select leave type...</option>
                 {applicableRules.map((r) => (
                   <option key={r.id} value={r.code}>{r.name}</option>
                 ))}

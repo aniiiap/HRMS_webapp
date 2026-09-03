@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
+import { useSearchParams } from 'react-router-dom'
 import { CalendarDays, MapPin } from 'lucide-react'
 import {
   attendanceStatusCode,
@@ -13,7 +14,8 @@ const STATUS_LEGEND = [
   { code: 'L', label: 'Leave' },
   { code: 'WO', label: 'Weekly off' },
   { code: 'H', label: 'Holiday' },
-  { code: 'HL', label: 'Half day leave' },
+  { code: 'HD', label: 'Half day leave' },
+  { code: 'LOP', label: 'Loss of Pay' },
   { code: 'WFH', label: 'Work from home' },
   { code: 'AN', label: 'Anomaly', danger: true },
   { code: 'MC', label: 'Missing check-out', danger: true },
@@ -65,8 +67,10 @@ function formatHourLabel(h) {
 }
 
 export default function EmployeeAttendanceLogsSubTab({ attendance = [] }) {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const defaultDate = searchParams.get('date') || dayjs().format('YYYY-MM-DD')
   const [mode, setMode] = useState('daily')
-  const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'))
+  const [selectedDate, setSelectedDate] = useState(defaultDate)
   const [rangeFrom, setRangeFrom] = useState(dayjs().subtract(30, 'day').format('YYYY-MM-DD'))
   const [rangeTo, setRangeTo] = useState(dayjs().format('YYYY-MM-DD'))
   const [page, setPage] = useState(1)

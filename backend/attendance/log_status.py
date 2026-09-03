@@ -15,23 +15,29 @@ def day_status_for_employee(
     day_date: date,
     attendance=None,
     leave_type_code: str | None = None,
+    leave_half_day: str | None = None,
     is_holiday: bool = False,
 ) -> tuple[str, str]:
     """
     Return (status_key, status_code).
-    Keys: present, absent, leave, wfh, weekend, holiday, anomaly, no_record
-    Codes: P, A, L, WFH, WO, H, AN, NA
+    Keys: present, absent, leave, wfh, weekend, holiday, anomaly, no_record, lop, half_day
+    Codes: P, A, L, WFH, WO, H, AN, NA, LOP, HD
     """
     today = timezone.localdate()
     
+    # Check if there is an approved half-day leave
+    is_half_day_leave = leave_half_day in ("first_half", "second_half")
+    
     # If the employee actually punched in:
     if attendance and attendance.check_in:
+        if is_half_day_leave:
+            return "half_day", "HD"
+            
         # Check if it was a holiday or weekend to mark differently
         if is_holiday:
             return "holiday_worked", "HW"
         if is_weekend_day(employee, day_date):
-            # Not explicitly asked for weekend_worked, but aligns with holiday_worked
-            return "present", "P"  # We can just return present for weekend worked
+            return "present", "P"
             
         anomaly = attendance_anomaly(attendance)
         if anomaly != "none" or not attendance.check_out:
@@ -43,6 +49,10 @@ def day_status_for_employee(
         code = normalize_leave_type_code(leave_type_code)
         if code == "work_from_home":
             return "wfh", "WFH"
+        if code == "loss_of_pay":
+            return "lop", "LOP"
+        if is_half_day_leave:
+            return "half_day", "HD"
         return "leave", "L"
         
     if is_holiday:

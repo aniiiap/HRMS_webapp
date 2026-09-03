@@ -212,7 +212,12 @@ class PayrollEmployeeResultSerializer(serializers.ModelSerializer):
     def get_leave_balances(self, obj):
         from leave_management.leave_rules import employee_leave_balance_rows
         rows = employee_leave_balance_rows(obj.employee)
-        return [{"leave_type": r["label"], "balance": r["remaining"]} for r in rows if r["remaining"] is not None]
+        return [{
+            "leave_type": r["label"], 
+            "balance": r["remaining"],
+            "used": r["used"],
+            "quota": r["quota"]
+        } for r in rows if r["remaining"] is not None]
 
     def get_attendance_summary(self, obj):
         from .services.paid_days import compute_paid_days_for_employee

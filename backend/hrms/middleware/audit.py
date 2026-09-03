@@ -32,9 +32,44 @@ class AuditMiddleware(MiddlewareMixin):
                 user = request.user
                 if user.role in [UserRole.ADMIN, UserRole.HR, UserRole.MANAGER]:
                     payload = getattr(request, '_audit_payload', {})
+                    if not isinstance(payload, dict):
+                        payload = {}
+
+                    resource_id = path.rstrip('/').split('/')[-1]
+                    
+                    try:
+                        from employees.models import Employee
+                        emp_name = None
+                        
+                        # 1. If employee ID is explicitly in the payload (like a POST request)
+                        if 'employee' in payload and str(payload['employee']).isdigit():
+                            emp = Employee.objects.filter(id=payload['employee']).select_related('user').first()
+                            if emp and emp.user:
+                                emp_name = f"{emp.user.first_name} {emp.user.last_name}".strip() or emp.user.email
+                        
+                        # 2. If it's a specific resource update/delete without employee in payload, fetch it from DB
+                        elif str(resource_id).isdigit():
+                            if resource_type == 'Attendance':
+                                from attendance.models import Attendance
+                                att = Attendance.objects.filter(id=resource_id).select_related('employee__user').first()
+                                if att and att.employee and att.employee.user:
+                                    emp_name = f"{att.employee.user.first_name} {att.employee.user.last_name}".strip() or att.employee.user.email
+                            elif resource_type == 'Leave':
+                                from leave_management.models import LeaveRequest
+                                lr = LeaveRequest.objects.filter(id=resource_id).select_related('employee__user').first()
+                                if lr and lr.employee and lr.employee.user:
+                                    emp_name = f"{lr.employee.user.first_name} {lr.employee.user.last_name}".strip() or lr.employee.user.email
+                            elif resource_type == 'Employee/Salary' and '/salary-lines/' not in path and '/compensation/' not in path:
+                                emp = Employee.objects.filter(id=resource_id).select_related('user').first()
+                                if emp and emp.user:
+                                    emp_name = f"{emp.user.first_name} {emp.user.last_name}".strip() or emp.user.email
+                        
+                        if emp_name:
+                            payload['employee'] = emp_name
+                    except Exception:
+                        pass
                     
                     ip_address = request.META.get('REMOTE_ADDR')
-                    resource_id = path.rstrip('/').split('/')[-1]
                     
                     ActionLog.objects.create(
                         user=user,

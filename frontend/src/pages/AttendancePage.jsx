@@ -2,7 +2,7 @@ import dayjs from 'dayjs'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Check, Download, Pencil, Save, Search, X } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { api, messageFromError } from '../api/client'
 import AttendanceRulesPanel from '../components/attendance/AttendanceRulesPanel'
 import AttendanceLogsPanel from '../components/attendance/AttendanceLogsPanel'
@@ -48,6 +48,7 @@ function DualTimeCell({ actual, requested, showRequested }) {
 
 export default function AttendancePage() {
   const { isManagerPlus, isPrivileged } = useAuth()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('overview')
   const [rows, setRows] = useState([])
   const [heatmap, setHeatmap] = useState(null)
@@ -192,7 +193,7 @@ export default function AttendancePage() {
       const url = window.URL.createObjectURL(new Blob([res.data]))
       const a = document.createElement('a')
       a.href = url
-      a.download = `attendance_${year}_${String(month).padStart(2, '0')}.csv`
+      a.download = `attendance_${year}_${String(month).padStart(2, '0')}.xlsx`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -442,6 +443,8 @@ export default function AttendancePage() {
     if (status === 'holiday') return 'bg-fuchsia-500/95 ring-1 ring-fuchsia-300/60 dark:ring-fuchsia-400/20'
     if (status === 'holiday_worked') return 'bg-fuchsia-600/95 ring-1 ring-fuchsia-400/60 dark:ring-fuchsia-500/20'
     if (status === 'weekend') return 'bg-slate-300 ring-1 ring-slate-300/80 dark:bg-slate-600 dark:ring-slate-500/60'
+    if (status === 'lop') return 'bg-orange-500/95 ring-1 ring-orange-300/60 dark:ring-orange-400/20'
+    if (status === 'half_day') return 'bg-teal-500/95 ring-1 ring-teal-300/60 dark:ring-teal-400/20'
     return 'bg-slate-100 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700'
   }
 
@@ -456,6 +459,8 @@ export default function AttendancePage() {
     if (status === 'holiday_worked') return 'HW'
     if (status === 'anomaly') return 'AN'
     if (status === 'weekend') return 'WO'
+    if (status === 'lop') return 'LOP'
+    if (status === 'half_day') return 'HD'
     return 'NA'
   }
 
@@ -526,6 +531,8 @@ export default function AttendancePage() {
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-fuchsia-600" />Holiday Worked</span>
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-slate-300 dark:bg-slate-600" />Weekend</span>
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-slate-100 dark:bg-slate-800" />No record</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-orange-500" />Loss of Pay</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-teal-500" />Half Day</span>
                 </div>
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
                   <Search size={12} />
@@ -567,8 +574,12 @@ export default function AttendancePage() {
                         return (
                           <div
                             key={`cell-${r.employee_id}-${r.employee_code || 'na'}-${day}-${rowIdx}`}
-                            className={`flex h-6 items-center justify-center rounded-md text-[10px] font-bold transition hover:scale-105 ${cellClass(status)} ${status === 'weekend' || status === 'no_record' ? 'text-slate-700 dark:text-slate-200' : 'text-white'}`}
+                            className={`flex h-6 items-center justify-center rounded-md text-[10px] font-bold transition hover:scale-105 cursor-pointer ${cellClass(status)} ${status === 'weekend' || status === 'no_record' ? 'text-slate-700 dark:text-slate-200' : 'text-white'}`}
                             title={`${r.name} - ${dayjs(`${year}-${month}-${day}`).format('MMM D')}: ${status}`}
+                            onClick={() => {
+                              const fDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                              navigate(`/employees/${r.employee_id}?tab=attendance&date=${fDate}`)
+                            }}
                           >
                             {cellLabel(status, r.days, day)}
                           </div>

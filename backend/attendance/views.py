@@ -182,15 +182,18 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             status=LeaveStatus.APPROVED,
             start_date__lte=end,
             end_date__gte=start,
-        ).values("employee_id", "start_date", "end_date", "leave_type")
+        ).values("employee_id", "start_date", "end_date", "leave_type", "half_day")
 
-        leave_map: dict[int, dict[int, str]] = {}
+        leave_map: dict[int, dict[int, dict]] = {}
         for row in leave_qs:
             eid = row["employee_id"]
             cur = max(row["start_date"], start)
             lim = min(row["end_date"], end)
             while cur <= lim:
-                leave_map.setdefault(eid, {})[cur.day] = row["leave_type"]
+                leave_map.setdefault(eid, {})[cur.day] = {
+                    "type": row["leave_type"],
+                    "half_day": row["half_day"],
+                }
                 cur += timedelta(days=1)
 
         from leave_management.models import Holiday
@@ -223,7 +226,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             day_status = {}
             for d in range(1, last_day + 1):
                 day_date = date(year, month, d)
-                leave_type = leave_map.get(eid, {}).get(d)
+                leave_data = leave_map.get(eid, {}).get(d)
+                leave_type = leave_data["type"] if leave_data else None
+                leave_half_day = leave_data["half_day"] if leave_data else None
                 att = att_map.get(eid, {}).get(d)
                 is_holiday = False
                 if day_date in holidays_by_date:
@@ -231,9 +236,17 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                         if not shifts or (e.shift_template_id and e.shift_template_id in shifts):
                             is_holiday = True
                             break
-                status_key, status_code = day_status_for_employee(e, day_date, att, leave_type, is_holiday)
+                status_key, status_code = day_status_for_employee(
+                    e, day_date, att, leave_type, leave_half_day, is_holiday
+                )
                 day_status[str(d)] = status_key
                 day_status[f"{d}_code"] = status_code
+                if att:
+                    from django.utils import timezone
+                    if att.check_in:
+                        day_status[f"{d}_in"] = timezone.localtime(att.check_in).strftime("%I:%M %p").lower()
+                    if att.check_out:
+                        day_status[f"{d}_out"] = timezone.localtime(att.check_out).strftime("%I:%M %p").lower()
             rows.append(
                 {
                     "employee_id": eid,
@@ -324,8 +337,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             status=LeaveStatus.APPROVED,
             start_date__lte=log_date,
             end_date__gte=log_date,
-        ).values("employee_id", "leave_type"):
-            leave_by_emp[row["employee_id"]] = row["leave_type"]
+        ).values("employee_id", "leave_type", "half_day"):
+            leave_by_emp[row["employee_id"]] = {
+                "type": row["leave_type"],
+                "half_day": row["half_day"]
+            }
 
         from leave_management.models import Holiday
         log_date_holidays = Holiday.objects.filter(
@@ -358,8 +374,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     break
 
             att = att_by_emp.get(e.id)
-            leave_type = leave_by_emp.get(e.id)
-            status_key, status_code = day_status_for_employee(e, log_date, att, leave_type, is_holiday)
+            leave_data = leave_by_emp.get(e.id)
+            leave_type = leave_data["type"] if leave_data else None
+            leave_half_day = leave_data["half_day"] if leave_data else None
+            status_key, status_code = day_status_for_employee(
+                e, log_date, att, leave_type, leave_half_day, is_holiday=is_holiday
+            )
 
             if status_filter and status_filter != "all":
                 if status_filter != status_key:
@@ -440,52 +460,80 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated, IsManagerOrAbove])
     def export(self, request):
-        today = date.today()
-        year = int(request.query_params.get("year", today.year))
-        month = int(request.query_params.get("month", today.month))
-        _, last_day = monthrange(year, month)
-        start = date(year, month, 1)
-        end = date(year, month, last_day)
-        org_id = organization_id_from_request(request)
-        qs = (
-            Attendance.objects.select_related("employee", "employee__user")
-            .filter(date__gte=start, date__lte=end)
-            .order_by("date", "employee__employee_code")
-        )
-        
-        user = request.user
-        profile = getattr(user, "employee_profile", None)
-        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
-            qs = filter_by_employee_org(qs, org_id)
-        elif profile and user.role == UserRole.MANAGER:
-            from django.db.models import Q
-            qs = filter_by_employee_org(qs, org_id).filter(
-                Q(employee=profile) | Q(employee__manager=profile)
-            )
-        else:
-            qs = qs.none()
+        res = self.heatmap(request)
+        if not hasattr(res, "data") or "year" not in res.data:
+            return res
             
-        buffer = io.StringIO()
-        buffer.write("\ufeff")
-        writer = csv.writer(buffer)
-        writer.writerow(["Date", "Employee Code", "Employee Name", "Department", "Check In", "Check Out", "Status", "Notes"])
-        for row in qs:
-            name = f"{row.employee.user.first_name} {row.employee.user.last_name}".strip() or row.employee.user.email
-            status_value = "present" if row.check_in and row.check_out else "absent"
-            writer.writerow(
-                [
-                    _format_csv_date(row.date),
-                    row.employee.employee_code,
-                    name,
-                    row.employee.department or "",
-                    _format_csv_datetime(row.check_in),
-                    _format_csv_datetime(row.check_out),
-                    status_value,
-                    row.notes or "",
-                ]
-            )
-        response = HttpResponse(buffer.getvalue(), content_type="text/csv; charset=utf-8")
-        response["Content-Disposition"] = f'attachment; filename="attendance_{year}_{month:02d}.csv"'
+        data = res.data
+        year = data["year"]
+        month = data["month"]
+        days_in_month = data["days_in_month"]
+        
+        import openpyxl
+        from openpyxl.styles import PatternFill, Font, Alignment
+        
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Attendance"
+        
+        headers = ["Employee Code", "Employee Name", "Department", "Designation"]
+        for d in range(1, days_in_month + 1):
+            headers.append(str(d))
+        ws.append(headers)
+        
+        COLOR_MAP = {
+            "P": "10B981", # emerald-500
+            "A": "F43F5E", # rose-500
+            "L": "3B82F6", # blue-500
+            "WFH": "84CC16", # lime-500
+            "AN": "F59E0B", # amber-500
+            "H": "D946EF", # fuchsia-500
+            "HW": "C026D3", # fuchsia-600
+            "WO": "CBD5E1", # slate-300
+            "LOP": "F97316", # orange-500
+            "HD": "14B8A6", # teal-500
+            "NA": "F1F5F9", # slate-100
+        }
+        
+        for row_idx, row in enumerate(data["rows"], start=2):
+            ws.cell(row=row_idx, column=1, value=row["employee_code"] or "")
+            ws.cell(row=row_idx, column=2, value=row["name"] or "")
+            ws.cell(row=row_idx, column=3, value=row["department"] or "")
+            ws.cell(row=row_idx, column=4, value=row["designation"] or "")
+            
+            for d in range(1, days_in_month + 1):
+                col = d + 4
+                code = row["days"].get(f"{d}_code", "")
+                in_time = row["days"].get(f"{d}_in")
+                out_time = row["days"].get(f"{d}_out")
+                
+                cell_value = code
+                if in_time or out_time:
+                    cell_value += f"\n{in_time or '--'} - {out_time or '--'}"
+                
+                cell = ws.cell(row=row_idx, column=col, value=cell_value)
+                cell.alignment = Alignment(wrap_text=True, horizontal="center", vertical="center")
+                
+                if code in COLOR_MAP:
+                    bg_color = COLOR_MAP[code]
+                    cell.fill = PatternFill(start_color=bg_color, end_color=bg_color, fill_type="solid")
+                    
+                    if code in ("WO", "NA"):
+                        cell.font = Font(color="334155", bold=True) # slate-700
+                    else:
+                        cell.font = Font(color="FFFFFF", bold=True) # white
+        
+        # Adjust column widths
+        for col in range(1, 5):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
+        for d in range(1, days_in_month + 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(d + 4)].width = 12
+            
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        
+        response = HttpResponse(buffer.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response["Content-Disposition"] = f'attachment; filename="attendance_{year}_{month:02d}.xlsx"'
         return response
 
     @action(detail=True, methods=["post"])

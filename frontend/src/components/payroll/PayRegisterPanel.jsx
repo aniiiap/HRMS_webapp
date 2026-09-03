@@ -137,25 +137,36 @@ export default function PayRegisterPanel({
 
   function handleExportRegister() {
     import('../../utils/csvExport').then(({ downloadCSV }) => {
-      const exportData = results.map(row => ({
-        'Employee Name': row.employee_name,
-        'Employee Code': row.employee_code,
-        'Department': row.department || '',
-        'Designation': row.designation || '',
-        'Working Days': getWorkingDays(row),
-        'Paid Days': row.paid_days,
-        'Weekend Days': getWeekendDaysCount(row),
-        'LOP Days': row.lop_days,
-        'Basic': row.basic,
-        'HRA': row.hra,
-        'Allowances': row.other_allowances,
-        'Reimbursements': row.total_reimbursements,
-        'Gross Pay': row.gross_monthly_full,
-        'Earned Gross': row.gross_prorated,
-        'Deductions': row.total_deductions,
-        'Net Pay': row.net_pay,
-        'Status': row.status || selectedRun?.status || 'draft'
-      }))
+      const allLeaveTypes = Array.from(new Set(results.flatMap(r => (r.leave_balances || []).map(lb => lb.leave_type))))
+
+      const exportData = results.map(row => {
+        const rowData = {
+          'Employee Name': row.employee_name,
+          'Employee Code': row.employee_code,
+          'Department': row.department || '',
+          'Designation': row.designation || '',
+          'Working Days': getWorkingDays(row),
+          'Paid Days': row.paid_days,
+          'Weekend Days': getWeekendDaysCount(row),
+          'LOP Days': row.lop_days,
+          'Basic': row.basic,
+          'HRA': row.hra,
+          'Allowances': row.other_allowances,
+          'Reimbursements': row.total_reimbursements,
+          'Gross Pay': row.gross_monthly_full,
+          'Earned Gross': row.gross_prorated,
+          'Deductions': row.total_deductions,
+          'Net Pay': row.net_pay,
+          'Status': row.status || selectedRun?.status || 'draft'
+        }
+
+        allLeaveTypes.forEach(lt => {
+          const lb = (row.leave_balances || []).find(l => l.leave_type === lt)
+          rowData[`Leave Balance: ${lt}`] = lb ? `${lb.used ?? 0} / ${lb.quota ?? lb.balance} (left ${lb.balance})` : '0'
+        })
+
+        return rowData
+      })
       const period = selectedRun ? `${selectedRun.period_year}-${String(selectedRun.period_month).padStart(2, '0')}` : 'Payroll'
       downloadCSV(exportData, `Pay_Register_${period}.csv`)
     })
@@ -377,8 +388,8 @@ function RegisterBreakdown({ g, row, canEdit, onUpdateResult, onOpenManageExpens
               <dl className="flex flex-wrap gap-x-6 gap-y-1 text-slate-700 dark:text-slate-300">
                 {row.leave_balances.map(lb => (
                   <div key={lb.leave_type}>
-                    <dt className="inline text-slate-500">{lb.leave_type} </dt>
-                    <dd className="inline font-medium tabular-nums">{lb.balance}</dd>
+                    <dt className="inline text-slate-500">{lb.leave_type}: </dt>
+                    <dd className="inline font-medium tabular-nums">{lb.used ?? 0} / {lb.quota ?? lb.balance} (left {lb.balance})</dd>
                   </div>
                 ))}
               </dl>
