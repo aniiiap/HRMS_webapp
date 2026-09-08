@@ -17,7 +17,7 @@ export default function PlatformLayout() {
 
   async function handleLogout() {
     await logout()
-    navigate('/login')
+    navigate('/')
   }
 
   return (

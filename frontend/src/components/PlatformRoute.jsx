@@ -8,7 +8,7 @@ export default function PlatformRoute() {
   if (loading) return null
   if (!user) return <Navigate to="/login" replace />
   if (!isPlatformAdmin || user.organization_id) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/dashboard" replace />
   }
   return <Outlet />
 }

@@ -36,9 +36,27 @@ import PlatformRoute from './components/PlatformRoute'
 import PlatformLayout from './components/PlatformLayout'
 import CompanyRoute from './components/CompanyRoute'
 
+// Public Marketing Pages
+import PublicLayout from './components/public/PublicLayout'
+const LandingPage = lazy(() => import('./pages/public/LandingPage'))
+const ProductsPage = lazy(() => import('./pages/public/ProductsPage'))
+const PricingPage = lazy(() => import('./pages/public/PricingPage'))
+const AboutPage = lazy(() => import('./pages/public/AboutPage'))
+const RequestDemoPage = lazy(() => import('./pages/public/RequestDemoPage'))
+
 export default function App() {
   return (
     <Routes>
+      {/* Public Marketing Routes */}
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<Suspense fallback={<RoutePageFallback />}><LandingPage /></Suspense>} />
+        <Route path="/products" element={<Suspense fallback={<RoutePageFallback />}><ProductsPage /></Suspense>} />
+        <Route path="/pricing" element={<Suspense fallback={<RoutePageFallback />}><PricingPage /></Suspense>} />
+        <Route path="/about" element={<Suspense fallback={<RoutePageFallback />}><AboutPage /></Suspense>} />
+        <Route path="/demo" element={<Suspense fallback={<RoutePageFallback />}><RequestDemoPage /></Suspense>} />
+        <Route path="/contact" element={<Suspense fallback={<RoutePageFallback />}><RequestDemoPage /></Suspense>} />
+      </Route>
+
       <Route path="/login" element={<LoginPage />} />
       <Route
         path="/activate-account"
@@ -111,7 +129,7 @@ export default function App() {
         </Route>
         <Route element={<CompanyRoute />}>
           <Route element={<Layout />}>
-          <Route path="/" element={<DashboardPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route element={<RoleRoute allowedRoles={['admin', 'hr']} />}>
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/letters" element={<LetterTemplates />} />

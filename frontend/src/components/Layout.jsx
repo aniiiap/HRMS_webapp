@@ -33,7 +33,7 @@ import GlobalSearch from './GlobalSearch'
 import RoutePageFallback from './RoutePageFallback'
 
 const allGeneral = [
-  { to: '/', label: 'Overview', icon: LayoutDashboard, iconFx: 'icon-fx-bounce' },
+  { to: '/dashboard', label: 'Overview', icon: LayoutDashboard, iconFx: 'icon-fx-bounce' },
   { to: '/payroll', label: 'Payroll', employeeLabel: 'Payslips', icon: IndianRupee, iconFx: 'icon-fx-swing' },
   { to: '/employees', label: 'Employees', icon: Users, iconFx: 'icon-fx-pop' },
   { to: '/attendance', label: 'Attendance', icon: CalendarDays, iconFx: 'icon-fx-nudge' },
@@ -152,11 +152,10 @@ export default function Layout() {
   const Sidebar = (
     <div className="flex h-full min-h-0 flex-col border-r border-warm-200/90 bg-gradient-to-b from-white via-surface-card to-warm-50/80 dark:border-stone-800 dark:from-stone-950 dark:via-stone-950 dark:to-stone-900">
       <div className="shrink-0 px-3 pb-1 pt-2 md:px-4 md:pb-1.5 md:pt-2.5">
-        {/* Full row width matches previous icon + “Worksphere” + tagline footprint */}
-        <div className="flex w-full min-w-0 items-center">
+        <div className="flex w-full min-w-0 items-center justify-center">
           <img
-            src="/illustrations/image-removebg-preview%20(1).png"
-            alt="Worksphere"
+            src="/Sw%20logo/globalworkspherelogo.png"
+            alt="GlobalWorkSphere"
             className="block h-auto w-full max-h-[5.25rem] object-contain object-left sm:max-h-[5.75rem]"
           />
         </div>
@@ -206,7 +205,7 @@ export default function Layout() {
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-warm-200 py-2.5 text-sm font-semibold text-stone-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-stone-700 dark:text-stone-300 dark:hover:border-rose-900 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
           onClick={async () => {
             await logout()
-            navigate('/login', { replace: true })
+            navigate('/', { replace: true })
           }}
         >
           <LogOut size={18} />

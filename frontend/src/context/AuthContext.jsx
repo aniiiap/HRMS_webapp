@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
 
   const defaultHome = (u) => {
     if (u?.is_superuser && !u?.organization_id) return '/platform'
-    return '/'
+    return '/dashboard'
   }
 
   const logout = async () => {
@@ -62,7 +62,7 @@ export function AuthProvider({ children }) {
     isPrivileged: ['admin', 'hr'].includes(user?.role),
     isPlatformAdmin: Boolean(user?.is_superuser),
     isOrganizationUser: Boolean(user?.organization_id),
-    defaultHome: user ? defaultHome(user) : '/',
+    defaultHome: user ? defaultHome(user) : '/dashboard',
   }), [user, loading])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

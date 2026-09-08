@@ -24,6 +24,8 @@ router.register("announcements", CompanyAnnouncementViewSet, basename="announcem
 from .views import ActionLogViewSet
 router.register("action-logs", ActionLogViewSet, basename="action-log")
 
+from .public_views import contact_us
+
 urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/refresh/", RefreshView.as_view(), name="refresh"),
@@ -34,5 +36,6 @@ urlpatterns = [
     path("auth/password-reset/request/", password_reset_request_view, name="password-reset-request"),
     path("auth/password-reset/confirm/", password_reset_confirm_view, name="password-reset-confirm"),
     path("notifications/mark-all-read/", notifications_mark_all_read_view, name="notifications-mark-all-read"),
+    path("public/contact-us/", contact_us, name="contact-us"),
     path("", include(router.urls)),
 ]
