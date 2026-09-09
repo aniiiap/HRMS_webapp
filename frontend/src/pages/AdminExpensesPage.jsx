@@ -16,15 +16,21 @@ export default function AdminExpensesPage() {
     const [selectedClaimIds, setSelectedClaimIds] = useState([]);
     const [previewReceiptUrl, setPreviewReceiptUrl] = useState(null);
 
+    // Organization Settings State
+    const [org, setOrg] = useState(null);
+    const [backdateLimit, setBackdateLimit] = useState('');
+    const [savingLimit, setSavingLimit] = useState(false);
+
     useEffect(() => {
         fetchData();
     }, []);
 
     const fetchData = async () => {
         try {
-            const [claimsRes, catRes] = await Promise.all([
+            const [claimsRes, catRes, orgRes] = await Promise.all([
                 expensesApi.getClaims(),
-                expensesApi.getCategories()
+                expensesApi.getCategories(),
+                import('../api/client').then(m => m.api.get('/api/organizations/'))
             ]);
             
             const cData = claimsRes.data?.results || claimsRes.data;
@@ -32,10 +38,38 @@ export default function AdminExpensesPage() {
             
             const catData = catRes.data?.results || catRes.data;
             setCategories(Array.isArray(catData) ? catData : []);
+
+            const orgData = orgRes.data?.results || orgRes.data;
+            const currentOrg = Array.isArray(orgData) ? orgData[0] : null;
+            if (currentOrg) {
+                setOrg(currentOrg);
+                setBackdateLimit(currentOrg.expense_backdate_limit_days === null ? '' : String(currentOrg.expense_backdate_limit_days));
+            }
         } catch (error) {
             console.error("Failed to load data", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSaveBackdateLimit = async () => {
+        if (!org) return;
+        setSavingLimit(true);
+        try {
+            const { api } = await import('../api/client');
+            const val = backdateLimit.trim() === '' ? null : parseInt(backdateLimit, 10);
+            if (val !== null && val < 0) {
+                import('react-hot-toast').then(m => m.default.error('Limit must be a positive number or empty.'));
+                setSavingLimit(false);
+                return;
+            }
+            await api.patch(`/api/organizations/${org.id}/`, { expense_backdate_limit_days: val });
+            import('react-hot-toast').then(m => m.default.success('Expense settings updated.'));
+            await fetchData();
+        } catch (err) {
+            import('react-hot-toast').then(m => m.default.error('Failed to update expense settings.'));
+        } finally {
+            setSavingLimit(false);
         }
     };
 
@@ -140,15 +174,15 @@ export default function AdminExpensesPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-max">
-                        {['pending', 'approved', 'rejected', 'categories'].map(tab => (
+                    <div className="flex space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-max overflow-x-auto">
+                        {['pending', 'approved', 'rejected', 'categories', 'settings'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => {
                                     setActiveTab(tab);
                                     setSelectedClaimIds([]);
                                 }}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${
+                                className={`px-4 py-2 rounded-lg text-sm font-medium capitalize whitespace-nowrap ${
                                     activeTab === tab ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                                 }`}
                             >
@@ -166,7 +200,7 @@ export default function AdminExpensesPage() {
                             Export CSV
                         </button>
                         
-                        {activeTab !== 'categories' && (
+                        {activeTab !== 'categories' && activeTab !== 'settings' && (
                             <>
                                 <div className="relative w-64">
                                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -238,6 +272,40 @@ export default function AdminExpensesPage() {
                                 <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">No categories defined yet.</p>
                             )}
                         </div>
+                    </div>
+                ) : activeTab === 'settings' ? (
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm p-6 max-w-2xl">
+                        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Expense Settings</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                            Configure how employees submit expense claims. You can limit how far back in the past an expense can be reported.
+                        </p>
+                        
+                        <div className="flex items-end gap-4 max-w-sm">
+                            <div className="flex-1">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                    Backdate Limit (Days)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={backdateLimit}
+                                    onChange={(e) => setBackdateLimit(e.target.value)}
+                                    placeholder="e.g. 15 (leave empty for unlimited)"
+                                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 bg-transparent dark:text-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                />
+                            </div>
+                            <button
+                                onClick={handleSaveBackdateLimit}
+                                disabled={savingLimit}
+                                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                {savingLimit ? 'Saving...' : 'Save Limit'}
+                            </button>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-2 max-w-sm">
+                            If a number is set, users cannot submit expenses with an incurred date older than this many days from today.
+                        </p>
                     </div>
                 ) : (
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">

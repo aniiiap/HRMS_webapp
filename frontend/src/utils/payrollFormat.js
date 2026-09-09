@@ -135,15 +135,22 @@ export function groupResultLines(row) {
   const hra = amount('HRA')
   const allowanceCodes = ['SPECIAL_ALLOWANCE', 'CONVEYANCE', 'BONUS', 'INCENTIVE', 'OVERTIME', 'ARREARS']
   let allowances = 0
+  let reimbursements = 0
+  
   earnings.forEach((ln) => {
     const c = (ln.component_code || '').toUpperCase()
-    if (c !== 'BASIC' && c !== 'HRA') allowances += Number(ln.amount_prorated || 0)
+    if (c === 'REIMBURSEMENT') {
+        reimbursements += Number(ln.amount_prorated || 0)
+    } else if (c !== 'BASIC' && c !== 'HRA') {
+        allowances += Number(ln.amount_prorated || 0)
+    }
   })
 
   return {
     basic,
     hra,
     allowances,
+    reimbursements,
     gross: Number(row?.gross_prorated || 0),
     pf: Number(row?.pf_employee || 0),
     esi: Number(row?.esi_employee || 0),

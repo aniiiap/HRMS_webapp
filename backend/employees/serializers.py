@@ -26,6 +26,9 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "plan",
             "max_employees",
             "created_at",
+            "signature_image",
+            "company_logo",
+            "expense_backdate_limit_days",
         )
         read_only_fields = ("id", "created_at")
 

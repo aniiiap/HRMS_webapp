@@ -9,6 +9,16 @@ from .models import AppNotification, CompanyAnnouncement, InviteToken, PasswordR
 
 def _user_payload(user):
     ep = getattr(user, "employee_profile", None)
+    profile_img = None
+    backdate_limit = None
+    if ep:
+        if ep.profile_image:
+            profile_img = ep.profile_image.url
+        if ep.organization:
+            backdate_limit = ep.organization.expense_backdate_limit_days
+    elif getattr(user, 'organization', None):
+        backdate_limit = user.organization.expense_backdate_limit_days
+        
     return {
         "id": user.id,
         "email": user.email,
@@ -19,6 +29,8 @@ def _user_payload(user):
         "is_superuser": user.is_superuser,
         "employee_id": ep.id if ep else None,
         "organization_id": user_organization_id(user),
+        "profile_image": profile_img,
+        "expense_backdate_limit_days": backdate_limit,
     }
 
 
@@ -26,6 +38,8 @@ class UserSerializer(serializers.ModelSerializer):
     employee_id = serializers.SerializerMethodField()
     organization_id = serializers.SerializerMethodField()
     is_superuser = serializers.BooleanField(read_only=True)
+    profile_image = serializers.SerializerMethodField()
+    expense_backdate_limit_days = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -41,6 +55,8 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
             "employee_id",
             "organization_id",
+            "profile_image",
+            "expense_backdate_limit_days",
         )
         read_only_fields = ("id", "date_joined", "employee_id", "organization_id", "is_superuser")
 
@@ -50,6 +66,23 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_organization_id(self, user):
         return user_organization_id(user)
+
+    def get_profile_image(self, user):
+        ep = getattr(user, "employee_profile", None)
+        if ep and ep.profile_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(ep.profile_image.url)
+            return ep.profile_image.url
+        return None
+        
+    def get_expense_backdate_limit_days(self, obj):
+        ep = getattr(obj, "employee_profile", None)
+        if ep and ep.organization:
+            return ep.organization.expense_backdate_limit_days
+        if getattr(obj, 'organization', None):
+            return obj.organization.expense_backdate_limit_days
+        return None
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

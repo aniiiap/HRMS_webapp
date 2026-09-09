@@ -50,6 +50,20 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
         else:
             qs = qs.filter(employee__user=user)
             
+        # Apply query parameter filters manually
+        employee_id = self.request.query_params.get('employee')
+        if employee_id:
+            qs = qs.filter(employee_id=employee_id)
+            
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            qs = qs.filter(status=status_param)
+            
+        is_reimbursed_param = self.request.query_params.get('is_reimbursed')
+        if is_reimbursed_param is not None:
+            is_reimbursed = is_reimbursed_param.lower() in ['true', '1', 'yes']
+            qs = qs.filter(is_reimbursed=is_reimbursed)
+
         return qs
 
     def perform_create(self, serializer):

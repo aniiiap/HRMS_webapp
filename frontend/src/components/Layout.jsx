@@ -92,7 +92,7 @@ export default function Layout() {
     if (item.to === '/reports') return canViewReports
     if (item.to === '/expenses/approvals') return ['admin', 'hr'].includes(user?.role)
     if (item.to === '/platform-support') return user?.is_superuser || ['admin', 'hr', 'owner'].includes(user?.role)
-    if (item.to === '/expenses') return ['employee', 'manager'].includes(user?.role)
+    if (item.to === '/expenses') return ['admin', 'hr', 'employee', 'manager'].includes(user?.role)
     if (item.to === '/assets') return ['admin', 'hr'].includes(user?.role)
 
     return true
@@ -368,9 +368,13 @@ export default function Layout() {
                 <Settings size={20} />
               </button>
               <div className="ml-1 flex items-center gap-2 rounded-xl border border-warm-200/90 bg-white/90 py-1 pl-1 pr-3 shadow-soft dark:border-stone-700 dark:bg-stone-900/90">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 text-xs font-bold text-white shadow-md shadow-brand-600/30">
-                  {initials}
-                </div>
+                {user?.profile_image ? (
+                  <img src={user.profile_image} alt="Profile" className="h-9 w-9 shrink-0 rounded-lg object-cover shadow-md" />
+                ) : (
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 text-xs font-bold text-white shadow-md shadow-brand-600/30">
+                    {initials}
+                  </div>
+                )}
                 <div className="hidden min-w-0 text-left sm:block">
                   <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{displayName}</p>
                   <p className="text-[10px] capitalize text-slate-500 dark:text-slate-400">{user?.role}</p>

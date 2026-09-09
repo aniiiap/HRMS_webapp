@@ -6,8 +6,12 @@ import SmartButton from '../components/ui/SmartButton';
 import DragDropUpload from '../components/ui/DragDropUpload';
 import { format } from 'date-fns';
 import { expensesApi } from '../api/expensesApi';
+import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
+import { messageFromError } from '../api/client';
 
 export default function ExpensesPage() {
+    const { user } = useAuth();
     const [claims, setClaims] = useState([]);
     const [categories, setCategories] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,6 +26,14 @@ export default function ExpensesPage() {
         notes: '',
         receipt: null
     });
+
+    const maxDateStr = new Date().toISOString().split('T')[0];
+    let minDateStr = undefined;
+    if (user?.expense_backdate_limit_days != null) {
+        const d = new Date();
+        d.setDate(d.getDate() - user.expense_backdate_limit_days);
+        minDateStr = d.toISOString().split('T')[0];
+    }
 
     useEffect(() => {
         fetchData();
@@ -64,6 +76,12 @@ export default function ExpensesPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (isSubmitting) return;
+        
+        if (!formData.receipt) {
+            toast.error("Receipt Image/PDF is required.");
+            return;
+        }
+
         setIsSubmitting(true);
         const data = new FormData();
         data.append('title', formData.title);
@@ -77,11 +95,10 @@ export default function ExpensesPage() {
             await expensesApi.createClaim(data);
             setIsModalOpen(false);
             setFormData({ title: '', category: '', amount: '', date_incurred: '', notes: '', receipt: null });
+            toast.success("Expense claim submitted successfully!");
             fetchData();
         } catch (error) {
-            const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
-            console.error('Submit error:', error.response?.data);
-            alert(`Failed to submit expense claim: ${errorMsg}`);
+            toast.error(messageFromError(error));
         } finally {
             setIsSubmitting(false);
         }
@@ -195,8 +212,11 @@ export default function ExpensesPage() {
                                 )}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Date Incurred</label>
-                                    <input required type="date" className="w-full border-slate-200 rounded-xl px-4 py-2 border focus:ring-2 focus:ring-indigo-500"
-                                        value={formData.date_incurred} onChange={e => setFormData({...formData, date_incurred: e.target.value})} />
+                                      <input required type="date" 
+                                          max={maxDateStr}
+                                          min={minDateStr}
+                                          className="w-full border-slate-200 rounded-xl px-4 py-2 border focus:ring-2 focus:ring-indigo-500"
+                                          value={formData.date_incurred} onChange={e => setFormData({...formData, date_incurred: e.target.value})} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Amount (₹)</label>

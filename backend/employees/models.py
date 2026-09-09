@@ -31,6 +31,16 @@ class Organization(models.Model):
     
     # For letter templates
     signature_image = models.ImageField(upload_to="organization_signatures/", null=True, blank=True)
+    
+    # For company logo (payslips, settings)
+    company_logo = models.ImageField(upload_to="organization_logos/", null=True, blank=True)
+    
+    # Policy limit for backdating expense claims
+    expense_backdate_limit_days = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Max days in the past an expense can be incurred. Leave blank for unlimited."
+    )
+    
     class Meta:
         ordering = ["name"]
 

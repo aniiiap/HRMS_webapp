@@ -34,10 +34,46 @@ def build_payslip_pdf(result: PayrollEmployeeResult) -> bytes:
     period = f"{run.period_year}-{run.period_month:02d}"
     emp_name = f"{user.first_name} {user.last_name}".strip() or user.email
 
-    story = [
+    from reportlab.platypus import Image as ReportLabImage
+
+    header_data = []
+    
+    title_paragraphs = [
         Paragraph(org.legal_name or org.name, title_style),
         Paragraph("Salary Payslip", styles["Heading2"]),
         Paragraph(f"Pay period: {period}", sub_style),
+    ]
+
+    if org.company_logo:
+        try:
+            try:
+                path_or_url = org.company_logo.path
+            except NotImplementedError:
+                path_or_url = org.company_logo.url
+                if path_or_url.startswith('/'):
+                    from django.conf import settings
+                    import os
+                    path_or_url = os.path.join(settings.MEDIA_ROOT, org.company_logo.name)
+                    
+            logo = ReportLabImage(path_or_url, width=40 * mm, height=20 * mm, kind='proportional')
+            header_data = [[title_paragraphs, logo]]
+        except Exception:
+            header_data = [[title_paragraphs, ""]]
+    else:
+        header_data = [[title_paragraphs, ""]]
+
+    header_table = Table(header_data, colWidths=[120 * mm, 45 * mm])
+    header_table.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
+    )
+
+    story = [
+        header_table,
         Spacer(1, 8),
     ]
 

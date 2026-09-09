@@ -278,8 +278,7 @@ def compute_employee_payroll(
                 "is_system": True,
             }
         )
-        # Reimbursements are not prorated or taxable
-        gross_full += total_expenses
+        # Reimbursements are not prorated or taxable, and NOT part of gross pay.
         breakdown.append(
             {
                 "component": reimbursement_comp,
@@ -289,7 +288,7 @@ def compute_employee_payroll(
             }
         )
 
-    gross_prorated = _q(sum((b["prorated"] for b in breakdown), Decimal("0")))
+    gross_prorated = _q(sum((b["prorated"] for b in breakdown if b["component"].code != "REIMBURSEMENT"), Decimal("0")))
     taxable_prorated = _q(
         sum((b["prorated"] for b in breakdown if b["component"].taxable), Decimal("0"))
     )
@@ -364,11 +363,11 @@ def compute_employee_payroll(
         )
 
     total_ded = _q(pf_ee + esi_ee + pt + tds)
-    net = _q(gross_prorated - total_ded)
+    net = _q(gross_prorated + total_expenses - total_ded)
 
     if result.is_on_hold:
         net = Decimal("0")
-        total_ded = _q(gross_prorated)
+        total_ded = _q(gross_prorated + total_expenses)
 
     with transaction.atomic():
         PayrollResultLine.objects.filter(result=result).delete()

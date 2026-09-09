@@ -140,6 +140,7 @@ export default function PayRegisterPanel({
       const allLeaveTypes = Array.from(new Set(results.flatMap(r => (r.leave_balances || []).map(lb => lb.leave_type))))
 
       const exportData = results.map(row => {
+        const g = groupResultLines(row)
         const rowData = {
           'Employee Name': row.employee_name,
           'Employee Code': row.employee_code,
@@ -149,10 +150,10 @@ export default function PayRegisterPanel({
           'Paid Days': row.paid_days,
           'Weekend Days': getWeekendDaysCount(row),
           'LOP Days': row.lop_days,
-          'Basic': row.basic,
-          'HRA': row.hra,
-          'Allowances': row.other_allowances,
-          'Reimbursements': row.total_reimbursements,
+          'Basic': g.basic,
+          'HRA': g.hra,
+          'Allowances': g.allowances,
+          'Reimbursements': g.reimbursements,
           'Gross Pay': row.gross_monthly_full,
           'Earned Gross': row.gross_prorated,
           'Deductions': row.total_deductions,

@@ -38,7 +38,9 @@ from .org_scope import (
 )
 
 
-class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
+from rest_framework import mixins
+
+class OrganizationViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     """Company workspace: view own organization only. Use /api/platform/ for tenant management."""
 
     queryset = Organization.objects.all()
@@ -59,6 +61,10 @@ class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
         return qs.none()
 
     def get_permissions(self):
+        # Allow read for ManagerOrAbove, but update only for Admin/HR
+        if self.action in ["update", "partial_update"]:
+            from accounts.permissions import IsAdminOrHR
+            return [permissions.IsAuthenticated(), IsAdminOrHR()]
         return [permissions.IsAuthenticated(), IsManagerOrAbove()]
 
 

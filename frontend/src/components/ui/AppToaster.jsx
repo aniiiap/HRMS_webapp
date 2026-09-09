@@ -8,6 +8,7 @@ export default function AppToaster() {
   return (
     <Toaster
       position="top-right"
+      containerStyle={{ zIndex: 999999 }}
       toastOptions={{
         duration: 3200,
         style: isDark

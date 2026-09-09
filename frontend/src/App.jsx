@@ -163,7 +163,7 @@ export default function App() {
           <Route path="/holidays" element={<HolidayCalendar />} />
           
           {/* Expenses */}
-          <Route element={<RoleRoute allowedRoles={['employee', 'manager']} />}>
+          <Route element={<RoleRoute allowedRoles={['admin', 'hr', 'employee', 'manager']} />}>
             <Route path="/expenses" element={<Suspense fallback={<RoutePageFallback />}><ExpensesPage /></Suspense>} />
           </Route>
           
