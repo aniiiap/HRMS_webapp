@@ -50,14 +50,29 @@ def build_payslip_pdf(result: PayrollEmployeeResult) -> bytes:
                 path_or_url = org.company_logo.path
             except NotImplementedError:
                 path_or_url = org.company_logo.url
+            
+            if path_or_url.startswith('http'):
+                import urllib.request
+                req = urllib.request.Request(path_or_url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    img_data = response.read()
+                
+                # Eagerly validate image
+                from PIL import Image as PILImage
+                PILImage.open(io.BytesIO(img_data)).verify()
+                
+                logo = ReportLabImage(io.BytesIO(img_data), width=40 * mm, height=20 * mm, kind='proportional')
+            else:
                 if path_or_url.startswith('/'):
                     from django.conf import settings
                     import os
                     path_or_url = os.path.join(settings.MEDIA_ROOT, org.company_logo.name)
-                    
-            logo = ReportLabImage(path_or_url, width=40 * mm, height=20 * mm, kind='proportional')
+                logo = ReportLabImage(path_or_url, width=40 * mm, height=20 * mm, kind='proportional')
+                
             header_data = [[title_paragraphs, logo]]
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Failed to load company logo for payslip: %s", e)
             header_data = [[title_paragraphs, ""]]
     else:
         header_data = [[title_paragraphs, ""]]
