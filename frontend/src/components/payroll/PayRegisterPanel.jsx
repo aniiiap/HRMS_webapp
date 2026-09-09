@@ -1,4 +1,5 @@
 import { Fragment, useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Eye, FileDown, Edit2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api, messageFromError } from '../../api/client'
@@ -38,8 +39,8 @@ function ManageExpensesModal({ employeeId, employeeName, runId, onClose, onRecal
     if (onRecalculate) onRecalculate(runId)
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Expenses for {employeeName}</h3>
@@ -77,7 +78,8 @@ function ManageExpensesModal({ employeeId, employeeName, runId, onClose, onRecal
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

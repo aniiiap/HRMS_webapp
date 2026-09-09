@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Download, X } from 'lucide-react'
 
+import { createPortal } from 'react-dom'
+
 export default function PayslipPreviewModal({ url, employeeName, period, onClose, onDownload }) {
   useEffect(() => {
     const onKey = (e) => {
@@ -12,8 +14,8 @@ export default function PayslipPreviewModal({ url, employeeName, period, onClose
 
   if (!url) return null
 
-  return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-slate-900/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
           <div>
@@ -37,6 +39,7 @@ export default function PayslipPreviewModal({ url, employeeName, period, onClose
         </div>
         <iframe title="Payslip" src={url} className="min-h-0 flex-1 w-full bg-slate-100" />
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
