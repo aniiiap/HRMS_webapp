@@ -47,14 +47,19 @@ def resolve_pf_wage_preview(
     special: Decimal | int | float | str = 0,
     basis: str | None = "basic_da",
 ) -> Decimal:
-    """PF wage for CTC preview when only Basic / DA / Special are known."""
+    """PF wage for CTC preview when only Basic / DA / Special are known.
+
+    We pass only the single canonical code for each component so that
+    resolve_pf_wage_from_codes does not double-count aliases.
+    PF_BASIS_CODE_SETS uses DEARNESS_ALLOWANCE and SPECIAL_ALLOWANCE as
+    the canonical keys; DA and SPECIAL are kept as legacy aliases in the
+    set but are not passed here.
+    """
     return resolve_pf_wage_from_codes(
         {
             "BASIC": basic,
-            "DA": da,
             "DEARNESS_ALLOWANCE": da,
             "SPECIAL_ALLOWANCE": special,
-            "SPECIAL": special,
         },
         basis,
     )

@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from employees.models import Employee, Organization
 
-from .models import (
+from payroll.models import (
     EmployeeSalaryLine,
     PayrollComponent,
     PayrollComponentCategory,
@@ -16,7 +16,7 @@ from .models import (
     PayrollStatutoryConfig,
     SalaryCalculationMode,
 )
-from .services.engine import compute_employee_payroll, recalculate_run, resolve_monthly_amounts
+from payroll.services.engine import compute_employee_payroll, recalculate_run, resolve_monthly_amounts
 
 User = get_user_model()
 

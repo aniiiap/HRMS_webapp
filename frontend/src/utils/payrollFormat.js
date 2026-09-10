@@ -133,7 +133,6 @@ export function groupResultLines(row) {
 
   const basic = amount('BASIC')
   const hra = amount('HRA')
-  const allowanceCodes = ['SPECIAL_ALLOWANCE', 'CONVEYANCE', 'BONUS', 'INCENTIVE', 'OVERTIME', 'ARREARS']
   let allowances = 0
   let reimbursements = 0
   
