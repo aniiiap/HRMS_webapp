@@ -36,8 +36,8 @@ const FEATURES = [
     )
   },
   {
-    title: 'Smart Payroll',
-    description: 'Automate salary processing, tax calculations, and compliance without the headache.',
+    title: 'AI-Powered Payroll',
+    description: 'Automate salary processing, tax calculations, and compliance with intelligent AI insights.',
     icon: Zap,
     cardGradient: 'bg-indigo-50',
     shadowColor: 'shadow-indigo-900/5',
@@ -71,8 +71,8 @@ const FEATURES = [
     )
   },
   {
-    title: 'Performance & Growth',
-    description: 'Align teams with goals, conduct reviews, and foster continuous feedback.',
+    title: 'AI Insights & Growth',
+    description: 'Align teams with goals and foster continuous feedback using machine learning performance analytics.',
     icon: TrendingUp,
     cardGradient: 'bg-amber-50',
     shadowColor: 'shadow-amber-900/5',
@@ -176,7 +176,7 @@ export default function LoginPage() {
             </h1>
             
             <p className="text-lg lg:text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed motion-safe:animate-fade-up max-w-xl" style={{ animationDelay: '200ms' }}>
-              Automate your HR workflows, run payroll flawlessly, and empower your team with a platform they'll actually love using.
+              Automate your HR workflows, run payroll flawlessly, and empower your team with an AI-driven platform they'll actually love using.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-10 motion-safe:animate-fade-up" style={{ animationDelay: '300ms' }}>

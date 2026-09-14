@@ -147,7 +147,7 @@ export default function PublicLayout() {
                   to="/login"
                   className="text-sm font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors"
                 >
-                  Log in
+                  Sign in
                 </Link>
               )}
               <Link
@@ -188,7 +188,7 @@ export default function PublicLayout() {
                 to="/login"
                 className="text-base font-medium text-slate-800 dark:text-slate-200 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
               >
-                Log in
+                Sign in
               </Link>
             )}
             <Link
