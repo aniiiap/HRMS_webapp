@@ -1,7 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Globe, Menu, X, ArrowRight, Twitter, Linkedin, Github } from 'lucide-react';
+import { Globe, Menu, X, ArrowRight, Twitter, Linkedin, Github, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+
+function MobileNavItem({ link }) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-center justify-between">
+        <Link
+          to={link.path}
+          className="text-base font-medium text-slate-800 dark:text-slate-200 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 flex-1"
+        >
+          {link.name}
+        </Link>
+        {link.dropdown && (
+          <button 
+            onClick={(e) => { e.preventDefault(); setIsOpen(!isOpen); }}
+            className="p-2 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
+          >
+            <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+          </button>
+        )}
+      </div>
+      {link.dropdown && isOpen && (
+        <div className="ml-4 flex flex-col gap-1 border-l-2 border-slate-100 dark:border-slate-800 pl-4 mt-1">
+          {link.dropdown.map(item => (
+            <Link 
+              key={item}
+              to={`/features#${item.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+              className="text-sm font-medium text-slate-600 dark:text-slate-400 py-2 hover:text-brand-600 dark:hover:text-brand-400"
+            >
+              {item}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PublicLayout() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -24,7 +61,20 @@ export default function PublicLayout() {
   }, [location.pathname]);
 
   const navLinks = [
-    { name: 'Products', path: '/products' },
+    { 
+      name: 'Products', 
+      path: '/products',
+      dropdown: [
+        'Core HR Database',
+        'Payroll Management',
+        'Leave & Attendance',
+        'Expense Management',
+        'Document Center',
+        'Performance & Growth',
+        'Statutory Compliance',
+        'Employee Self-Service'
+      ]
+    },
     { name: 'Pricing', path: '/pricing' },
     { name: 'About Us', path: '/about' },
     { name: 'Contact', path: '/contact' },
@@ -52,17 +102,33 @@ export default function PublicLayout() {
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.path;
                 return (
-                  <Link
-                    key={link.name}
-                    to={link.path}
-                    className={`text-sm font-medium transition-colors ${
-                      isActive 
-                        ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-600 dark:border-brand-400 pb-1' 
-                        : 'text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400'
-                    }`}
-                  >
-                    {link.name}
-                  </Link>
+                  <div key={link.name} className="relative group py-4">
+                    <Link
+                      to={link.path}
+                      className={`text-sm font-medium transition-colors ${
+                        isActive 
+                          ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-600 dark:border-brand-400 pb-1' 
+                          : 'text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400'
+                      }`}
+                    >
+                      {link.name}
+                      {link.dropdown && <ChevronDown className="inline-block w-4 h-4 ml-1 opacity-60" />}
+                    </Link>
+                    
+                    {link.dropdown && (
+                      <div className="absolute top-full left-0 mt-0 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        {link.dropdown.map(item => (
+                          <Link 
+                            key={item} 
+                            to={`/features#${item.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                            className="block px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                          >
+                            {item}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </nav>
@@ -107,13 +173,7 @@ export default function PublicLayout() {
         {mobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xl p-4 flex flex-col gap-4">
             {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                to={link.path}
-                className="text-base font-medium text-slate-800 dark:text-slate-200 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                {link.name}
-              </Link>
+              <MobileNavItem key={link.name} link={link} />
             ))}
             <div className="h-px bg-slate-200 dark:bg-slate-800 my-2" />
             {user ? (
@@ -202,7 +262,7 @@ export default function PublicLayout() {
           
           <div className="mt-16 pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-slate-400 text-sm">
-              © {new Date().getFullYear()} GlobalWorkSphere. All rights reserved.
+              Â© {new Date().getFullYear()} GlobalWorkSphere. All rights reserved.
             </p>
           </div>
         </div>

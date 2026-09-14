@@ -11,7 +11,7 @@ export default function AboutPage() {
   ];
 
   return (
-    <div className="py-20 bg-white dark:bg-slate-900">
+    <div className="py-20 bg-gradient-to-br from-orange-50 via-amber-50 to-rose-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-24">

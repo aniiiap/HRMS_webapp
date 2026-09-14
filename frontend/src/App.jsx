@@ -40,6 +40,7 @@ import CompanyRoute from './components/CompanyRoute'
 import PublicLayout from './components/public/PublicLayout'
 const LandingPage = lazy(() => import('./pages/public/LandingPage'))
 const ProductsPage = lazy(() => import('./pages/public/ProductsPage'))
+const FeaturesPage = lazy(() => import('./pages/public/FeaturesPage'))
 const PricingPage = lazy(() => import('./pages/public/PricingPage'))
 const AboutPage = lazy(() => import('./pages/public/AboutPage'))
 const RequestDemoPage = lazy(() => import('./pages/public/RequestDemoPage'))
@@ -51,6 +52,7 @@ export default function App() {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Suspense fallback={<RoutePageFallback />}><LandingPage /></Suspense>} />
         <Route path="/products" element={<Suspense fallback={<RoutePageFallback />}><ProductsPage /></Suspense>} />
+        <Route path="/features" element={<Suspense fallback={<RoutePageFallback />}><FeaturesPage /></Suspense>} />
         <Route path="/pricing" element={<Suspense fallback={<RoutePageFallback />}><PricingPage /></Suspense>} />
         <Route path="/about" element={<Suspense fallback={<RoutePageFallback />}><AboutPage /></Suspense>} />
         <Route path="/demo" element={<Suspense fallback={<RoutePageFallback />}><RequestDemoPage /></Suspense>} />

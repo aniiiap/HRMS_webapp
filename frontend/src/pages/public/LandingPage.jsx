@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Moon, Sparkles, Sun, ArrowRight, CheckCircle2, Users, Building, ShieldCheck, Zap, LineChart, PieChart, Smartphone, Wallet, DollarSign, Heart } from 'lucide-react'
+import { Eye, EyeOff, Moon, Sparkles, Sun, ArrowRight, CheckCircle2, Users, Building, ShieldCheck, Zap, LineChart, PieChart, Smartphone, Wallet, DollarSign, Heart, TrendingUp } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { messageFromError, tokenStore } from '../../api/client'
@@ -11,22 +11,25 @@ const FEATURES = [
     title: 'Core HR & People',
     description: 'Centralize your employee data, documents, and directories in one secure platform.',
     icon: Users,
-    cardGradient: 'bg-gradient-to-b from-emerald-500 to-emerald-800',
-    shadowColor: 'shadow-emerald-900/40',
+    cardGradient: 'bg-emerald-50',
+    shadowColor: 'shadow-emerald-900/5',
+    titleColor: 'text-emerald-950',
+    descColor: 'text-emerald-800',
+    iconColor: 'text-emerald-600',
     Visual: () => (
-      <div className="mt-8 flex flex-col gap-3 opacity-60 group-hover:opacity-100 transition-all duration-500 transform group-hover:translate-x-1">
-        <div className="flex items-center gap-3 bg-white/10 p-2.5 rounded-xl border border-white/5 backdrop-blur-sm">
-          <div className="w-8 h-8 rounded-full bg-white/30 shrink-0" />
+      <div className="mt-8 flex flex-col gap-3 opacity-80 group-hover:opacity-100 transition-all duration-500">
+        <div className="flex items-center gap-3 bg-white/70 p-2.5 rounded-xl border border-emerald-100">
+          <div className="w-8 h-8 rounded-full bg-emerald-200 shrink-0" />
           <div className="flex-1 space-y-1.5">
-            <div className="h-2 w-3/4 bg-white/40 rounded-full" />
-            <div className="h-1.5 w-1/2 bg-white/20 rounded-full" />
+            <div className="h-2 w-3/4 bg-emerald-300 rounded-full" />
+            <div className="h-1.5 w-1/2 bg-emerald-200 rounded-full" />
           </div>
         </div>
-        <div className="flex items-center gap-3 bg-white/5 p-2.5 rounded-xl border border-white/5 backdrop-blur-sm ml-4">
-          <div className="w-8 h-8 rounded-full bg-white/20 shrink-0" />
+        <div className="flex items-center gap-3 bg-white/40 p-2.5 rounded-xl border border-emerald-50 ml-4">
+          <div className="w-8 h-8 rounded-full bg-emerald-100 shrink-0" />
           <div className="flex-1 space-y-1.5">
-            <div className="h-2 w-2/3 bg-white/30 rounded-full" />
-            <div className="h-1.5 w-1/3 bg-white/10 rounded-full" />
+            <div className="h-2 w-2/3 bg-emerald-200 rounded-full" />
+            <div className="h-1.5 w-1/3 bg-emerald-100 rounded-full" />
           </div>
         </div>
       </div>
@@ -36,16 +39,17 @@ const FEATURES = [
     title: 'Smart Payroll',
     description: 'Automate salary processing, tax calculations, and compliance without the headache.',
     icon: Zap,
-    cardGradient: 'bg-gradient-to-b from-indigo-500 to-indigo-800',
-    shadowColor: 'shadow-indigo-900/40',
+    cardGradient: 'bg-indigo-50',
+    shadowColor: 'shadow-indigo-900/5',
+    titleColor: 'text-indigo-950',
+    descColor: 'text-indigo-800',
+    iconColor: 'text-indigo-600',
     Visual: () => (
-      <div className="mt-8 flex items-end gap-2 h-20 opacity-60 group-hover:opacity-100 transition-all duration-500">
-        <div className="w-full bg-white/20 rounded-t-lg h-[40%] group-hover:h-[50%] transition-all duration-700" />
-        <div className="w-full bg-white/40 rounded-t-lg h-[60%] group-hover:h-[75%] transition-all duration-700 delay-75" />
-        <div className="w-full bg-white/20 rounded-t-lg h-[30%] group-hover:h-[40%] transition-all duration-700 delay-150" />
-        <div className="w-full bg-white/60 rounded-t-lg h-[80%] group-hover:h-[100%] transition-all duration-700 delay-200 relative">
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-        </div>
+      <div className="mt-8 flex items-end gap-2 h-20 opacity-80 group-hover:opacity-100 transition-all duration-500">
+        <div className="w-full bg-indigo-200 rounded-t-lg h-[40%] group-hover:h-[50%] transition-all duration-700" />
+        <div className="w-full bg-indigo-300 rounded-t-lg h-[60%] group-hover:h-[75%] transition-all duration-700 delay-75" />
+        <div className="w-full bg-indigo-200 rounded-t-lg h-[30%] group-hover:h-[40%] transition-all duration-700 delay-150" />
+        <div className="w-full bg-indigo-400 rounded-t-lg h-[80%] group-hover:h-[100%] transition-all duration-700 delay-200" />
       </div>
     )
   },
@@ -53,19 +57,15 @@ const FEATURES = [
     title: 'Time & Attendance',
     description: 'Track clock-ins, manage shifts, and handle leave requests with automated workflows.',
     icon: ShieldCheck,
-    cardGradient: 'bg-gradient-to-b from-rose-500 to-rose-800',
-    shadowColor: 'shadow-rose-900/40',
+    cardGradient: 'bg-rose-50',
+    shadowColor: 'shadow-rose-900/5',
+    titleColor: 'text-rose-950',
+    descColor: 'text-rose-800',
+    iconColor: 'text-rose-600',
     Visual: () => (
-      <div className="mt-8 grid grid-cols-5 gap-2 opacity-60 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-105 origin-left">
+      <div className="mt-8 grid grid-cols-5 gap-2 opacity-80 group-hover:opacity-100 transition-all duration-500">
         {[...Array(10)].map((_, i) => (
-          <div 
-            key={i} 
-            className={`aspect-square rounded-md ${
-              i === 7 ? 'bg-white/80 shadow-[0_0_12px_rgba(255,255,255,0.6)] animate-pulse' 
-              : i < 7 ? 'bg-white/30' 
-              : 'bg-white/10'
-            }`} 
-          />
+          <div key={i} className={`aspect-square rounded-md ${i === 7 ? 'bg-rose-400' : 'bg-rose-200'}`} />
         ))}
       </div>
     )
@@ -73,19 +73,22 @@ const FEATURES = [
   {
     title: 'Performance & Growth',
     description: 'Align teams with goals, conduct reviews, and foster continuous feedback.',
-    icon: LineChart,
-    cardGradient: 'bg-gradient-to-b from-amber-500 to-amber-800',
-    shadowColor: 'shadow-amber-900/40',
+    icon: TrendingUp,
+    cardGradient: 'bg-amber-50',
+    shadowColor: 'shadow-amber-900/5',
+    titleColor: 'text-amber-950',
+    descColor: 'text-amber-800',
+    iconColor: 'text-amber-600',
     Visual: () => (
-      <div className="mt-8 flex flex-col gap-4 opacity-60 group-hover:opacity-100 transition-all duration-500">
-        <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-          <div className="bg-white/70 h-full rounded-full w-[65%] group-hover:w-[85%] transition-all duration-1000 ease-out" />
+      <div className="mt-8 flex flex-col gap-2.5 opacity-80 group-hover:opacity-100 transition-all duration-500">
+        <div className="h-2 w-full bg-amber-100 rounded-full overflow-hidden">
+          <div className="h-full w-[75%] bg-amber-400 rounded-full group-hover:w-[85%] transition-all duration-1000" />
         </div>
-        <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-          <div className="bg-white/40 h-full rounded-full w-[40%] group-hover:w-[60%] transition-all duration-1000 ease-out delay-100" />
+        <div className="h-2 w-full bg-amber-100 rounded-full overflow-hidden">
+          <div className="h-full w-[45%] bg-amber-400 rounded-full group-hover:w-[60%] transition-all duration-1000 delay-100" />
         </div>
-        <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-          <div className="bg-white/90 h-full rounded-full w-[85%] group-hover:w-[100%] transition-all duration-1000 ease-out delay-200" />
+        <div className="h-2 w-full bg-amber-100 rounded-full overflow-hidden">
+          <div className="h-full w-[90%] bg-amber-400 rounded-full group-hover:w-[95%] transition-all duration-1000 delay-200" />
         </div>
       </div>
     )
@@ -143,7 +146,7 @@ export default function LoginPage() {
     <div className="min-h-screen font-sans bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-white overflow-x-hidden selection:bg-brand-500/30">
       
       {/* Hero Section */}
-      <section className="relative pt-24 pb-20 lg:pt-32 lg:pb-32 px-6 lg:px-12 w-full overflow-hidden">
+      <section className="relative pt-10 pb-16 lg:pt-32 lg:pb-32 px-4 sm:px-6 lg:px-12 w-full overflow-hidden">
         {/* Background Image & Overlays */}
         <div className="absolute inset-0 z-0 hidden lg:block">
           <img 
@@ -172,11 +175,11 @@ export default function LoginPage() {
               Designed for growth.
             </h1>
             
-            <p className="hidden md:block text-lg lg:text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed motion-safe:animate-fade-up max-w-xl" style={{ animationDelay: '200ms' }}>
+            <p className="text-lg lg:text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed motion-safe:animate-fade-up max-w-xl" style={{ animationDelay: '200ms' }}>
               Automate your HR workflows, run payroll flawlessly, and empower your team with a platform they'll actually love using.
             </p>
             
-            <div className="hidden md:flex flex-col sm:flex-row gap-4 mb-10 motion-safe:animate-fade-up" style={{ animationDelay: '300ms' }}>
+            <div className="flex flex-col sm:flex-row gap-4 mb-10 motion-safe:animate-fade-up" style={{ animationDelay: '300ms' }}>
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-white/5 shadow-sm">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Free Setup
               </div>
@@ -188,7 +191,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="hidden md:flex items-center gap-4 motion-safe:animate-fade-up" style={{ animationDelay: '400ms' }}>
+            <div className="flex items-center gap-4 motion-safe:animate-fade-up" style={{ animationDelay: '400ms' }}>
               <div className="flex -space-x-3">
                 <img className="w-10 h-10 rounded-full border-2 border-slate-50 dark:border-[#0b0f19] object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80" alt="User 1" />
                 <img className="w-10 h-10 rounded-full border-2 border-slate-50 dark:border-[#0b0f19] object-cover" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&q=80" alt="User 2" />
@@ -204,91 +207,73 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Embedded Login Form */}
-          <div ref={loginRef} className="relative w-full max-w-md mx-auto lg:ml-auto motion-safe:animate-fade-up z-20" style={{ animationDelay: '200ms' }}>
-            <div className="relative rounded-[2.5rem] shadow-2xl shadow-slate-900/20 dark:shadow-black/40">
-              <div className="relative bg-white/80 dark:bg-[#0b0f19]/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-8 lg:p-10 h-full w-full overflow-hidden">
-              
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Welcome back</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Sign in to your workspace to continue.</p>
+          {/* Custom Floating UI Stack */}
+          <div className="relative w-full max-w-lg mx-auto lg:ml-auto z-20 motion-safe:animate-fade-up mt-8 lg:mt-0" style={{ animationDelay: '200ms' }}>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-brand-500/10 to-teal-400/10 rounded-full blur-3xl -z-10" />
+
+            {/* Main Card */}
+            <div className="relative w-full aspect-[4/3] bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200/60 dark:border-white/10 shadow-2xl p-4 sm:p-6 flex flex-col transform transition-transform duration-700 hover:scale-[1.02]">
+              {/* Header */}
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex gap-3 items-center">
+                  <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center">
+                    <div className="w-5 h-5 rounded-md bg-brand-500" />
+                  </div>
+                  <div>
+                    <div className="h-3 w-24 bg-slate-800 dark:bg-slate-200 rounded-full mb-1.5" />
+                    <div className="h-2 w-16 bg-slate-400 dark:bg-slate-500 rounded-full" />
+                  </div>
+                </div>
+                <div className="h-8 w-24 bg-slate-100 dark:bg-slate-800 rounded-lg" />
               </div>
-
-              <form onSubmit={submit} className="space-y-5">
-                {error && !isPasswordError && (
-                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-900/20 dark:text-rose-200">
-                    <span className="font-semibold mr-2">Oops!</span>{error}
-                  </div>
-                )}
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Work Email</label>
-                  <input
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 transition-all focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-brand-500"
-                    placeholder="name@company.com"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+              
+              {/* Content area */}
+              <div className="flex-1 bg-slate-50 dark:bg-[#0b0f19] rounded-xl border border-slate-100 dark:border-white/5 p-5 flex flex-col gap-4">
+                <div className="h-2 w-32 bg-slate-300 dark:bg-slate-600 rounded-full" />
+                <div className="flex-1 flex items-end gap-2">
+                  {[40, 70, 45, 90, 65, 30, 85, 60, 75, 50].map((h, i) => (
+                    <div key={i} className="flex-1 bg-brand-100 dark:bg-brand-500/20 rounded-t-sm relative group cursor-pointer" style={{ height: `${h}%` }}>
+                      <div className="absolute bottom-0 w-full bg-brand-500 rounded-t-sm transition-all duration-700 group-hover:bg-brand-400" style={{ height: `${h * 0.7}%` }} />
+                    </div>
+                  ))}
                 </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Password</label>
-                  <div className="relative">
-                    <input
-                      className={`w-full rounded-xl border px-4 py-3 text-slate-900 placeholder-slate-400 transition-all focus:outline-none focus:ring-4 dark:text-white ${
-                        isPasswordError
-                          ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:border-rose-600 dark:bg-rose-900/20'
-                          : 'border-slate-200 bg-white focus:border-brand-500 focus:ring-brand-500/10 dark:border-slate-700 dark:bg-slate-900 dark:focus:border-brand-500'
-                      }`}
-                      placeholder="••••••••"
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value)
-                        if (isPasswordError) setError('')
-                      }}
-                      required
-                      autoComplete="current-password"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-300"
-                      onClick={() => setShowPassword((s) => !s)}
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  {isPasswordError && (
-                    <p className="mt-2 text-sm font-medium text-rose-600 dark:text-rose-400 ml-1">
-                      {error}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex justify-end pt-1">
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-
-                <div className="pt-2">
-                  <SmartButton
-                    type="submit"
-                    loading={loading}
-                    className="w-full rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-brand-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    Sign in to workspace
-                  </SmartButton>
-                </div>
-              </form>
+              </div>
             </div>
+
+            {/* Floating Top-Left Card */}
+            <div className="absolute -top-6 -left-0 sm:-top-6 sm:-left-8 w-44 sm:w-48 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-white/10 shadow-2xl p-3 sm:p-4 z-30 animate-float">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-slate-800 dark:text-white leading-tight">Payroll Run</div>
+                  <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">Successfully completed</div>
+                </div>
+              </div>
+              <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 w-full" />
+              </div>
+            </div>
+
+            {/* Floating Bottom-Right Card */}
+            <div className="absolute -bottom-8 -right-0 sm:-bottom-8 sm:-right-6 w-48 sm:w-56 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-white/10 shadow-2xl p-3 sm:p-4 z-30 animate-float-delayed">
+              <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2.5 uppercase tracking-widest">Time Off Request</div>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-orange-100 dark:bg-orange-500/20 flex items-center justify-center shrink-0 border border-orange-200 dark:border-orange-500/30">
+                  <span className="text-base sm:text-lg">🏖️</span>
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight mb-0.5">Alex Chen</div>
+                  <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium">Dec 24 - Dec 28</div>
+                </div>
+              </div>
+              <div className="mt-3 sm:mt-3.5 flex gap-2">
+                <div className="flex-1 py-1 sm:py-1.5 bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 text-[10px] sm:text-xs font-bold text-center rounded-lg border border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors cursor-pointer shadow-sm">Approve</div>
+              </div>
             </div>
           </div>
+
         </div>
       </section>
 
@@ -325,7 +310,7 @@ export default function LoginPage() {
       </section>
 
       {/* Trusted By Section */}
-      <section className="hidden md:block py-12 border-y border-slate-200/50 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/20">
+      <section className="py-12 border-y border-slate-200/50 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/20">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 text-center">
           <p className="text-sm font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-8">
             Trusted by modern forward-thinking companies
@@ -341,7 +326,7 @@ export default function LoginPage() {
       </section>
 
       {/* Features Section */}
-      <section className="hidden md:block py-24 px-6 lg:px-12 max-w-7xl mx-auto relative">
+      <section className="py-24 px-6 lg:px-12 max-w-7xl mx-auto relative">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6">
             Everything you need to run your team effortlessly.
@@ -361,20 +346,20 @@ export default function LoginPage() {
                 className={`group relative p-8 rounded-[32px] overflow-hidden ${feature.cardGradient} shadow-xl hover:shadow-2xl ${feature.shadowColor} transition-all duration-500 hover:-translate-y-2 flex flex-col h-[420px] ${idx % 2 === 1 ? 'lg:mt-12' : ''}`}
               >
                 
-                <div className="relative z-10 flex flex-col h-full text-white">
+                <div className="relative z-10 flex flex-col h-full">
                   <div className="mb-6 group-hover:scale-110 transition-transform duration-500 origin-left">
-                    <Icon size={28} strokeWidth={2.5} className="text-white/95" />
+                    <Icon size={28} strokeWidth={2.5} className={feature.iconColor} />
                   </div>
                   
-                  <h3 className="text-[20px] font-bold tracking-tight mb-3 leading-tight">{feature.title}</h3>
-                  <p className="text-[14px] text-white/90 leading-relaxed font-medium">
+                  <h3 className={`text-[20px] font-bold tracking-tight mb-3 leading-tight ${feature.titleColor}`}>{feature.title}</h3>
+                  <p className={`text-[14px] leading-relaxed font-medium ${feature.descColor}`}>
                     {feature.description}
                   </p>
 
                   <Visual />
 
                   <div className="mt-auto pt-6">
-                    <div className="flex items-center text-[13px] font-bold text-white hover:text-white/80 transition-colors">
+                    <div className={`flex items-center text-[13px] font-bold hover:opacity-70 transition-colors ${feature.titleColor}`}>
                       Learn More <ArrowRight size={14} className="ml-1.5 group-hover:translate-x-1.5 transition-transform duration-300" />
                     </div>
                   </div>
@@ -386,7 +371,7 @@ export default function LoginPage() {
       </section>
 
       {/* UI Showcase Image Section */}
-      <section className="hidden md:block py-24 px-6 lg:px-12 bg-slate-900 text-white relative overflow-hidden">
+      <section className="py-24 px-6 lg:px-12 bg-slate-900 text-white relative overflow-hidden">
         {/* Abstract Backgrounds */}
         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-brand-600/20 to-transparent pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-brand-500/20 rounded-full blur-[100px] pointer-events-none" />
@@ -424,7 +409,7 @@ export default function LoginPage() {
       </section>
 
       {/* Redesigned Payroll Section */}
-      <section className="hidden md:block py-32 px-6 lg:px-12 bg-slate-50 dark:bg-slate-900/40 relative border-b border-slate-200 dark:border-slate-800/50 overflow-hidden">
+      <section className="py-32 px-6 lg:px-12 bg-slate-50 dark:bg-slate-900/40 relative border-b border-slate-200 dark:border-slate-800/50 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent pointer-events-none" />
         
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center">
@@ -479,7 +464,7 @@ export default function LoginPage() {
       </section>
 
       {/* Final CTA Section */}
-      <section className="hidden md:block py-32 px-6 lg:px-12 relative overflow-hidden">
+      <section className="py-32 px-6 lg:px-12 relative overflow-hidden">
         <div className="absolute inset-0 z-0">
            <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=2000&q=80" className="w-full h-full object-cover opacity-30 dark:opacity-20" alt="CTA background" />
            <div className="absolute inset-0 bg-teal-900/90 dark:bg-[#0b0f19]/95 backdrop-blur-sm" />

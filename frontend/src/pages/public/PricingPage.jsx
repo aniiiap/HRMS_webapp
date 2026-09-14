@@ -11,10 +11,10 @@ export default function PricingPage() {
       name: 'Starter',
       desc: 'Perfect for small teams getting started with digital HR.',
       price: {
-        INR: annual ? '59' : '89',
-        USD: annual ? '0.49' : '0.79'
+        INR: annual ? '1,249' : '1,499',
+        USD: annual ? '12.49' : '14.99'
       },
-      period: '/ employee / month',
+      period: '/ month',
       popular: false,
       icon: <Building2 className="h-6 w-6 text-blue-500" />,
       features: [
@@ -34,10 +34,10 @@ export default function PricingPage() {
       name: 'Professional',
       desc: 'The complete suite for growing companies.',
       price: {
-        INR: annual ? '99' : '129',
-        USD: annual ? '0.89' : '1.19'
+        INR: annual ? '1,749' : '2,099',
+        USD: annual ? '17.49' : '20.99'
       },
-      period: '/ employee / month',
+      period: '/ month',
       popular: true,
       icon: <Zap className="h-6 w-6 text-amber-500" />,
       features: [
