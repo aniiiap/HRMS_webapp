@@ -75,7 +75,7 @@ export default function RequestDemoPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Call us</h3>
-                  <p className="text-slate-600 dark:text-slate-400">+1 (555) 123-4567</p>
+                  <p className="text-slate-600 dark:text-slate-400">+91 9351060628</p>
                 </div>
               </div>
 
@@ -85,7 +85,10 @@ export default function RequestDemoPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Global Headquarters</h3>
-                  <p className="text-slate-600 dark:text-slate-400">123 Innovation Drive, Tech City</p>
+                  <p className="text-slate-600 dark:text-slate-400">
+                    6203 San Ignacio Avenue Suite 110<br />
+                    San Jose, CA 95119
+                  </p>
                 </div>
               </div>
             </div>
