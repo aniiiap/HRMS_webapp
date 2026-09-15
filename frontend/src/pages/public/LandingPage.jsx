@@ -241,10 +241,11 @@ export default function LoginPage() {
             </div>
 
             {/* Floating Top-Left Card */}
-            <div className="absolute -top-6 -left-0 sm:-top-6 sm:-left-8 w-44 sm:w-48 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-white/10 shadow-2xl p-3 sm:p-4 z-30 animate-float">
+            <div className="absolute -top-6 -left-0 sm:-top-6 sm:-left-8 w-44 sm:w-48 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-white/10 shadow-2xl p-3 sm:p-4 z-30 animate-float group hover:scale-105 hover:-translate-y-1 transition-all duration-300 cursor-default">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
-                  <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400" />
+                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0 relative">
+                  <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-20 group-hover:opacity-40" />
+                  <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400 relative z-10" />
                 </div>
                 <div>
                   <div className="text-sm font-bold text-slate-800 dark:text-white leading-tight">Payroll Run</div>
@@ -252,24 +253,33 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 w-full" />
+                <div className="h-full bg-emerald-500 w-full relative">
+                  <div className="absolute top-0 bottom-0 left-0 w-1/3 bg-white/30 -skew-x-12 translate-x-[300%] group-hover:animate-[shimmer_2s_infinite]" />
+                </div>
               </div>
             </div>
 
             {/* Floating Bottom-Right Card */}
-            <div className="absolute -bottom-8 -right-0 sm:-bottom-8 sm:-right-6 w-48 sm:w-56 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-white/10 shadow-2xl p-3 sm:p-4 z-30 animate-float-delayed">
-              <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2.5 uppercase tracking-widest">Time Off Request</div>
+            <div className="absolute -bottom-8 -right-0 sm:-bottom-8 sm:-right-6 w-48 sm:w-56 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-white/10 shadow-2xl p-3 sm:p-4 z-30 animate-float-delayed group hover:scale-105 hover:-translate-y-1 transition-all duration-300 cursor-default">
+              <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2.5 uppercase tracking-widest flex items-center justify-between">
+                Time Off Request
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+              </div>
               <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-orange-100 dark:bg-orange-500/20 flex items-center justify-center shrink-0 border border-orange-200 dark:border-orange-500/30">
-                  <span className="text-base sm:text-lg">🏖️</span>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-orange-100 dark:bg-orange-500/20 flex items-center justify-center shrink-0 border border-orange-200 dark:border-orange-500/30 relative">
+                  <div className="absolute inset-0 bg-orange-400 rounded-full animate-ping opacity-0 group-hover:opacity-20" />
+                  <span className="text-base sm:text-lg relative z-10">🏖️</span>
                 </div>
                 <div className="flex-1">
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight mb-0.5">Alex Chen</div>
+                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight mb-0.5 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">Alex Chen</div>
                   <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium">Dec 24 - Dec 28</div>
                 </div>
               </div>
               <div className="mt-3 sm:mt-3.5 flex gap-2">
-                <div className="flex-1 py-1 sm:py-1.5 bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 text-[10px] sm:text-xs font-bold text-center rounded-lg border border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors cursor-pointer shadow-sm">Approve</div>
+                <div className="flex-1 py-1 sm:py-1.5 bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 text-[10px] sm:text-xs font-bold text-center rounded-lg border border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-500 dark:hover:text-white transition-all cursor-pointer shadow-sm relative overflow-hidden">
+                  <span className="relative z-10">Approve</span>
+                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+                </div>
               </div>
             </div>
           </div>

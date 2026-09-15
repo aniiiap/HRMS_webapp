@@ -1,4 +1,4 @@
-﻿import { Eye, EyeOff, CheckCircle2 } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle2, Sun, Moon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { messageFromError, tokenStore } from '../api/client'
@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext'
 
 export default function LoginPage() {
   const { login, user, loading: authLoading, defaultHome } = useAuth()
+  const { theme, toggle } = useTheme()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -53,165 +54,165 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen lg:h-screen lg:overflow-hidden font-sans bg-slate-50 dark:bg-[#0b0f19] flex flex-col lg:flex-row selection:bg-brand-500/30">
+    <div className="relative min-h-screen lg:h-screen lg:overflow-hidden font-sans bg-slate-50 dark:bg-slate-900 flex flex-col lg:flex-row selection:bg-brand-500/30">
       
+      {/* Theme Toggle */}
+      <button 
+        onClick={toggle} 
+        className="absolute top-6 right-6 lg:top-8 lg:right-8 z-50 p-2.5 rounded-xl bg-white/10 hover:bg-white/20 dark:bg-slate-800/50 dark:hover:bg-slate-700/50 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 text-slate-700 dark:text-slate-300 transition-all duration-300 hover:scale-105 active:scale-95 shadow-sm"
+        aria-label="Toggle theme"
+      >
+        {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      </button>
+
+      {/* Global Abstract Backgrounds */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] right-[-5%] w-[800px] h-[800px] bg-brand-500/15 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[900px] h-[900px] bg-indigo-500/15 rounded-full blur-[120px]" />
+      </div>
+
       {/* Left Marketing Side (Hidden on Mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-brand-600 via-indigo-600 to-purple-700 overflow-hidden text-white flex-col justify-between p-8 lg:p-10">
-        {/* Abstract Backgrounds inside Left Side */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/10 rounded-full blur-[80px] pointer-events-none transform translate-x-1/3 -translate-y-1/3" />
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-teal-400/20 rounded-full blur-[100px] pointer-events-none transform -translate-x-1/4 translate-y-1/4" />
+      <div className="hidden lg:flex lg:w-1/2 relative text-slate-900 dark:text-white flex-col justify-between py-12 lg:py-20 px-8 lg:px-16 xl:px-24 z-10">
         
-        <div className="relative z-10">
+        {/* Logo (Top) */}
+        <div className="w-full max-w-md xl:max-w-lg mx-auto">
           <Link to="/">
             <img src="/Sw%20logo/globalworkspherelogo.png" alt="GlobalWorkSphere" className="h-12 w-auto object-contain" />
           </Link>
         </div>
 
-        {/* Custom CSS Glassmorphism Wireframe */}
-        <div className="relative z-10 flex-1 flex items-center justify-center w-full py-4 max-w-[90%] mx-auto">
-          <div className="relative w-full aspect-[4/3] max-w-[260px] lg:max-w-[280px] transform hover:scale-[1.02] transition-transform duration-700 group">
+        {/* Auth/Security Wireframe (Middle) */}
+        <div className="relative z-10 flex-1 flex items-center justify-center w-full max-w-md xl:max-w-lg mx-auto min-h-0 my-4">
+          <div className="relative w-full max-w-[200px] lg:max-w-[220px] transform hover:scale-[1.02] transition-transform duration-700 group">
             
-            {/* Main Glass Panel */}
-            <div className="absolute inset-0 bg-white/[0.08] backdrop-blur-md rounded-[24px] border border-white/[0.15] shadow-2xl flex overflow-hidden">
+            {/* Main Auth Panel */}
+            <div className="relative bg-slate-900/[0.04] dark:bg-white/[0.04] backdrop-blur-md rounded-[20px] border border-slate-900/[0.08] dark:border-white/[0.08] shadow-xl dark:shadow-2xl p-4 overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-brand-400/10 rounded-full blur-[30px] transform translate-x-1/2 -translate-y-1/2" />
               
-              {/* Sidebar */}
-              <div className="w-1/3 bg-white/5 border-r border-white/10 p-3.5 flex flex-col gap-3.5">
-                <div className="w-7 h-7 rounded-lg bg-white/20 mb-1" />
-                <div className="space-y-2.5">
-                  <div className="h-1.5 w-full bg-white/30 rounded-full" />
-                  <div className="h-1.5 w-5/6 bg-white/20 rounded-full" />
-                  <div className="h-1.5 w-4/6 bg-white/20 rounded-full" />
-                  <div className="h-1.5 w-full bg-white/20 rounded-full" />
+              {/* Profile Placeholder */}
+              <div className="flex justify-center mb-4 relative">
+                <div className="w-12 h-12 rounded-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 flex items-center justify-center relative overflow-hidden">
+                  <div className="w-5 h-5 rounded-full bg-slate-900/20 dark:bg-white/20 mb-2" />
+                  <div className="absolute bottom-0 w-10 h-5 bg-slate-900/10 dark:bg-white/10 rounded-t-full" />
                 </div>
-                <div className="mt-auto h-20 w-full bg-gradient-to-t from-white/10 to-transparent rounded-lg border border-white/10" />
+                {/* Status dot */}
+                <div className="absolute bottom-0 right-12 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-50 dark:border-slate-900 animate-pulse" />
               </div>
 
-              {/* Main Content */}
-              <div className="flex-1 p-4 flex flex-col gap-3.5">
-                {/* Header */}
-                <div className="flex justify-between items-center pb-2.5 border-b border-white/10">
-                  <div className="h-2.5 w-1/3 bg-white/30 rounded-full" />
-                  <div className="flex gap-1.5">
-                    <div className="w-5 h-5 rounded-full bg-white/20" />
-                    <div className="w-5 h-5 rounded-full bg-white/20" />
-                  </div>
+              {/* Input 1 */}
+              <div className="h-7 w-full bg-slate-900/5 dark:bg-white/5 rounded-xl mb-3 border border-slate-900/10 dark:border-white/10 flex items-center px-3">
+                <div className="w-2.5 h-2.5 rounded-full bg-slate-900/20 dark:bg-white/20 mr-2.5" />
+                <div className="h-1.5 w-1/2 bg-slate-900/20 dark:bg-white/20 rounded-full" />
+              </div>
+              
+              {/* Input 2 (Password) */}
+              <div className="h-7 w-full bg-slate-900/5 dark:bg-white/5 rounded-xl mb-5 border border-slate-900/10 dark:border-white/10 flex items-center px-3">
+                <div className="w-2.5 h-2.5 rounded-full bg-slate-900/20 dark:bg-white/20 mr-2.5" />
+                <div className="flex gap-1">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="w-1 h-1 rounded-full bg-slate-900/30 dark:bg-white/30" />
+                  ))}
                 </div>
+              </div>
 
-                {/* Stats Grid - Unified Mono theme */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="bg-white/5 rounded-xl border border-white/10 p-2.5 flex flex-col gap-1.5">
-                    <div className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center">
-                      <div className="w-2.5 h-2.5 rounded-sm bg-white/70" />
-                    </div>
-                    <div className="h-2.5 w-1/2 bg-white/40 rounded mt-0.5" />
-                  </div>
-                  <div className="bg-white/5 rounded-xl border border-white/10 p-2.5 flex flex-col gap-1.5">
-                    <div className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center">
-                      <div className="w-2.5 h-2.5 rounded-sm bg-white/70" />
-                    </div>
-                    <div className="h-2.5 w-1/2 bg-white/40 rounded mt-0.5" />
-                  </div>
-                </div>
-
-                {/* Chart Area */}
-                <div className="flex-1 bg-white/5 rounded-xl border border-white/10 p-3 flex flex-col justify-end gap-1.5 mt-1">
-                  <div className="flex items-end justify-between h-full gap-1.5 opacity-80">
-                    {[40, 70, 45, 90, 65, 30].map((h, i) => (
-                      <div key={i} className="w-full bg-white/40 rounded-t-[2px] relative group-hover:bg-white/60 transition-colors duration-500" style={{ height: `${h}%` }} />
-                    ))}
-                  </div>
-                </div>
+              {/* Button */}
+              <div className="h-8 w-full bg-brand-500/90 rounded-xl flex items-center justify-center border border-brand-400/30 relative overflow-hidden group-hover:bg-brand-500 transition-colors shadow-[0_0_15px_rgba(var(--color-brand-500),0.3)]">
+                <div className="h-1.5 w-1/3 bg-white/90 rounded-full" />
               </div>
             </div>
 
+            {/* Floating Security Badge */}
+            <div className="absolute -top-4 -right-4 w-12 h-12 bg-slate-900/5 dark:bg-white/5 backdrop-blur-xl border border-slate-900/10 dark:border-white/10 rounded-2xl shadow-xl dark:shadow-2xl flex items-center justify-center animate-float-delayed rotate-12 group-hover:rotate-0 transition-all duration-700 z-20">
+              <div className="relative">
+                <div className="w-4 h-3.5 border-[1.5px] border-emerald-400/80 rounded-b-md rounded-t-sm flex items-center justify-center relative mt-1.5 bg-emerald-400/10">
+                  <div className="w-1 h-1 bg-emerald-400/80 rounded-full" />
+                </div>
+                {/* Lock Shackle */}
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-2.5 h-2.5 border-[1.5px] border-b-0 border-emerald-400/80 rounded-t-full transition-all duration-700 group-hover:-translate-y-1 group-hover:border-emerald-300" />
+              </div>
+            </div>
+            
             {/* Floating Notification */}
-            <div className="absolute -top-5 -right-5 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-2.5 shadow-2xl flex items-center gap-2.5 animate-float z-20">
-              <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center border border-white/30">
-                <div className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+            <div className="absolute -bottom-3 -left-3 bg-slate-900/10 dark:bg-white/10 backdrop-blur-xl rounded-xl border border-slate-900/20 dark:border-white/20 p-2 shadow-xl dark:shadow-2xl flex items-center gap-2 animate-float z-20">
+              <div className="w-5 h-5 rounded-full bg-slate-900/20 dark:bg-white/20 flex items-center justify-center border border-slate-900/30 dark:border-white/30">
+                <div className="w-1 h-1 rounded-full bg-slate-900 shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:bg-white dark:shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
               </div>
               <div>
-                <div className="h-1.5 w-12 bg-white/60 rounded-full mb-1" />
-                <div className="h-1 w-8 bg-white/30 rounded-full" />
+                <div className="h-1 w-10 bg-slate-900/80 dark:bg-white/80 rounded-full mb-1" />
+                <div className="h-1 w-6 bg-slate-900/40 dark:bg-white/40 rounded-full" />
               </div>
             </div>
-            
-            {/* Floating Avatar Card */}
-            <div className="absolute -bottom-5 -left-5 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-2.5 shadow-2xl flex items-center gap-2.5 animate-float-delayed z-20">
-              <div className="flex -space-x-2.5">
-                <div className="w-8 h-8 rounded-full bg-white/30 border border-white/20 backdrop-blur-sm" />
-                <div className="w-8 h-8 rounded-full bg-white/20 border border-white/20 backdrop-blur-sm" />
-                <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm" />
-              </div>
-            </div>
-            
           </div>
         </div>
         
-        <div className="relative z-10 max-w-lg">
-          <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight mb-6 leading-[1.1]">
-            Everything you need to manage your team.
+        {/* Text (Bottom) */}
+        <div className="relative z-10 w-full max-w-md xl:max-w-lg mx-auto">
+          <h1 className="text-3xl lg:text-4xl font-black tracking-tight mb-4 leading-[1.1]">
+            Secure access to your workspace.
           </h1>
-          <p className="text-lg text-white/80 font-medium mb-6 leading-relaxed">
-            From seamless onboarding to smart payroll and attendance. Join thousands of forward-thinking companies streamlining their HR.
+          <p className="text-base lg:text-lg text-slate-600 dark:text-white/70 font-normal mb-6 leading-relaxed">
+            Sign in to manage your HR, run payroll, and empower your team securely.
           </p>
           
           <div className="flex items-center gap-4">
-            <div className="flex -space-x-4">
+            <div className="flex -space-x-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className={`w-10 h-10 rounded-full border-2 border-brand-600 bg-white/20 backdrop-blur-md flex items-center justify-center`} style={{ zIndex: 4 - i }}>
-                  <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${i}&backgroundColor=transparent`} alt="Avatar" className="w-full h-full rounded-full" />
+                <div key={i} className={"w-8 h-8 rounded-full border-2 border-slate-50 dark:border-slate-900 bg-slate-900/10 dark:bg-white/20 backdrop-blur-md flex items-center justify-center ring-2 ring-slate-50 dark:ring-slate-900"} style={{ zIndex: 4 - i }}>
+                  <img src={"https://api.dicebear.com/7.x/notionists/svg?seed=" + i + "&backgroundColor=transparent"} alt="Avatar" className="w-full h-full rounded-full" />
                 </div>
               ))}
             </div>
-            <div className="text-sm font-medium">
-              <span className="font-bold">4.9/5</span> from over 2,000 reviews
+            <div className="text-xs font-medium text-slate-700 dark:text-white/80">
+              <span className="font-bold text-slate-900 dark:text-white">4.9/5</span> from over 2,000 reviews
             </div>
           </div>
         </div>
       </div>
 
       {/* Right Login Side */}
-      <div className="w-full lg:w-1/2 flex-1 flex items-center justify-center p-6 lg:p-8 relative">
-        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-brand-100 to-transparent dark:from-brand-900/20 pointer-events-none opacity-50" />
+      <div className="w-full lg:w-1/2 flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative z-10">
         
-        <div className="relative w-full max-w-md z-10">
+        <div className="w-full max-w-md bg-white rounded-[2rem] p-8 sm:p-12 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] border border-white/10 relative overflow-hidden">
+          {/* Subtle card accent */}
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-brand-400 via-indigo-500 to-brand-400" />
+          
           <div className="mb-10 text-center lg:text-left">
-            <Link to="/" className="lg:hidden inline-block mb-8">
-              <img src="/Sw%20logo/globalworkspherelogo.png" alt="GlobalWorkSphere" className="h-12 w-auto object-contain" />
+            <Link to="/" className="lg:hidden inline-flex justify-center mb-8 w-full">
+              <img src="/Sw%20logo/globalworkspherelogo.png" alt="GlobalWorkSphere" className="h-10 w-auto object-contain brightness-0" />
             </Link>
-            <h2 className="text-[2rem] font-extrabold tracking-tight text-slate-900 dark:text-white mb-3">Welcome back</h2>
-            <p className="text-base text-slate-500 dark:text-slate-400">Please enter your details to sign in.</p>
+            <h2 className="text-3xl font-black tracking-tight text-slate-900 mb-2">Welcome back</h2>
+            <p className="text-sm font-medium text-slate-500">Please enter your details to sign in.</p>
           </div>
 
-          <form onSubmit={submit} className="space-y-5">
+          <form onSubmit={submit} className="space-y-6">
             {error && !isPasswordError && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-900/20 dark:text-rose-200 flex items-start gap-3">
-                <div className="mt-0.5 bg-rose-100 dark:bg-rose-900/50 p-1 rounded-full"><EyeOff size={14} className="text-rose-600 dark:text-rose-400" /></div>
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 flex items-start gap-3 shadow-sm">
+                <div className="mt-0.5 bg-rose-100 p-1.5 rounded-full"><EyeOff size={14} className="text-rose-600" /></div>
                 <div><span className="font-semibold block mb-0.5">Authentication Failed</span>{error}</div>
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            <div className="space-y-2.5">
+              <label className="text-[13px] font-bold text-slate-700 uppercase tracking-wide">
                 Email address
               </label>
               <input
                 type="email"
                 required
                 autoComplete="email"
-                className="w-full rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-white px-5 py-3.5 text-base text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-slate-800 dark:bg-slate-900/50 dark:text-white dark:hover:bg-slate-900 dark:placeholder:text-slate-600 shadow-sm transition-all duration-300"
+                className="w-full rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 px-4 py-3.5 text-[15px] font-medium text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 shadow-sm transition-all duration-300"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <label className="text-[13px] font-bold text-slate-700 uppercase tracking-wide">
                   Password
                 </label>
-                <Link to="/forgot-password" className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                <Link to="/forgot-password" className="text-[13px] font-bold text-brand-600 hover:text-brand-700 transition-colors">
                   Forgot password?
                 </Link>
               </div>
@@ -220,7 +221,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   required
                   autoComplete="current-password"
-                  className="w-full rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-white px-5 py-3.5 text-base tracking-widest text-slate-900 placeholder:text-slate-300 placeholder:tracking-normal focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-slate-800 dark:bg-slate-900/50 dark:text-white dark:hover:bg-slate-900 dark:placeholder:text-slate-600 shadow-sm transition-all duration-300"
+                  className="w-full rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 px-4 py-3.5 text-[15px] font-medium tracking-widest text-slate-900 placeholder:text-slate-400 placeholder:tracking-normal placeholder:font-normal focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/10 shadow-sm transition-all duration-300"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -228,22 +229,24 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-all"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
               {isPasswordError && (
-                <p className="text-sm text-rose-500 mt-1 flex items-center gap-1.5">
+                <p className="text-sm text-rose-500 mt-2 flex items-center gap-1.5 font-medium">
                   <EyeOff size={14} /> Incorrect password. Please try again.
                 </p>
               )}
             </div>
 
-            <SmartButton type="submit" loading={loading} className="w-full rounded-2xl bg-slate-900 dark:bg-brand-600 px-5 py-4 text-[15px] font-bold text-white hover:bg-slate-800 dark:hover:bg-brand-500 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:focus:ring-brand-500/20 shadow-xl shadow-slate-900/20 transition-all duration-300 active:scale-[0.98]">
-              Sign in to workspace
-            </SmartButton>
+            <div className="pt-4">
+              <SmartButton type="submit" loading={loading} className="w-full rounded-xl bg-slate-900 px-5 py-4 text-[15px] font-extrabold text-white hover:bg-slate-800 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-slate-900/20 shadow-[0_8px_20px_-8px_rgba(15,23,42,0.5)] transition-all duration-300 active:scale-[0.98]">
+                Sign in to workspace
+              </SmartButton>
+            </div>
           </form>
         </div>
       </div>
