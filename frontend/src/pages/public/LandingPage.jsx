@@ -686,7 +686,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 divide-x divide-slate-200 dark:divide-slate-800">
             <div className="text-center px-4">
               <div className="flex justify-center mb-4"><ShieldCheck className="w-8 h-8 text-[#0F7A6C] dark:text-[#14B8A6]" /></div>
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mb-2">SOC 2 Type II</h3>
+              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mb-2">Enterprise Security</h3>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Certified Secure</p>
             </div>
             <div className="text-center px-4">

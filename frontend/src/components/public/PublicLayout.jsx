@@ -94,7 +94,16 @@ export default function PublicLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <Link to="/" className="flex items-center group">
+            <Link 
+              to="/" 
+              onClick={(e) => {
+                if (location.pathname === '/') {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              className="flex items-center group"
+            >
               <img src="/Sw%20logo/globalworkspherelogo.png" alt="GlobalWorkSphere" className="h-14 sm:h-20 w-auto object-contain group-hover:scale-105 transition-transform -ml-4 sm:-ml-6 lg:-ml-8" />
             </Link>
 
