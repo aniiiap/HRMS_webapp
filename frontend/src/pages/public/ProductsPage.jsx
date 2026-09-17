@@ -1,58 +1,92 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ShieldCheck, BarChart3, Users, Clock, Calendar, Mail, FileText, Headphones, Calculator, IndianRupee, CheckCircle2, Send } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 
 export default function ProductsPage() {
+  const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
+  const timelineRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: timelineRef,
+    offset: ["start center", "end center"]
+  });
+
+  const progressHeight = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
+
   const modules = [
     {
-      title: 'Core HR & Employee Directory',
+      title: 'Core HR & Employee Directory', link: '/products/core-hr-database',
       desc: 'Maintain a single source of truth for all employee data. Track personal details, job history, and documents securely.',
       icon: <Users className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />,
-      color: 'bg-indigo-50 dark:bg-indigo-900/30'
+      color: 'bg-indigo-50 dark:bg-indigo-900/30',
+      iconAnim: { hover: { scale: [1, 1.1, 1] } }
     },
     {
-      title: 'Time & Attendance',
+      title: 'Time & Attendance', link: '/products/attendance',
       desc: 'Track hours worked with precision. Support for web clock-in, biometric integration, and flexible shift scheduling.',
       icon: <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />,
-      color: 'bg-blue-50 dark:bg-blue-900/30'
+      color: 'bg-blue-50 dark:bg-blue-900/30',
+      iconAnim: { hover: { rotate: [0, -15, 15, -5, 0] } }
     },
     {
-      title: 'Automated Payroll',
+      title: 'Automated Payroll', link: '/products/payroll-management',
       desc: 'Run payroll in minutes not days. Automatically calculates deductions, taxes, and generates compliant payslips.',
       icon: <BarChart3 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />,
-      color: 'bg-emerald-50 dark:bg-emerald-900/30'
+      color: 'bg-emerald-50 dark:bg-emerald-900/30',
+      iconAnim: { hover: { y: [0, -4, 0] } }
     },
     {
-      title: 'Leave & Time-off',
+      title: 'Leave & Time-off', link: '/products/leave-management',
       desc: 'Customizable leave policies, automated accruals, and a multi-level approval workflow that managers love.',
       icon: <Calendar className="h-6 w-6 text-amber-600 dark:text-amber-400" />,
-      color: 'bg-amber-50 dark:bg-amber-900/30'
+      color: 'bg-amber-50 dark:bg-amber-900/30',
+      iconAnim: { hover: { rotate: [0, -10, 10, 0] } }
     },
     {
-      title: 'Helpdesk & Ticketing',
+      title: 'Helpdesk & Ticketing', link: '/products/employee-self-service',
       desc: 'Internal support made easy. Let employees raise HR or IT requests and track them to resolution.',
       icon: <Headphones className="h-6 w-6 text-rose-600 dark:text-rose-400" />,
-      color: 'bg-rose-50 dark:bg-rose-900/30'
+      color: 'bg-rose-50 dark:bg-rose-900/30',
+      iconAnim: { hover: { y: [0, -6, 0, -3, 0] } },
+      isFeatured: true
     },
     {
-      title: 'Letter & Document Generation',
+      title: 'Letter & Document Generation', link: '/products/document-center',
       desc: 'Create beautiful templates for offer letters, relieving letters, and more, instantly populated with employee data.',
       icon: <FileText className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />,
-      color: 'bg-cyan-50 dark:bg-cyan-900/30'
+      color: 'bg-cyan-50 dark:bg-cyan-900/30',
+      iconAnim: { hover: { scale: [1, 1.15, 1], opacity: [1, 0.8, 1] } }
     },
     {
-      title: 'Enterprise Security',
+      title: 'Enterprise Security', link: '/products/statutory-compliance',
       desc: 'Multi-tenant architecture ensuring complete data isolation, role-based access control, and comprehensive audit trails.',
       icon: <ShieldCheck className="h-6 w-6 text-purple-600 dark:text-purple-400" />,
-      color: 'bg-purple-50 dark:bg-purple-900/30'
+      color: 'bg-purple-50 dark:bg-purple-900/30',
+      iconAnim: { hover: { scale: [1, 1.1, 1] } }
     },
     {
-      title: 'Automated Communications',
+      title: 'Automated Communications', link: '/products/performance-growth',
       desc: 'Built-in email notifications for approvals, announcements, and payroll updates to keep everyone in the loop.',
       icon: <Mail className="h-6 w-6 text-orange-600 dark:text-orange-400" />,
-      color: 'bg-orange-50 dark:bg-orange-900/30'
+      color: 'bg-orange-50 dark:bg-orange-900/30',
+      iconAnim: { hover: { x: [0, 5, 0], y: [0, -5, 0] } }
     },
   ];
+
+  const gridVariants = {
+    hidden: {},
+    show: {
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
+  };
 
   return (
     <div className="bg-white dark:bg-slate-900">
@@ -164,34 +198,65 @@ export default function ProductsPage() {
 
       {/* Cards Section */}
       <div className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-          {modules.map((m, i) => {
-            // Cycle through stagger classes 1-4
-            const staggerClass = `stagger-${(i % 4) + 1}`;
-            return (
-              <div 
-                key={i} 
-                className={`group animate-fade-up ${staggerClass} relative p-8 rounded-[2rem] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-2xl hover:shadow-brand-500/20 transition-all duration-500 transform hover:-translate-y-3 overflow-hidden cursor-pointer`}
-              >
-                {/* Glow reveal on hover */}
-                <div className="absolute inset-0 bg-gradient-to-br from-brand-50/50 via-transparent to-transparent dark:from-brand-900/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
-                
-                <div className={`relative z-10 h-16 w-16 rounded-2xl flex items-center justify-center mb-8 shadow-sm ${m.color} group-hover:scale-110 group-hover:-translate-y-1 group-hover:rotate-3 transition-all duration-500`}>
-                  {m.icon}
+        <motion.div 
+          className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20"
+          variants={!prefersReducedMotion ? gridVariants : {}}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-50px" }}
+        >
+          {modules.map((m, i) => (
+            <motion.div 
+              key={i} 
+              variants={!prefersReducedMotion ? cardVariants : {}}
+              whileHover={!prefersReducedMotion ? "hover" : {}}
+              onClick={() => m.link ? navigate(m.link) : null}
+              className="group relative p-8 rounded-[2rem] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-300 dark:hover:border-brand-700 transition-colors overflow-hidden cursor-pointer"
+            >
+              {/* Card Hover Lift & Shadow */}
+              <motion.div 
+                className="absolute inset-0 bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm pointer-events-none"
+                variants={{
+                  hover: { 
+                    y: -4, 
+                    boxShadow: "0 20px 40px -10px rgba(15, 122, 108, 0.15)",
+                    transition: { duration: 0.3 }
+                  }
+                }}
+              />
+
+              {/* Glow reveal on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-brand-50/50 via-transparent to-transparent dark:from-brand-900/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-[2rem]"></div>
+              
+              {/* Featured Indicator */}
+              {m.isFeatured && (
+                <div className="absolute top-6 right-6 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-500"></span>
                 </div>
-                <h3 className="relative z-10 text-xl font-bold text-slate-900 dark:text-white mb-4 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{m.title}</h3>
-                <p className="relative z-10 text-slate-600 dark:text-slate-400 leading-relaxed">{m.desc}</p>
-                
-                {/* Decorative circle that expands on hover */}
-                <div className="absolute -bottom-16 -right-16 w-32 h-32 rounded-full bg-brand-50 dark:bg-brand-900/10 opacity-0 group-hover:opacity-100 group-hover:scale-[2.5] transition-all duration-700 ease-out pointer-events-none"></div>
+              )}
+
+              <div className="relative z-10 flex flex-col items-start">
+                <motion.div 
+                  variants={!prefersReducedMotion ? m.iconAnim : {}}
+                  transition={{ duration: 0.4 }}
+                  className={`h-16 w-16 rounded-2xl flex items-center justify-center mb-8 shadow-sm ${m.color}`}
+                >
+                  {m.icon}
+                </motion.div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{m.title}</h3>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{m.desc}</p>
               </div>
-            );
-          })}
-        </div>
+              
+              {/* Decorative circle that expands on hover */}
+              <div className="absolute -bottom-16 -right-16 w-32 h-32 rounded-full bg-brand-50 dark:bg-brand-900/10 opacity-0 group-hover:opacity-100 group-hover:scale-[2.5] transition-all duration-700 ease-out pointer-events-none"></div>
+            </motion.div>
+          ))}
+        </motion.div>
 
         {/* Six Checkpoints Section */}
-        <div className="mt-32 mb-24">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+        <div className="mt-32 mb-24 relative" ref={timelineRef}>
+          <div className="text-center max-w-3xl mx-auto mb-16 relative z-10">
             <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-6">
               Six checkpoints from inputs to money in accounts
             </h2>
@@ -200,66 +265,163 @@ export default function ProductsPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Vertical Progress Line (Desktop) */}
+          <div className="hidden lg:block absolute left-[50%] top-[250px] bottom-[100px] w-1 bg-slate-200 dark:bg-slate-700 -translate-x-1/2 z-0 rounded-full overflow-hidden">
+            <motion.div 
+              className="w-full bg-brand-500 origin-top" 
+              style={{ height: prefersReducedMotion ? '100%' : progressHeight }}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-24 gap-y-12 relative z-10">
+            
             {/* Step 1 */}
-            <div className="relative p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-brand-300 transition-colors group">
-              <div className="absolute top-8 right-8 text-5xl font-black text-slate-200 dark:text-slate-700/50 group-hover:text-brand-100 dark:group-hover:text-brand-900/50 transition-colors">01</div>
-              <div className="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center mb-6 text-brand-600 dark:text-brand-400">
-                <Clock className="h-6 w-6" />
+            <motion.div 
+              className="relative p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 lg:justify-self-end lg:w-full max-w-lg group hover:border-brand-300 transition-colors"
+              whileInView={!prefersReducedMotion ? "active" : "active"}
+              initial={!prefersReducedMotion ? "inactive" : "active"}
+              viewport={{ margin: "-20% 0px -20% 0px" }}
+              variants={{
+                inactive: { opacity: 0.8 },
+                active: { opacity: 1 }
+              }}
+            >
+              <motion.div 
+                className="absolute top-8 right-8 text-6xl font-black text-slate-200/50 dark:text-slate-700/30 transition-colors"
+                variants={{
+                  inactive: { opacity: 0.1, scale: 0.9 },
+                  active: { opacity: 1, scale: 1, color: "rgba(203, 213, 225, 1)" } // subtle highlight
+                }}
+              >
+                01
+              </motion.div>
+              <div className="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center mb-6 text-brand-600 dark:text-brand-400 overflow-hidden">
+                <motion.div
+                  variants={{ active: { rotate: [0, -15, 15, 0], transition: { duration: 0.5, repeat: Infinity, repeatDelay: 3 } } }}
+                >
+                  <Clock className="h-6 w-6" />
+                </motion.div>
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 relative z-10">Sync Attendance & Leave</h3>
               <p className="text-slate-600 dark:text-slate-400 relative z-10">Inputs are gathered automatically from biometrics and self-service portals to calculate payable days.</p>
-            </div>
+            </motion.div>
             
             {/* Step 2 */}
-            <div className="relative p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 transition-colors group">
-              <div className="absolute top-8 right-8 text-5xl font-black text-slate-200 dark:text-slate-700/50 group-hover:text-indigo-100 dark:group-hover:text-indigo-900/50 transition-colors">02</div>
+            <motion.div 
+              className="relative p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 lg:justify-self-start lg:w-full max-w-lg  group hover:border-indigo-300 transition-colors"
+              whileInView={!prefersReducedMotion ? "active" : "active"}
+              initial={!prefersReducedMotion ? "inactive" : "active"}
+              viewport={{ margin: "-20% 0px -20% 0px" }}
+            >
+              <motion.div 
+                className="absolute top-8 right-8 text-6xl font-black text-slate-200/50 dark:text-slate-700/30 transition-colors"
+                variants={{
+                  inactive: { opacity: 0.1, scale: 0.9 },
+                  active: { opacity: 1, scale: 1 }
+                }}
+              >02</motion.div>
               <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-6 text-indigo-600 dark:text-indigo-400">
-                <Calculator className="h-6 w-6" />
+                <motion.div variants={{ active: { y: [0, 2, 0], scale: [1, 0.9, 1], transition: { duration: 0.4, repeat: Infinity, repeatDelay: 2 } } }}>
+                  <Calculator className="h-6 w-6" />
+                </motion.div>
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 relative z-10">Handle Deductions</h3>
               <p className="text-slate-600 dark:text-slate-400 relative z-10">Statutory compliances like PF, ESI, PT, and TDS are calculated precisely with built-in formulas.</p>
-            </div>
+            </motion.div>
 
             {/* Step 3 */}
-            <div className="relative p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-blue-300 transition-colors group">
-              <div className="absolute top-8 right-8 text-5xl font-black text-slate-200 dark:text-slate-700/50 group-hover:text-blue-100 dark:group-hover:text-blue-900/50 transition-colors">03</div>
+            <motion.div 
+              className="relative p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 lg:justify-self-end lg:w-full max-w-lg  group hover:border-blue-300 transition-colors"
+              whileInView={!prefersReducedMotion ? "active" : "active"}
+              initial={!prefersReducedMotion ? "inactive" : "active"}
+              viewport={{ margin: "-20% 0px -20% 0px" }}
+            >
+              <motion.div 
+                className="absolute top-8 right-8 text-6xl font-black text-slate-200/50 dark:text-slate-700/30 transition-colors"
+                variants={{
+                  inactive: { opacity: 0.1, scale: 0.9 },
+                  active: { opacity: 1, scale: 1 }
+                }}
+              >03</motion.div>
               <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center mb-6 text-blue-600 dark:text-blue-400">
-                <FileText className="h-6 w-6" />
+                <motion.div variants={{ active: { scale: [1, 1.1, 1], rotateY: [0, 15, 0], transition: { duration: 0.5, repeat: Infinity, repeatDelay: 2.5 } } }}>
+                  <FileText className="h-6 w-6" />
+                </motion.div>
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 relative z-10">Review Salary Register</h3>
               <p className="text-slate-600 dark:text-slate-400 relative z-10">A detailed, reviewable draft is generated. Check every number before moving forward.</p>
-            </div>
+            </motion.div>
 
             {/* Step 4 */}
-            <div className="relative p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 transition-colors group">
-              <div className="absolute top-8 right-8 text-5xl font-black text-slate-200 dark:text-slate-700/50 group-hover:text-emerald-100 dark:group-hover:text-emerald-900/50 transition-colors">04</div>
+            <motion.div 
+              className="relative p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 lg:justify-self-start lg:w-full max-w-lg  group hover:border-emerald-300 transition-colors"
+              whileInView={!prefersReducedMotion ? "active" : "active"}
+              initial={!prefersReducedMotion ? "inactive" : "active"}
+              viewport={{ margin: "-20% 0px -20% 0px" }}
+            >
+              <motion.div 
+                className="absolute top-8 right-8 text-6xl font-black text-slate-200/50 dark:text-slate-700/30 transition-colors"
+                variants={{
+                  inactive: { opacity: 0.1, scale: 0.9 },
+                  active: { opacity: 1, scale: 1 }
+                }}
+              >04</motion.div>
               <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mb-6 text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-6 w-6" />
+                <motion.div variants={{ active: { scale: [0.8, 1.2, 1], transition: { duration: 0.4, repeat: Infinity, repeatDelay: 3 } } }}>
+                  <CheckCircle2 className="h-6 w-6" />
+                </motion.div>
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 relative z-10">One-Tap Approvals</h3>
               <p className="text-slate-600 dark:text-slate-400 relative z-10">Route the finalized payroll batch to managers and finance heads for a final sign-off.</p>
-            </div>
+            </motion.div>
 
             {/* Step 5 - Highlighted */}
-            <div className="relative p-8 rounded-[2rem] bg-white dark:bg-slate-800 border-2 border-brand-500 shadow-xl shadow-brand-500/15 transform scale-105 z-10">
-              <div className="absolute top-8 right-8 text-5xl font-black text-brand-100 dark:text-brand-900/40">05</div>
+            <motion.div 
+              className="relative p-8 rounded-[2rem] bg-white dark:bg-slate-800 border-2 border-brand-500 shadow-xl shadow-brand-500/15 z-10 lg:justify-self-end lg:w-full max-w-lg "
+              whileInView={!prefersReducedMotion ? "active" : "active"}
+              initial={!prefersReducedMotion ? "inactive" : "active"}
+              viewport={{ margin: "-20% 0px -20% 0px" }}
+              animate={!prefersReducedMotion ? { boxShadow: ["0 0 0px 0px rgba(15, 122, 108, 0)", "0 0 25px 2px rgba(15, 122, 108, 0.4)", "0 0 0px 0px rgba(15, 122, 108, 0)"] } : {}}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <motion.div 
+                className="absolute top-8 right-8 text-6xl font-black text-brand-100/60 dark:text-brand-900/40"
+                variants={{
+                  inactive: { opacity: 0.3, scale: 0.95 },
+                  active: { opacity: 1, scale: 1.05 }
+                }}
+              >05</motion.div>
               <div className="h-12 w-12 rounded-full bg-gradient-to-r from-brand-600 to-indigo-600 flex items-center justify-center mb-6 text-white shadow-md">
-                <IndianRupee className="h-6 w-6" />
+                <motion.div variants={{ active: { rotateY: [0, 180, 360], scale: [1, 1.1, 1], transition: { duration: 1, repeat: Infinity, repeatDelay: 2 } } }}>
+                  <IndianRupee className="h-6 w-6" />
+                </motion.div>
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 relative z-10">Disburse Salaries</h3>
               <p className="text-slate-600 dark:text-slate-400 relative z-10">Press disburse to securely route money directly into your employees' bank accounts in one click.</p>
-            </div>
+            </motion.div>
 
             {/* Step 6 */}
-            <div className="relative p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-purple-300 transition-colors group">
-              <div className="absolute top-8 right-8 text-5xl font-black text-slate-200 dark:text-slate-700/50 group-hover:text-purple-100 dark:group-hover:text-purple-900/50 transition-colors">06</div>
+            <motion.div 
+              className="relative p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 lg:justify-self-start lg:w-full max-w-lg  group hover:border-purple-300 transition-colors"
+              whileInView={!prefersReducedMotion ? "active" : "active"}
+              initial={!prefersReducedMotion ? "inactive" : "active"}
+              viewport={{ margin: "-20% 0px -20% 0px" }}
+            >
+              <motion.div 
+                className="absolute top-8 right-8 text-6xl font-black text-slate-200/50 dark:text-slate-700/30 transition-colors"
+                variants={{
+                  inactive: { opacity: 0.1, scale: 0.9 },
+                  active: { opacity: 1, scale: 1 }
+                }}
+              >06</motion.div>
               <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center mb-6 text-purple-600 dark:text-purple-400">
-                <Send className="h-6 w-6" />
+                <motion.div variants={{ active: { x: [0, 10, 0], y: [0, -10, 0], opacity: [1, 0, 1], transition: { duration: 1.2, repeat: Infinity, repeatDelay: 2 } } }}>
+                  <Send className="h-6 w-6" />
+                </motion.div>
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 relative z-10">Distribute Payslips</h3>
               <p className="text-slate-600 dark:text-slate-400 relative z-10">Payslips and tax forms are automatically generated and delivered to employees instantly.</p>
-            </div>
+            </motion.div>
           </div>
         </div>
 

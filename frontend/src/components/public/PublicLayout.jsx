@@ -27,11 +27,11 @@ function MobileNavItem({ link }) {
         <div className="ml-4 flex flex-col gap-1 border-l-2 border-slate-100 dark:border-slate-800 pl-4 mt-1">
           {link.dropdown.map(item => (
             <Link 
-              key={item}
-              to={`/features#${item.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+              key={item.name}
+              to={item.path}
               className="text-sm font-medium text-slate-600 dark:text-slate-400 py-2 hover:text-brand-600 dark:hover:text-brand-400"
             >
-              {item}
+              {item.name}
             </Link>
           ))}
         </div>
@@ -65,14 +65,15 @@ export default function PublicLayout() {
       name: 'Products', 
       path: '/products',
       dropdown: [
-        'Core HR Database',
-        'Payroll Management',
-        'Leave & Attendance',
-        'Expense Management',
-        'Document Center',
-        'Performance & Growth',
-        'Statutory Compliance',
-        'Employee Self-Service'
+        { name: 'Core HR Database', path: '/products/core-hr-database' },
+        { name: 'Payroll Management', path: '/products/payroll-management' },
+        { name: 'Time & Attendance', path: '/products/attendance' },
+        { name: 'Leave Management', path: '/products/leave-management' },
+        { name: 'Expense Management', path: '/products/expense-management' },
+        { name: 'Document Center', path: '/products/document-center' },
+        { name: 'Performance & Growth', path: '/products/performance-growth' },
+        { name: 'Statutory Compliance', path: '/products/statutory-compliance' },
+        { name: 'Employee Self-Service', path: '/products/employee-self-service' }
       ]
     },
     { name: 'Pricing', path: '/pricing' },
@@ -86,7 +87,7 @@ export default function PublicLayout() {
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-transparent ${
           isScrolled 
-            ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-slate-200 dark:border-slate-800 shadow-sm py-3' 
+            ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-md py-3' 
             : 'bg-transparent py-5'
         }`}
       >
@@ -119,11 +120,11 @@ export default function PublicLayout() {
                       <div className="absolute top-full left-0 mt-0 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                         {link.dropdown.map(item => (
                           <Link 
-                            key={item} 
-                            to={`/features#${item.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                            className="block px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                            key={item.name} 
+                            to={item.path}
+                            className="block px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-600 dark:hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all"
                           >
-                            {item}
+                            {item.name}
                           </Link>
                         ))}
                       </div>
@@ -138,14 +139,14 @@ export default function PublicLayout() {
               {user ? (
                 <Link
                   to={user.is_superuser && !user.organization_id ? '/platform' : '/dashboard'}
-                  className="text-sm font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors"
+                  className="text-sm font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all"
                 >
                   Dashboard
                 </Link>
               ) : (
                 <Link
                   to="/login"
-                  className="text-sm font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors"
+                  className="text-sm font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all"
                 >
                   Sign in
                 </Link>
@@ -220,7 +221,7 @@ export default function PublicLayout() {
               </p>
               <div className="flex items-center gap-2 text-sm text-slate-300">
                 <span className="font-semibold text-white">Email:</span>
-                <a href="mailto:globalworksphere@gmail.com" className="hover:text-brand-400 transition-colors">
+                <a href="mailto:globalworksphere@gmail.com" className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">
                   globalworksphere@gmail.com
                 </a>
               </div>
@@ -230,21 +231,21 @@ export default function PublicLayout() {
               <div>
                 <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider">Product</h3>
                 <ul className="space-y-4 text-sm">
-                  <li><Link to="/products" className="hover:text-brand-400 transition-colors">Features</Link></li>
-                  <li><Link to="/pricing" className="hover:text-brand-400 transition-colors">Pricing</Link></li>
-                  <li><Link to="/demo" className="hover:text-brand-400 transition-colors">Request Demo</Link></li>
+                  <li><Link to="/products" className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">Features</Link></li>
+                  <li><Link to="/pricing" className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">Pricing</Link></li>
+                  <li><Link to="/demo" className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">Request Demo</Link></li>
                 </ul>
               </div>
               <div>
                 <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider">Company</h3>
                 <ul className="space-y-4 text-sm">
-                  <li><Link to="/about" className="hover:text-brand-400 transition-colors">About Us</Link></li>
-                  <li><Link to="/contact" className="hover:text-brand-400 transition-colors">Contact</Link></li>
+                  <li><Link to="/about" className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">About Us</Link></li>
+                  <li><Link to="/contact" className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">Contact</Link></li>
                   <li>
                     {user ? (
-                      <Link to={user.is_superuser && !user.organization_id ? '/platform' : '/dashboard'} className="hover:text-brand-400 transition-colors">Dashboard</Link>
+                      <Link to={user.is_superuser && !user.organization_id ? '/platform' : '/dashboard'} className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">Dashboard</Link>
                     ) : (
-                      <Link to="/login" className="hover:text-brand-400 transition-colors">Sign In</Link>
+                      <Link to="/login" className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">Sign In</Link>
                     )}
                   </li>
                 </ul>
@@ -252,8 +253,8 @@ export default function PublicLayout() {
               <div>
                 <h3 className="text-white font-bold mb-6 text-sm uppercase tracking-wider">Legal</h3>
                 <ul className="space-y-4 text-sm">
-                  <li><Link to="#" className="hover:text-brand-400 transition-colors">Privacy Policy</Link></li>
-                  <li><Link to="#" className="hover:text-brand-400 transition-colors">Terms of Service</Link></li>
+                  <li><Link to="#" className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">Privacy Policy</Link></li>
+                  <li><Link to="#" className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">Terms of Service</Link></li>
                 </ul>
               </div>
             </div>

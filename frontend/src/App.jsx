@@ -24,6 +24,8 @@ const PlatformDashboardPage = lazy(() => import('./pages/platform/PlatformDashbo
 const PlatformOrganizationsPage = lazy(() => import('./pages/platform/PlatformOrganizationsPage'))
 const LetterTemplates = lazy(() => import('./pages/letters/LetterTemplates'))
 const LetterEditor = lazy(() => import('./pages/letters/LetterEditor'))
+const IssueLetterPage = lazy(() => import('./pages/letters/IssueLetterPage'))
+const ResignationPage = lazy(() => import('./pages/ResignationPage'))
 const ExpensesPage = lazy(() => import('./pages/ExpensesPage'))
 const AdminExpensesPage = lazy(() => import('./pages/AdminExpensesPage'))
 const AssetsPage = lazy(() => import('./pages/AssetsPage'))
@@ -44,6 +46,15 @@ const FeaturesPage = lazy(() => import('./pages/public/FeaturesPage'))
 const PricingPage = lazy(() => import('./pages/public/PricingPage'))
 const AboutPage = lazy(() => import('./pages/public/AboutPage'))
 const RequestDemoPage = lazy(() => import('./pages/public/RequestDemoPage'))
+const AttendanceProductPage = lazy(() => import('./pages/public/AttendanceProductPage'))
+const CoreHRProductPage = lazy(() => import('./pages/public/CoreHRProductPage'))
+const PayrollProductPage = lazy(() => import('./pages/public/PayrollProductPage'))
+const LeaveProductPage = lazy(() => import('./pages/public/LeaveProductPage'))
+const ExpenseProductPage = lazy(() => import('./pages/public/ExpenseProductPage'))
+const DocumentProductPage = lazy(() => import('./pages/public/DocumentProductPage'))
+const PerformanceProductPage = lazy(() => import('./pages/public/PerformanceProductPage'))
+const ComplianceProductPage = lazy(() => import('./pages/public/ComplianceProductPage'))
+const ESSProductPage = lazy(() => import('./pages/public/ESSProductPage'))
 
 export default function App() {
   return (
@@ -52,6 +63,15 @@ export default function App() {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Suspense fallback={<RoutePageFallback />}><LandingPage /></Suspense>} />
         <Route path="/products" element={<Suspense fallback={<RoutePageFallback />}><ProductsPage /></Suspense>} />
+                <Route path="/products/attendance" element={<Suspense fallback={<RoutePageFallback />}><AttendanceProductPage /></Suspense>} />
+        <Route path="/products/core-hr-database" element={<Suspense fallback={<RoutePageFallback />}><CoreHRProductPage /></Suspense>} />
+        <Route path="/products/payroll-management" element={<Suspense fallback={<RoutePageFallback />}><PayrollProductPage /></Suspense>} />
+        <Route path="/products/leave-management" element={<Suspense fallback={<RoutePageFallback />}><LeaveProductPage /></Suspense>} />
+        <Route path="/products/expense-management" element={<Suspense fallback={<RoutePageFallback />}><ExpenseProductPage /></Suspense>} />
+        <Route path="/products/document-center" element={<Suspense fallback={<RoutePageFallback />}><DocumentProductPage /></Suspense>} />
+        <Route path="/products/performance-growth" element={<Suspense fallback={<RoutePageFallback />}><PerformanceProductPage /></Suspense>} />
+        <Route path="/products/statutory-compliance" element={<Suspense fallback={<RoutePageFallback />}><ComplianceProductPage /></Suspense>} />
+        <Route path="/products/employee-self-service" element={<Suspense fallback={<RoutePageFallback />}><ESSProductPage /></Suspense>} />
         <Route path="/features" element={<Suspense fallback={<RoutePageFallback />}><FeaturesPage /></Suspense>} />
         <Route path="/pricing" element={<Suspense fallback={<RoutePageFallback />}><PricingPage /></Suspense>} />
         <Route path="/about" element={<Suspense fallback={<RoutePageFallback />}><AboutPage /></Suspense>} />
@@ -135,6 +155,7 @@ export default function App() {
           <Route element={<RoleRoute allowedRoles={['admin', 'hr']} />}>
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/letters" element={<LetterTemplates />} />
+            <Route path="/letters/issue" element={<IssueLetterPage />} />
             <Route path="/letters/:id" element={<LetterEditor />} />
           </Route>
           
@@ -167,6 +188,7 @@ export default function App() {
           {/* Expenses */}
           <Route element={<RoleRoute allowedRoles={['admin', 'hr', 'employee', 'manager']} />}>
             <Route path="/expenses" element={<Suspense fallback={<RoutePageFallback />}><ExpensesPage /></Suspense>} />
+            <Route path="/resignation" element={<Suspense fallback={<RoutePageFallback />}><ResignationPage /></Suspense>} />
           </Route>
           
           <Route element={<RoleRoute allowedRoles={['admin', 'hr']} />}>
