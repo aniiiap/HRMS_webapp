@@ -389,6 +389,8 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 summary[status_key] += 1
             elif status_key == "no_record":
                 summary["absent"] += 1
+            elif status_key == "anomaly_approved":
+                summary["present"] += 1
 
             manager = e.manager
             manager_name = ""

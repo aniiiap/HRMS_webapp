@@ -10,7 +10,7 @@ from .rule_settings import resolve_shift_rule, shift_end_datetime, shift_start_d
 
 def attendance_anomaly(attendance: Attendance) -> str:
     if attendance.correction_requests.filter(status=AttendanceCorrectionStatus.APPROVED).exists():
-        return "none"
+        return "anomaly_approved"
 
     today = timezone.localdate()
     if attendance.check_in and not attendance.check_out and attendance.date <= today:

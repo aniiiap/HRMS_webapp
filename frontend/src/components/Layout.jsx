@@ -38,13 +38,14 @@ const allGeneral = [
   { to: '/employees', label: 'Employees', icon: Users, iconFx: 'icon-fx-pop' },
   { to: '/attendance', label: 'Attendance', icon: CalendarDays, iconFx: 'icon-fx-nudge' },
   { to: '/announcements', label: 'Announcements', icon: Megaphone, iconFx: 'icon-fx-rise' },
-  { to: '/letters', label: 'Letters & Docs', icon: FileText, iconFx: 'icon-fx-tilt' },
+  { to: '/letters', label: 'Document Center', icon: FileText, iconFx: 'icon-fx-tilt' },
 ]
 
 const allMore = [
   { to: '/leaves', label: 'Leaves', icon: Briefcase, iconFx: 'icon-fx-tilt' },
   { to: '/holidays', label: 'Holiday Calendar', icon: Calendar, iconFx: 'icon-fx-pop' },
   { to: '/expenses', label: 'Expenses', icon: Receipt, iconFx: 'icon-fx-rise' },
+  { to: '/resignation', label: 'Resignation', icon: FileText, iconFx: 'icon-fx-rise' },
   { to: '/helpdesk', label: 'Helpdesk', icon: LifeBuoy, iconFx: 'icon-fx-pop' },
   { to: '/platform-support', label: 'Platform Support', icon: LifeBuoy, iconFx: 'icon-fx-pop' },
   { to: '/expenses/approvals', label: 'Expense Approvals', icon: Receipt, iconFx: 'icon-fx-rise' },
@@ -83,6 +84,7 @@ export default function Layout() {
     return item
   }).filter((item) => {
     if (item.to === '/employees') return ['admin', 'hr'].includes(user?.role)
+    if (item.to === '/letters') return ['admin', 'hr'].includes(user?.role)
     if (item.to === '/announcements') return ['admin', 'hr', 'employee'].includes(user?.role)
     if (item.to === '/payroll') return ['admin', 'hr', 'employee', 'manager'].includes(user?.role)
     return true
@@ -225,20 +227,21 @@ export default function Layout() {
         }}
       />
 
+      {/* Mobile Backdrop */}
       {mobileOpen && (
-        <button
-          type="button"
-          className="fixed inset-0 z-40 bg-stone-900/55 backdrop-blur-sm dark:bg-black/65 md:hidden motion-safe:animate-fade-in"
-          aria-label="Close menu"
+        <div
+          className="fixed inset-0 z-[90] bg-slate-900/60 backdrop-blur-sm transition-opacity md:hidden dark:bg-black/60"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       <div className="flex min-h-0 flex-1">
+        {/* Sidebar */}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex w-[min(100%,272px)] flex-col bg-surface-card shadow-2xl transition-transform duration-300 ease-out dark:bg-stone-950 dark:shadow-black/50 md:static md:z-0 md:w-[14.5rem] md:min-w-[14.5rem] md:max-w-[14.5rem] md:shadow-none ${
-            mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-          }`}
+          className={`
+            fixed inset-y-0 left-0 z-[100] flex w-72 flex-col bg-white shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] dark:bg-stone-950 md:static md:z-auto md:w-64 md:translate-x-0 md:shadow-none
+            ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          `}
         >
           {Sidebar}
           <button

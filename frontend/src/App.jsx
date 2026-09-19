@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage'
 const ActivateAccountPage = lazy(() => import('./pages/ActivateAccountPage'))
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const CompleteProfilePage = lazy(() => import('./pages/CompleteProfilePage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'))
 const EmployeeProfilePage = lazy(() => import('./pages/EmployeeProfilePage'))
@@ -105,6 +106,7 @@ export default function App() {
         }
       />
       <Route element={<ProtectedRoute />}>
+      <Route path="/complete-profile" element={<Suspense fallback={<RoutePageFallback />}><CompleteProfilePage /></Suspense>} />
         <Route element={<PlatformRoute />}>
           <Route element={<PlatformLayout />}>
             <Route

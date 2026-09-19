@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, messageFromError } from '../api/client'
 
@@ -6,11 +6,20 @@ export default function ActivateAccountPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const token = searchParams.get('token') || ''
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  useEffect(() => {
+    if (token) {
+      api.get(`/api/auth/invite/details/?token=${token}`)
+        .then(res => setEmail(res.data.email))
+        .catch(err => setError(messageFromError(err) || 'Invalid or expired invite link.'))
+    }
+  }, [token])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -48,6 +57,13 @@ export default function ActivateAccountPage() {
         </p>
         {error && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
         {success && <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">{success}</div>}
+        <input
+          type="email"
+          disabled
+          value={email}
+          placeholder="Email address"
+          className="w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-slate-500 outline-none cursor-not-allowed dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
+        />
         <input
           type="password"
           placeholder="New password"

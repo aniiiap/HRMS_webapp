@@ -31,6 +31,7 @@ def _user_payload(user):
         "organization_id": user_organization_id(user),
         "profile_image": profile_img,
         "expense_backdate_limit_days": backdate_limit,
+        "onboarding_pending": user.onboarding_pending,
     }
 
 
@@ -57,6 +58,7 @@ class UserSerializer(serializers.ModelSerializer):
             "organization_id",
             "profile_image",
             "expense_backdate_limit_days",
+            "onboarding_pending",
         )
         read_only_fields = ("id", "date_joined", "employee_id", "organization_id", "is_superuser")
 
@@ -100,6 +102,16 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return user
 
 
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import InvalidToken
+
+class CustomTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        try:
+            return super().validate(attrs)
+        except User.DoesNotExist:
+            raise InvalidToken("User no longer exists")
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -116,7 +128,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         if not user:
             raise serializers.ValidationError({"error": "No account found with this email address."})
-        if user.onboarding_pending or not user.has_usable_password():
+        if not user.has_usable_password():
             raise serializers.ValidationError(
                 {"error": "Please activate your account from the invite email before signing in."}
             )
@@ -169,8 +181,7 @@ class InviteAcceptSerializer(serializers.Serializer):
         user = invite.user
         user.set_password(self.validated_data["password"])
         user.is_active = True
-        user.onboarding_pending = False
-        user.save(update_fields=["password", "is_active", "onboarding_pending"])
+        user.save(update_fields=["password", "is_active"])
         invite.used_at = timezone.now()
         invite.save(update_fields=["used_at"])
         InviteToken.objects.filter(user=user, used_at__isnull=True).exclude(pk=invite.pk).delete()

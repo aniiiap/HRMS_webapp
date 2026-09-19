@@ -440,6 +440,7 @@ export default function AttendancePage() {
     if (status === 'leave') return 'bg-blue-500/95 ring-1 ring-blue-300/60 dark:ring-blue-400/20'
     if (status === 'wfh') return 'bg-lime-500/95 ring-1 ring-lime-300/60 dark:ring-lime-400/20'
     if (status === 'anomaly') return 'bg-amber-500/95 ring-1 ring-amber-300/60 dark:ring-amber-400/20'
+    if (status === 'anomaly_approved') return 'bg-amber-500/95 ring-1 ring-amber-300/60 dark:ring-amber-400/20'
     if (status === 'holiday') return 'bg-fuchsia-500/95 ring-1 ring-fuchsia-300/60 dark:ring-fuchsia-400/20'
     if (status === 'holiday_worked') return 'bg-fuchsia-600/95 ring-1 ring-fuchsia-400/60 dark:ring-fuchsia-500/20'
     if (status === 'weekend') return 'bg-slate-300 ring-1 ring-slate-300/80 dark:bg-slate-600 dark:ring-slate-500/60'
@@ -458,6 +459,7 @@ export default function AttendancePage() {
     if (status === 'holiday') return 'H'
     if (status === 'holiday_worked') return 'HW'
     if (status === 'anomaly') return 'AN'
+    if (status === 'anomaly_approved') return 'P'
     if (status === 'weekend') return 'WO'
     if (status === 'lop') return 'LOP'
     if (status === 'half_day') return 'HD'
@@ -527,6 +529,7 @@ export default function AttendancePage() {
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-rose-500" />Absent</span>
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-blue-500" />Leave</span>
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-amber-500" />Anomaly</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-amber-500 flex items-center justify-center text-[9px] font-bold text-white leading-none pb-[1px]">P</span>Anomaly Approved</span>
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-fuchsia-500" />Holiday</span>
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-fuchsia-600" />Holiday Worked</span>
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-slate-300 dark:bg-slate-600" />Weekend</span>

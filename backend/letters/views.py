@@ -166,3 +166,22 @@ class SentLetterViewSet(viewsets.ReadOnlyModelViewSet):
         sent_letter.signed_at = timezone.now()
         sent_letter.save(update_fields=["status", "signed_at"])
         return Response(SentLetterSerializer(sent_letter).data)
+    @action(detail=False, methods=["post"], url_path="render_html")
+    def render_html(self, request):
+        """Returns the HTML with variables replaced for a specific employee, so the frontend can edit it."""
+        try:
+            employee_id = request.data.get("employee_id")
+            body_html = request.data.get("body_html", "")
+            
+            org = request.user.organization
+            employee = None
+            if employee_id:
+                employee = Employee.objects.filter(id=employee_id, organization=org).first()
+                
+            if not employee:
+                return Response({"error": "Employee not found."}, status=status.HTTP_404_NOT_FOUND)
+                
+            rendered_html = render_template_variables(body_html, employee)
+            return Response({"rendered_html": rendered_html})
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -26,6 +26,7 @@ def get_raw_storage():
 
 class SentLetter(models.Model):
     STATUS_CHOICES = (
+        ("draft", "Draft"),
         ("sent", "Sent"),
         ("viewed", "Viewed"),
         ("signed", "Signed"),
@@ -35,8 +36,9 @@ class SentLetter(models.Model):
     template = models.ForeignKey(LetterTemplate, on_delete=models.SET_NULL, null=True, blank=True)
     subject = models.CharField(max_length=255)
     note = models.TextField(blank=True)
-    pdf_file = models.FileField(upload_to="sent_letters/", storage=local_storage)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="sent")
+    draft_html = models.TextField(blank=True, help_text="Stores the edited HTML before final PDF generation.")
+    pdf_file = models.FileField(upload_to="sent_letters/", storage=local_storage, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     signed_at = models.DateTimeField(null=True, blank=True)
     sent_at = models.DateTimeField(auto_now_add=True)
 

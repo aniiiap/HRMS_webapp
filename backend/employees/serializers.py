@@ -27,8 +27,12 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "max_employees",
             "created_at",
             "signature_image",
+            "seal_image",
             "company_logo",
             "expense_backdate_limit_days",
+            "resignation_notice_period_days",
+            "resignation_auto_msg_enabled",
+            "resignation_auto_msg_text",
         )
         read_only_fields = ("id", "created_at")
 
@@ -61,6 +65,7 @@ class EmployeeDocumentSerializer(serializers.ModelSerializer):
 
 class EmployeeSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
+    official_email = serializers.EmailField(write_only=True, required=False)
     first_name = serializers.CharField(source="user.first_name", read_only=True)
     last_name = serializers.CharField(source="user.last_name", read_only=True)
     role = serializers.CharField(source="user.role", read_only=True)
@@ -76,6 +81,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "id",
             "user",
             "email",
+            "official_email",
+            "personal_email",
             "first_name",
             "last_name",
             "role",
@@ -183,10 +190,20 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         role = validated_data.pop("role", None)
+        official_email = validated_data.pop("official_email", None)
         employee = super().update(instance, self._apply_template(validated_data))
+        update_user_fields = []
         if role and employee.user.role != role:
             employee.user.role = role
-            employee.user.save(update_fields=["role"])
+            update_user_fields.append("role")
+        if official_email and employee.user.email != official_email:
+            from accounts.models import User
+            if User.objects.exclude(pk=employee.user.pk).filter(email__iexact=official_email).exists():
+                raise serializers.ValidationError({"official_email": "A user with this email already exists."})
+            employee.user.email = official_email
+            update_user_fields.append("email")
+        if update_user_fields:
+            employee.user.save(update_fields=update_user_fields)
         return employee
 
 
@@ -440,3 +457,39 @@ class OfficeLocationSettingsSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("id", "updated_at")
+class EmployeeCompleteProfileSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    phone = serializers.CharField(max_length=32, required=False, allow_blank=True)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
+    address = serializers.CharField(required=False, allow_blank=True)
+    
+    def save(self, **kwargs):
+        user = self.context['request'].user
+        employee = getattr(user, 'employee_profile', None)
+        
+        user.first_name = self.validated_data.get('first_name', user.first_name)
+        user.last_name = self.validated_data.get('last_name', user.last_name)
+        user.onboarding_pending = False
+        user.save(update_fields=['first_name', 'last_name', 'onboarding_pending'])
+        
+        if employee:
+            employee.phone = self.validated_data.get('phone', employee.phone)
+            employee.date_of_birth = self.validated_data.get('date_of_birth', employee.date_of_birth)
+            employee.address = self.validated_data.get('address', employee.address)
+            if not employee.personal_email:
+                employee.personal_email = user.email
+            employee.save(update_fields=['phone', 'date_of_birth', 'address', 'personal_email'])
+        
+        return user
+from .models import Resignation
+
+class ResignationSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.user.get_full_name', read_only=True)
+    employee_code = serializers.CharField(source='employee.employee_code', read_only=True)
+    reviewer_name = serializers.CharField(source='reviewed_by.user.get_full_name', read_only=True)
+
+    class Meta:
+        model = Resignation
+        fields = '__all__'
+        read_only_fields = ('employee', 'submitted_at', 'status', 'reviewed_by', 'reviewed_at', 'reviewer_notes')

@@ -254,14 +254,25 @@ export default function RequestDemoPage() {
                   ></textarea>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-5 rounded-xl bg-brand-600 text-white font-bold text-lg hover:bg-brand-700 shadow-xl shadow-brand-500/25 hover:shadow-brand-500/40 hover:-translate-y-1 transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-                >
-                  {loading ? 'Sending Request...' : 'Submit Request'}
-                </button>
-                <p className="text-center text-xs text-slate-500 font-medium">By submitting this form, you agree to our Privacy Policy.</p>
+                  <div className="flex items-start gap-3 px-1">
+                    <input 
+                      type="checkbox" 
+                      id="privacy_policy" 
+                      required 
+                      className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500" 
+                    />
+                    <label htmlFor="privacy_policy" className="text-xs text-slate-500 font-medium leading-relaxed">
+                      By submitting this form, you agree to our Privacy Policy.
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-5 rounded-xl bg-brand-600 text-white font-bold text-lg hover:bg-brand-700 shadow-xl shadow-brand-500/25 hover:shadow-brand-500/40 hover:-translate-y-1 transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  >
+                    {loading ? 'Sending Request...' : 'Submit Request'}
+                  </button>
               </form>
             </div>
           </motion.div>

@@ -10,17 +10,6 @@ def frontend_url_for_email() -> str:
     return settings.FRONTEND_URL.rstrip("/")
 
 
-def _resolve_frontend_url(origin: str | None = None) -> str:
-    """
-    Prefer explicit request origin for in-app/debug responses, fallback to FRONTEND_URL.
-    """
-    if origin:
-        parsed = urlparse(origin.strip())
-        if parsed.scheme in ("http", "https") and parsed.netloc:
-            return f"{parsed.scheme}://{parsed.netloc}"
-    return frontend_url_for_email()
-
-
 def issue_and_send_invite(
     user,
     *,
@@ -30,7 +19,7 @@ def issue_and_send_invite(
     organization_name: str | None = None,
 ):
     invite = InviteToken.create_for_user(user, created_by=created_by, lifetime_hours=24)
-    base_url = _resolve_frontend_url(frontend_origin)
+    base_url = frontend_url_for_email()
     invite_url = f"{base_url}/activate-account?token={invite.token}"
     full_name = f"{user.first_name} {user.last_name}".strip()
 

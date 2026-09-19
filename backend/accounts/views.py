@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics, permissions, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes, authentication_classes
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle, UserRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -49,7 +49,10 @@ class LoginView(TokenObtainPairView):
     throttle_scope = "auth_login"
 
 
+from .serializers import CustomTokenRefreshSerializer
+
 class RefreshView(TokenRefreshView):
+    serializer_class = CustomTokenRefreshSerializer
     pass
 
 
@@ -260,24 +263,29 @@ PASSWORD_RESET_SENT_MESSAGE = (
 
 
 @api_view(["POST"])
+@authentication_classes([])
 @permission_classes([permissions.AllowAny])
 @throttle_classes([AnonRateThrottle, ScopedRateThrottle])
 def password_reset_request_view(request):
     ser = PasswordResetRequestSerializer(data=request.data)
     ser.is_valid(raise_exception=True)
-    email = ser.validated_data["email"].strip().lower()
-    user = User.objects.filter(email__iexact=email).first()
-    payload = {"message": PASSWORD_RESET_SENT_MESSAGE}
-    if user and user_can_reset_password(user):
-        _reset, _reset_url, ok, detail = issue_and_send_password_reset(
-            user, frontend_origin=request.headers.get("Origin")
+    email = ser.validated_data["email"]
+    
+    if user_can_reset_password(email):
+        user = User.objects.get(email__iexact=email)
+        _token, _url, _ok, _detail = issue_and_send_password_reset(
+            user,
+            frontend_origin=request.headers.get("Origin")
         )
-        if not ok:
-            payload["email_status"] = detail
-    return Response(payload, status=status.HTTP_200_OK)
+    
+    return Response(
+        {"message": "If that email exists in our system, you will receive a password reset link shortly."},
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(["POST"])
+@authentication_classes([])
 @permission_classes([permissions.AllowAny])
 @throttle_classes([AnonRateThrottle, ScopedRateThrottle])
 def password_reset_confirm_view(request):
@@ -294,7 +302,29 @@ password_reset_request_view.throttle_scope = "auth_password_reset"
 password_reset_confirm_view.throttle_scope = "auth_password_reset"
 
 
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([permissions.AllowAny])
+@throttle_classes([AnonRateThrottle])
+def invite_details_view(request):
+    from .models import InviteToken
+    token = request.query_params.get("token")
+    if not token:
+        return Response({"error": "Missing token parameter"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    invite = InviteToken.objects.filter(token=token).select_related("user").first()
+    if not invite or not invite.is_valid:
+        return Response({"error": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response({
+        "email": invite.user.email,
+        "first_name": invite.user.first_name,
+        "last_name": invite.user.last_name
+    }, status=status.HTTP_200_OK)
+
+
 @api_view(["POST"])
+@authentication_classes([])
 @permission_classes([permissions.AllowAny])
 @throttle_classes([AnonRateThrottle])
 def invite_accept_view(request):

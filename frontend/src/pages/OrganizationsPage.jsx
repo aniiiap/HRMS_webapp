@@ -11,9 +11,9 @@ export default function OrganizationsPage() {
   const { isPrivileged, isPlatformAdmin } = useAuth()
   const [rows, setRows] = useState([])
   const [error, setError] = useState('')
-  const [loadingLogo, setLoadingLogo] = useState(false)
+  const [loadingFile, setLoadingFile] = useState(false)
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
-  const [orgToDeleteLogo, setOrgToDeleteLogo] = useState(null)
+  const [fileToDelete, setFileToDelete] = useState({ orgId: null, field: null, label: '' })
   
   const [backdateLimit, setBackdateLimit] = useState('')
   const [savingLimit, setSavingLimit] = useState(false)
@@ -54,43 +54,43 @@ export default function OrganizationsPage() {
     }
   }
 
-  const handleLogoUpload = async (e, orgId) => {
+  const handleFileUpload = async (e, orgId, field, label) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setLoadingLogo(true)
+    setLoadingFile(true)
     try {
       const formData = new FormData()
-      formData.append('company_logo', file)
+      formData.append(field, file)
       await api.patch(`/api/organizations/${orgId}/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-      toast.success('Company logo updated successfully.')
+      toast.success(`${label} updated successfully.`)
       await fetchOrgs()
     } catch (err) {
-      toast.error(messageFromError(err) || 'Failed to update company logo.')
+      toast.error(messageFromError(err) || `Failed to update ${label.toLowerCase()}.`)
     } finally {
-      setLoadingLogo(false)
+      setLoadingFile(false)
     }
   }
 
-  const confirmLogoDelete = (orgId) => {
-    setOrgToDeleteLogo(orgId)
+  const confirmFileDelete = (orgId, field, label) => {
+    setFileToDelete({ orgId, field, label })
     setShowConfirmDelete(true)
   }
 
-  const handleLogoDelete = async () => {
-    if (!orgToDeleteLogo) return
+  const handleFileDelete = async () => {
+    if (!fileToDelete.orgId) return
     setShowConfirmDelete(false)
-    setLoadingLogo(true)
+    setLoadingFile(true)
     try {
-      await api.patch(`/api/organizations/${orgToDeleteLogo}/`, { company_logo: null })
-      toast.success('Company logo removed.')
+      await api.patch(`/api/organizations/${fileToDelete.orgId}/`, { [fileToDelete.field]: null })
+      toast.success(`${fileToDelete.label} removed.`)
       await fetchOrgs()
     } catch (err) {
-      toast.error(messageFromError(err) || 'Failed to remove company logo.')
+      toast.error(messageFromError(err) || `Failed to remove ${fileToDelete.label.toLowerCase()}.`)
     } finally {
-      setLoadingLogo(false)
-      setOrgToDeleteLogo(null)
+      setLoadingFile(false)
+      setFileToDelete({ orgId: null, field: null, label: '' })
     }
   }
 
@@ -154,28 +154,90 @@ export default function OrganizationsPage() {
               </div>
             </div>
             
-            <div className="flex flex-col gap-2 min-w-[140px]">
-              <label className="btn-secondary cursor-pointer justify-center">
-                <Upload size={16} />
-                <span>Upload Logo</span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={(e) => handleLogoUpload(e, org.id)}
-                  disabled={loadingLogo}
-                />
-              </label>
-              {org.company_logo && (
-                <button
-                  onClick={() => confirmLogoDelete(org.id)}
-                  disabled={loadingLogo}
-                  className="btn text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-900/20 justify-center rounded-xl px-3 py-2 transition"
-                >
-                  <Trash2 size={16} className="mr-1 inline" />
-                  Remove Logo
-                </button>
-              )}
+            <div className="flex flex-col gap-6">
+              {/* Logo Upload Section */}
+              <div className="flex flex-col gap-2 min-w-[140px]">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Company Logo</label>
+                <label className="btn-secondary cursor-pointer justify-center">
+                  <Upload size={16} />
+                  <span>Upload Logo</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, org.id, 'company_logo', 'Company logo')}
+                    disabled={loadingFile}
+                  />
+                </label>
+                {org.company_logo && (
+                  <button
+                    onClick={() => confirmFileDelete(org.id, 'company_logo', 'Company logo')}
+                    disabled={loadingFile}
+                    className="btn text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-900/20 justify-center rounded-xl px-3 py-2 transition"
+                  >
+                    <Trash2 size={16} className="mr-1 inline" />
+                    Remove Logo
+                  </button>
+                )}
+              </div>
+              
+              {/* Signature Upload Section */}
+              <div className="flex flex-col gap-2 min-w-[140px]">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Company Signature</label>
+                {org.signature_image && (
+                  <img src={org.signature_image} alt="Signature" className="h-12 w-auto object-contain border border-slate-200 dark:border-slate-700 bg-white rounded-md mb-2 p-1" />
+                )}
+                <label className="btn-secondary cursor-pointer justify-center">
+                  <Upload size={16} />
+                  <span>Upload Signature</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, org.id, 'signature_image', 'Company signature')}
+                    disabled={loadingFile}
+                  />
+                </label>
+                {org.signature_image && (
+                  <button
+                    onClick={() => confirmFileDelete(org.id, 'signature_image', 'Company signature')}
+                    disabled={loadingFile}
+                    className="btn text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-900/20 justify-center rounded-xl px-3 py-2 transition"
+                  >
+                    <Trash2 size={16} className="mr-1 inline" />
+                    Remove Signature
+                  </button>
+                )}
+              </div>
+
+              {/* Seal Upload Section */}
+              <div className="flex flex-col gap-2 min-w-[140px]">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Company Seal</label>
+                {org.seal_image && (
+                  <img src={org.seal_image} alt="Seal" className="h-16 w-16 object-contain border border-slate-200 dark:border-slate-700 bg-white rounded-md mb-2 p-1" />
+                )}
+                <label className="btn-secondary cursor-pointer justify-center">
+                  <Upload size={16} />
+                  <span>Upload Seal</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, org.id, 'seal_image', 'Company seal')}
+                    disabled={loadingFile}
+                  />
+                </label>
+                {org.seal_image && (
+                  <button
+                    onClick={() => confirmFileDelete(org.id, 'seal_image', 'Company seal')}
+                    disabled={loadingFile}
+                    className="btn text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-900/20 justify-center rounded-xl px-3 py-2 transition"
+                  >
+                    <Trash2 size={16} className="mr-1 inline" />
+                    Remove Seal
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           
@@ -189,14 +251,14 @@ export default function OrganizationsPage() {
       
       {showConfirmDelete && (
         <ConfirmDialog
-          title="Remove Company Logo"
-          message="Are you sure you want to remove the company logo? This action cannot be undone."
+          title={`Remove ${fileToDelete.label}`}
+          message={`Are you sure you want to remove the ${fileToDelete.label.toLowerCase()}? This action cannot be undone.`}
           confirmLabel="Remove"
           destructive={true}
-          onConfirm={handleLogoDelete}
+          onConfirm={handleFileDelete}
           onCancel={() => {
             setShowConfirmDelete(false)
-            setOrgToDeleteLogo(null)
+            setFileToDelete({ orgId: null, field: null, label: '' })
           }}
         />
       )}

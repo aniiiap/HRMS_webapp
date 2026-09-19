@@ -31,7 +31,34 @@ export default function EmployeePersonalTab({ employee, editForm, setEditForm, c
 
       <ProfileSectionCard title="Contact info">
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <ProfileField label="Official email" value={employee.email} />
+          {canEdit ? (
+            <label className="block">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Official email</p>
+              <input
+                type="email"
+                className="input-field mt-1"
+                value={editForm.official_email || ''}
+                onChange={(e) => setEditForm({ ...editForm, official_email: e.target.value })}
+              />
+            </label>
+          ) : (
+            <ProfileField label="Official email" value={employee.email} />
+          )}
+
+          {canEdit ? (
+            <label className="block">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Personal email</p>
+              <input
+                type="email"
+                className="input-field mt-1"
+                value={editForm.personal_email || ''}
+                onChange={(e) => setEditForm({ ...editForm, personal_email: e.target.value })}
+              />
+            </label>
+          ) : (
+            <ProfileField label="Personal email" value={employee.personal_email} />
+          )}
+
           {canEdit ? (
             <label className="block">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Phone</p>

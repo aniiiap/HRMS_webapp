@@ -1,23 +1,22 @@
 from django.conf import settings
 
 from .async_tasks import send_password_reset_email_async
-from .invite_service import _resolve_frontend_url
+from .invite_service import frontend_url_for_email
 from .models import PasswordResetToken
 
 
 def user_can_reset_password(user) -> bool:
     if not user or not user.is_active:
         return False
-    if user.onboarding_pending:
+    # Only block if it's explicitly a pending invite state, or unusable pass.
+    if getattr(user, "onboarding_pending", False):
         return False
-    if not user.has_usable_password():
-        return False
-    return True
+    return user.has_usable_password()
 
 
 def issue_and_send_password_reset(user, frontend_origin: str | None = None):
     reset = PasswordResetToken.create_for_user(user, lifetime_hours=1)
-    base_url = _resolve_frontend_url(frontend_origin)
+    base_url = frontend_url_for_email()
     reset_url = f"{base_url}/reset-password?token={reset.token}"
     full_name = f"{user.first_name} {user.last_name}".strip()
 

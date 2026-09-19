@@ -808,7 +808,7 @@ export default function LandingPage() {
                   {!col.hasDot && (
                     <div className="w-2 h-2 rounded-full bg-[#0F7A6C] dark:bg-[#14B8A6] opacity-30 shrink-0" />
                   )}
-                  <span className="truncate">{col.dataText}</span>
+                  <span className="whitespace-normal text-left">{col.dataText}</span>
                 </div>
                 
                 {/* Learn More Link */}
@@ -900,44 +900,6 @@ export default function LandingPage() {
 
       {/* Testimonial Quote Section */}
       <TestimonialSection />
-
-      {/* Pricing Preview (Synced with PricingPage) */}
-      <section className="py-24 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 text-center">
-          <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-slate-900 dark:text-white">Simple, transparent pricing</h2>
-          <p className="text-lg text-slate-600 dark:text-slate-400 mb-16">Start for free, then scale as you grow. No hidden fees.</p>
-          
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            {[
-              { name: "Starter", price: "$12.49", desc: "/ month", features: ["Core HR Database", "Basic Attendance", "Leave Management", "Employee Self-Service Portal"] },
-              { name: "Professional", price: "$17.49", desc: "/ month", features: ["Everything in Starter", "Automated Payroll & Payslips", "Biometric Integration", "Helpdesk & Ticketing"], popular: true },
-              { name: "Enterprise", price: "Custom", desc: "Contact sales", features: ["Everything in Professional", "Multi-Entity Management", "Custom API Integrations", "SLA Guarantees"] }
-            ].map((plan) => (
-              <div key={plan.name} className={`bg-white dark:bg-[#0D1B2A] border ${plan.popular ? 'border-[#14B8A6] ring-1 ring-[#14B8A6]' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-8 flex flex-col relative`}>
-                {plan.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#14B8A6] text-white text-[10px] font-bold uppercase tracking-widest py-1 px-3 rounded-full">Most Popular</span>}
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{plan.name}</h3>
-                <div className="text-3xl font-extrabold text-slate-900 dark:text-white mb-1">{plan.price}</div>
-                <div className="text-sm text-slate-500 mb-6">{plan.desc}</div>
-                <div className="space-y-4 mb-8 flex-1">
-                  {plan.features.map(feat => (
-                    <div key={feat} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300 text-left">
-                      <CheckCircle2 className="w-4 h-4 text-[#14B8A6] shrink-0 mt-0.5" />
-                      <span>{feat}</span>
-                    </div>
-                  ))}
-                </div>
-                <button className={`w-full py-3 rounded-xl text-sm font-bold transition-all ${plan.popular ? 'bg-[#0F7A6C] hover:bg-[#0c6256] text-white' : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white'}`}>
-                  {plan.name === 'Enterprise' ? 'Contact Sales' : 'Get Started'}
-                </button>
-              </div>
-            ))}
-          </div>
-          
-          <Link to="/pricing" className="inline-flex items-center gap-2 text-[#0F7A6C] dark:text-teal-400 font-bold hover:underline">
-            View full feature comparison <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </section>
 
       {/* FAQ Section */}
       <section className="py-24 bg-white dark:bg-[#0A1622] border-b border-slate-200 dark:border-slate-800">

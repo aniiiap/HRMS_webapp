@@ -40,6 +40,8 @@ def day_status_for_employee(
             return "present", "P"
             
         anomaly = attendance_anomaly(attendance)
+        if anomaly == "anomaly_approved":
+            return "anomaly_approved", "P"
         if anomaly != "none" or not attendance.check_out:
             return "anomaly", "AN"
         return "present", "P"

@@ -94,6 +94,8 @@ export default function EmployeeProfilePage() {
         date_of_birth: data.date_of_birth || '',
         date_of_joining: data.date_of_joining || '',
         address: data.address || '',
+        official_email: data.email || '',
+        personal_email: data.personal_email || '',
         manager: data.manager || '',
       })
     } catch (err) {

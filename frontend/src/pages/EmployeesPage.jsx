@@ -75,6 +75,8 @@ export default function EmployeesPage() {
   const [error, setError] = useState('')
   const [viewingImage, setViewingImage] = useState(null)
   const [allEmployees, setAllEmployees] = useState([])
+  const [isCustomDept, setIsCustomDept] = useState(false)
+  const [isCustomDesig, setIsCustomDesig] = useState(false)
   const [form, setForm] = useState({
     email: '',
     first_name: '',
@@ -83,7 +85,7 @@ export default function EmployeesPage() {
     department: '',
     designation: '',
     phone: '',
-    date_of_birth: '',
+    date_of_joining: '',
     shift_template: '',
     manager: '',
     location_restriction_enabled: true,
@@ -113,8 +115,12 @@ export default function EmployeesPage() {
   async function load() {
     try {
       const q = searchParams.get('q') || ''
+      const isActiveParam = activeTab === 'deactivated' ? 'false' : (activeTab === 'employees' ? 'true' : '')
+      const params = { page, page_size: pageSize, search: q }
+      if (isActiveParam) params.is_active = isActiveParam
+
       const [{ data }, tplRes, allEmpRes] = await Promise.all([
-        api.get('/api/employees/', { params: { page, page_size: pageSize, search: q } }),
+        api.get('/api/employees/', { params }),
         isPrivileged ? api.get('/api/employees/shift-templates/') : Promise.resolve({ data: [] }),
         isPrivileged ? api.get('/api/employees/', { params: { nopaginate: 'true' } }) : Promise.resolve({ data: [] }),
       ])
@@ -139,7 +145,11 @@ export default function EmployeesPage() {
     }
   }
 
-  useEffect(() => { void load() }, [page, pageSize, searchParams])
+  useEffect(() => { void load() }, [page, pageSize, searchParams, activeTab])
+
+  const uniqueDepartments = useMemo(() => Array.from(new Set(allEmployees.map(e => e.department).filter(Boolean))), [allEmployees])
+  const uniqueDesignations = useMemo(() => Array.from(new Set(allEmployees.map(e => e.designation).filter(Boolean))), [allEmployees])
+
 
   // Removed client-side search since we now do server-side pagination and search
   const employeeRows = rows || []
@@ -161,7 +171,7 @@ export default function EmployeesPage() {
         department: '',
         designation: '',
         phone: '',
-        date_of_birth: '',
+        date_of_joining: '',
         shift_template: '',
         location_restriction_enabled: true,
       })
@@ -363,13 +373,14 @@ export default function EmployeesPage() {
           <div className="flex flex-wrap items-center gap-1 border-b border-warm-200 bg-warm-50/90 px-3 py-2 dark:border-stone-700 dark:bg-stone-900/70">
             {[
               { id: 'employees', label: 'Employees' },
+              { id: 'deactivated', label: 'Deactivated' },
               { id: 'onboard', label: 'Onboard' },
               { id: 'location', label: 'Location setup' },
             ].map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); setPage(1); }}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                   activeTab === tab.id
                     ? 'bg-white text-brand-700 shadow-sm dark:bg-slate-800 dark:text-brand-300'
@@ -386,31 +397,114 @@ export default function EmployeesPage() {
       {isPrivileged && activeTab === 'onboard' && (
         <form onSubmit={onboard} className="card grid gap-3 p-4 md:grid-cols-4 motion-safe:animate-fade-up">
           <p className="col-span-full text-sm text-slate-600">
-            Add employee details and send a secure invite for first-time password setup.
+            Add employee details and send a secure invite. The employee will fill out their own personal details upon first login.
           </p>
           {[
             'email',
             'first_name',
             'last_name',
-            'department',
-            'designation',
             'phone',
-            'date_of_birth',
+            'date_of_joining',
           ].map((k) => (
             <input
               key={k}
               className="rounded-xl border border-slate-300 px-3 py-2"
               placeholder={
-                k === 'date_of_birth'
-                    ? 'Date of birth'
-                    : k.replace('_', ' ')
+                (k === 'date_of_joining' ? 'Date of joining' : k.replace('_', ' ')) + (k !== 'email' ? ' (Optional)' : '')
               }
-              type={k === 'date_of_birth' ? 'date' : 'text'}
+              type={k === 'date_of_joining' ? (form[k] ? 'date' : 'text') : 'text'}
+              onFocus={k === 'date_of_joining' ? (e) => (e.target.type = 'date') : undefined}
+              onBlur={k === 'date_of_joining' ? (e) => { if (!form[k]) e.target.type = 'text' } : undefined}
               value={form[k]}
               onChange={(e) => setForm({ ...form, [k]: e.target.value })}
               required={k === 'email'}
             />
           ))}
+
+          {/* Department Selection */}
+          <div className="flex gap-2 w-full min-w-0">
+            {isCustomDept ? (
+              <div className="flex w-full gap-2 min-w-0">
+                <input
+                  autoFocus
+                  className="rounded-xl border border-slate-300 px-3 py-2 flex-1 min-w-0 text-sm"
+                  placeholder="Enter new Department"
+                  value={form.department}
+                  onChange={(e) => setForm({ ...form, department: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomDept(false)
+                    setForm({ ...form, department: '' })
+                  }}
+                  className="px-3 py-2 flex-shrink-0 rounded-xl border border-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <select
+                className="rounded-xl border border-slate-300 px-3 py-2 flex-1 min-w-0 text-sm"
+                value={form.department}
+                onChange={(e) => {
+                  if (e.target.value === '__add_new__') {
+                    setIsCustomDept(true)
+                    setForm({ ...form, department: '' })
+                  } else {
+                    setForm({ ...form, department: e.target.value })
+                  }
+                }}
+              >
+                <option value="">Select Department (Optional)</option>
+                {uniqueDepartments.map(d => <option key={d} value={d}>{d}</option>)}
+                <option value="__add_new__" className="font-semibold text-brand-600">+ Add New Department...</option>
+              </select>
+            )}
+          </div>
+
+          {/* Designation Selection */}
+          <div className="flex gap-2 w-full min-w-0">
+            {isCustomDesig ? (
+              <div className="flex w-full gap-2 min-w-0">
+                <input
+                  autoFocus
+                  className="rounded-xl border border-slate-300 px-3 py-2 flex-1 min-w-0 text-sm"
+                  placeholder="Enter new Designation"
+                  value={form.designation}
+                  onChange={(e) => setForm({ ...form, designation: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomDesig(false)
+                    setForm({ ...form, designation: '' })
+                  }}
+                  className="px-3 py-2 flex-shrink-0 rounded-xl border border-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <select
+                className="rounded-xl border border-slate-300 px-3 py-2 flex-1 min-w-0 text-sm"
+                value={form.designation}
+                onChange={(e) => {
+                  if (e.target.value === '__add_new__') {
+                    setIsCustomDesig(true)
+                    setForm({ ...form, designation: '' })
+                  } else {
+                    setForm({ ...form, designation: e.target.value })
+                  }
+                }}
+              >
+                <option value="">Select Designation (Optional)</option>
+                {uniqueDesignations.map(d => <option key={d} value={d}>{d}</option>)}
+                <option value="__add_new__" className="font-semibold text-brand-600">+ Add New Designation...</option>
+              </select>
+            )}
+          </div>
+
           <select className="rounded-xl border border-slate-300 px-3 py-2" value={form.shift_template} onChange={(e) => setForm({ ...form, shift_template: e.target.value })}>
             <option value="">Select shift template</option>
             {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -522,7 +616,7 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {(!isPrivileged || activeTab === 'employees') && (
+      {(!isPrivileged || activeTab === 'employees' || activeTab === 'deactivated') && (
         <div className="card overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left text-slate-600">
@@ -753,7 +847,7 @@ export default function EmployeesPage() {
         </table>
       </div>
       )}
-      {activeTab === 'employees' && totalItems > 0 && (
+      {(activeTab === 'employees' || activeTab === 'deactivated') && totalItems > 0 && (
         <div className="mt-4">
           <Pagination page={page} totalPages={totalPages} total={totalItems} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} />
         </div>

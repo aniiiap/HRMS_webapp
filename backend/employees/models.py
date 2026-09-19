@@ -22,6 +22,12 @@ class Organization(models.Model):
         choices=OrganizationPlan.choices,
         default=OrganizationPlan.TRIAL,
     )
+    
+    # Resignation settings
+    resignation_notice_period_days = models.PositiveIntegerField(default=30, help_text="Minimum notice period days for resignation.")
+    resignation_auto_msg_enabled = models.BooleanField(default=False, help_text="Enable automatic warning message on resignation.")
+    resignation_auto_msg_text = models.TextField(blank=True, default="You have to submit all the assets before leaving the office. After submission all then only the resignation is accepted.", help_text="Warning message shown to user when applying for resignation.")
+
     max_employees = models.PositiveIntegerField(
         null=True,
         blank=True,
@@ -31,6 +37,7 @@ class Organization(models.Model):
     
     # For letter templates
     signature_image = models.ImageField(upload_to="organization_signatures/", null=True, blank=True)
+    seal_image = models.ImageField(upload_to="organization_seals/", null=True, blank=True)
     
     # For company logo (payslips, settings)
     company_logo = models.ImageField(upload_to="organization_logos/", null=True, blank=True)
@@ -65,6 +72,7 @@ class Employee(models.Model):
     department = models.CharField(max_length=120, blank=True)
     designation = models.CharField(max_length=120, blank=True)
     phone = models.CharField(max_length=32, blank=True)
+    personal_email = models.EmailField(blank=True, null=True, help_text="Personal email for records, kept even after offboarding.")
     address = models.TextField(blank=True)
     date_of_joining = models.DateField(null=True, blank=True)
     date_of_birth = models.DateField(
@@ -294,3 +302,26 @@ class OfficeLocationSettings(models.Model):
 
     def __str__(self):
         return self.name or "Office location"
+class ResignationStatus(models.TextChoices):
+    DRAFT = "draft", "Draft"
+    PENDING = "pending", "Pending"
+    ACCEPTED = "accepted", "Accepted"
+    REJECTED = "rejected", "Rejected"
+    WITHDRAWN = "withdrawn", "Withdrawn"
+
+class Resignation(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="resignations")
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    reason = models.TextField(help_text="Rich text reason or resignation letter.")
+    intended_last_day = models.DateField(null=True, blank=True)
+    
+    status = models.CharField(max_length=20, choices=ResignationStatus.choices, default=ResignationStatus.PENDING)
+    reviewed_by = models.ForeignKey(Employee, null=True, blank=True, on_delete=models.SET_NULL, related_name="reviewed_resignations")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewer_notes = models.TextField(blank=True, help_text="Notes from HR/Manager on acceptance/rejection.")
+
+    class Meta:
+        ordering = ["-submitted_at"]
+
+    def __str__(self):
+        return f"{self.employee.employee_code} - {self.status}"

@@ -1,21 +1,46 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactQuill, { Quill } from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
+import ImageResize from 'quill-image-resize-module-react'
+
+// Required for image resize module
+window.Quill = Quill
+Quill.register('modules/imageResize', ImageResize)
 
 import { api } from '../../api/client'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, Plus } from 'lucide-react'
+
+const AVAILABLE_VARIABLES = [
+  { label: 'Employee Name', value: 'employee_name' },
+  { label: 'Employee Email', value: 'employee_email' },
+  { label: 'Personal Email', value: 'personal_email' },
+  { label: 'Employee Code', value: 'employee_code' },
+  { label: 'Phone Number', value: 'phone' },
+  { label: 'Home Address', value: 'address' },
+  { label: 'Date of Birth', value: 'date_of_birth' },
+  { label: 'Joining Date', value: 'joining_date' },
+  { label: 'Designation', value: 'designation' },
+  { label: 'Department', value: 'department' },
+  { label: 'Salary', value: 'salary' },
+  { label: 'Organization Name', value: 'organization_name' },
+  { label: 'Company Signature', value: 'company_signature' },
+  { label: 'Company Seal', value: 'company_seal' },
+  { label: 'Company Logo', value: 'company_logo' },
+]
 
 export default function LetterEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
   const isNew = id === 'new'
+  const quillRef = useRef(null)
 
   const [name, setName] = useState('')
   const [subject, setSubject] = useState('')
   const [content, setContent] = useState('')
   const [saving, setSaving] = useState(false)
+  const [showVarDropdown, setShowVarDropdown] = useState(false)
 
   useEffect(() => {
     if (!isNew) {
@@ -59,6 +84,17 @@ export default function LetterEditor() {
     }
   }
 
+  const insertVariable = (variableValue) => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+    quill.focus()
+    const cursorPosition = quill.getSelection()?.index || 0
+    // Insert with spaces so it looks nice in the editor
+    quill.insertText(cursorPosition, `{{${variableValue}}}`)
+    quill.setSelection(cursorPosition + variableValue.length + 4)
+    setShowVarDropdown(false)
+  }
+
   const modules = {
     toolbar: [
       [{ 'header': [1, 2, 3, false] }],
@@ -67,7 +103,11 @@ export default function LetterEditor() {
       [{ 'align': [] }],
       ['link', 'image'],
       ['clean']
-    ]
+    ],
+    imageResize: {
+      parchment: Quill.import('parchment'),
+      modules: ['Resize', 'DisplaySize', 'Toolbar']
+    }
   }
 
   return (
@@ -93,7 +133,7 @@ export default function LetterEditor() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-6 relative">
         <div className="mx-auto max-w-4xl space-y-6">
           <div className="card p-6">
             <div className="grid gap-6 sm:grid-cols-2">
@@ -113,26 +153,44 @@ export default function LetterEditor() {
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g., Offer of Employment - {{company_name}}"
+                  placeholder="e.g., Offer of Employment - {{organization_name}}"
                   className="block w-full rounded-lg border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                 />
               </div>
             </div>
-            <div className="mt-4 rounded-md border border-brand-200 bg-brand-50 p-4 dark:border-brand-900/50 dark:bg-brand-900/20">
-              <h3 className="mb-2 text-sm font-semibold text-brand-800 dark:text-brand-300">Smart Variables Cheatsheet</h3>
-              <p className="mb-3 text-xs text-brand-600 dark:text-brand-400">Copy and paste these exact placeholders into your template. They will be automatically replaced with the selected employee's actual data when generating the PDF.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {['{{ employee_name }}', '{{ employee_email }}', '{{ designation }}', '{{ department }}', '{{ organization_name }}', '{{ salary }}', '{{ joining_date }}'].map(v => (
-                  <code key={v} className="block rounded bg-white px-2 py-1 text-xs text-brand-700 shadow-sm dark:bg-slate-800 dark:text-brand-300 text-center font-mono cursor-default">
-                    {v}
-                  </code>
-                ))}
-              </div>
-            </div>
           </div>
 
-          <div className="card overflow-hidden">
+          <div className="card">
+            {/* Custom Smart Toolbar Header */}
+            <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 p-2 flex items-center justify-between dark:bg-slate-900/95 dark:border-slate-800 rounded-t-xl">
+              <span className="text-sm font-medium text-slate-500 px-2">Document Editor</span>
+              <div className="relative">
+                <button 
+                  onClick={() => setShowVarDropdown(!showVarDropdown)}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-100 dark:bg-brand-900/30 dark:text-brand-400 dark:hover:bg-brand-900/50 transition-colors"
+                >
+                  <Plus size={16} /> Insert Variable
+                </button>
+                {showVarDropdown && (
+                  <div className="absolute right-0 top-full mt-1 w-56 rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800 max-h-64 overflow-y-auto p-1">
+                    <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700/50 mb-1">Standard Fields</div>
+                    {AVAILABLE_VARIABLES.map(v => (
+                      <button
+                        key={v.value}
+                        onClick={() => insertVariable(v.value)}
+                        className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-700 rounded-lg dark:text-slate-300 dark:hover:bg-brand-900/30 dark:hover:text-brand-400 transition-colors"
+                      >
+                        {v.label}
+                      </button>
+                    ))}
+                    {/* Placeholder for custom fields loop in the future */}
+                  </div>
+                )}
+              </div>
+            </div>
+            
             <ReactQuill
+              ref={quillRef}
               theme="snow"
               value={content}
               onChange={setContent}

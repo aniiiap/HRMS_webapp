@@ -61,11 +61,12 @@ class OrganizationViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mi
         return qs.none()
 
     def get_permissions(self):
-        # Allow read for ManagerOrAbove, but update only for Admin/HR
+        # Allow read for all Authenticated employees (needed for notice period settings)
+        # but update only for Admin/HR
         if self.action in ["update", "partial_update"]:
             from accounts.permissions import IsAdminOrHR
             return [permissions.IsAuthenticated(), IsAdminOrHR()]
-        return [permissions.IsAuthenticated(), IsManagerOrAbove()]
+        return [permissions.IsAuthenticated()]
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
@@ -88,6 +89,14 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_authenticated:
             return qs.none()
+        
+        is_active_param = self.request.query_params.get('is_active')
+        if is_active_param is not None:
+            if is_active_param.lower() == 'true':
+                qs = qs.filter(user__is_active=True)
+            elif is_active_param.lower() == 'false':
+                qs = qs.filter(user__is_active=False)
+
         if user.is_superuser or user.role in (
             UserRole.ADMIN,
             UserRole.HR,
@@ -138,6 +147,47 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         instance.delete()
         if user:
             user.delete()
+
+    @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    def complete_profile(self, request):
+        from .serializers import EmployeeCompleteProfileSerializer
+        ser = EmployeeCompleteProfileSerializer(data=request.data, context={"request": request})
+        ser.is_valid(raise_exception=True)
+        ser.save()
+        
+        # Handle document uploads
+        employee = getattr(request.user, 'employee_profile', None)
+        if employee:
+            try:
+                import cloudinary.uploader
+                has_cloud = True
+            except ImportError:
+                has_cloud = False
+                
+            import os
+            for key, file in request.FILES.items():
+                if key.startswith('document_'):
+                    title = key.replace('document_', '').replace('_', ' ').title()
+                    if has_cloud:
+                        original_name = file.name or 'document'
+                        ext = os.path.splitext(original_name)[1].lower()
+                        result = cloudinary.uploader.upload(
+                            file,
+                            resource_type='raw',
+                            folder='employee_docs',
+                            use_filename=True,
+                            unique_filename=True,
+                            overwrite=False,
+                            type='private',
+                        )
+                        secure_url = result.get('secure_url', '')
+                        if ext and not secure_url.lower().endswith(ext):
+                            secure_url = secure_url + ext
+                        EmployeeDocument.objects.create(employee=employee, title=title, file=secure_url)
+                    else:
+                        EmployeeDocument.objects.create(employee=employee, title=title, file=file)
+        
+        return Response({"message": "Profile completed successfully."}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated, IsAdminOrHR])
     def onboard(self, request):
@@ -848,3 +898,133 @@ class EmployeeDocumentViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("You can only delete your own documents.")
         instance.delete()
+from .models import Resignation, ResignationStatus
+from .serializers import ResignationSerializer
+from django.utils.timezone import now
+
+class ResignationViewSet(viewsets.ModelViewSet):
+    serializer_class = ResignationSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Resignation.objects.none()
+        
+        qs = Resignation.objects.select_related('employee__user', 'reviewed_by__user').all()
+        
+        is_admin_hr = user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR)
+        if is_admin_hr:
+            from django.db.models import Q
+            org_id = organization_id_from_request(self.request)
+            if org_id:
+                qs = qs.filter(employee__organization_id=org_id)
+            return qs.filter(~Q(status=ResignationStatus.DRAFT) | Q(employee__user=user))
+            
+        profile = getattr(user, 'employee_profile', None)
+        if profile:
+            return qs.filter(employee=profile)
+        return qs.none()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        profile = getattr(user, 'employee_profile', None)
+        if not profile:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"error": "Employee profile required to submit resignation."})
+        
+        status_val = self.request.data.get("status", ResignationStatus.PENDING)
+        resignation = serializer.save(employee=profile, status=status_val)
+        
+        if resignation.status == ResignationStatus.PENDING:
+            self._notify_resignation(resignation)
+
+    def perform_update(self, serializer):
+        old_status = self.get_object().status
+        status_val = self.request.data.get("status", old_status)
+        resignation = serializer.save(status=status_val)
+        if old_status == ResignationStatus.DRAFT and resignation.status == ResignationStatus.PENDING:
+            self._notify_resignation(resignation)
+
+    def _notify_resignation(self, resignation):
+        user = resignation.employee.user
+        profile = resignation.employee
+        from accounts.notifications import notify_roles, notify_user
+        from accounts.async_tasks import send_html_email_async
+        import base64
+        
+        reason_html = resignation.reason or "No reason provided."
+        formatted_html = f"<html><head><meta charset='utf-8'></head><body>{reason_html}</body></html>"
+        
+        from xhtml2pdf import pisa
+        import io
+        
+        pdf_buffer = io.BytesIO()
+        pisa.CreatePDF(formatted_html, dest=pdf_buffer)
+        pdf_bytes = pdf_buffer.getvalue()
+        
+        attachment_content = base64.b64encode(pdf_bytes).decode('utf-8')
+        
+        attachments = [
+            {
+                "filename": f"Resignation_Letter_{profile.employee_code}.pdf",
+                "content": attachment_content,
+                "content_type": "application/pdf",
+            }
+        ]
+        
+        notify_roles(
+            title="New Resignation Request",
+            message=f"{profile.employee_code} - {user.first_name} {user.last_name} has submitted a resignation request.",
+            type_value="resignation",
+            send_email=True,
+            email_html=f"<p>{user.first_name} {user.last_name} has submitted a resignation request.</p><p>Review it in the HRMS portal.</p>",
+            email_attachments=attachments
+        )
+        
+        # Also notify the user who applied
+        notify_user(
+            user=user,
+            title="New Resignation Request",
+            message="Your resignation request has been submitted successfully.",
+            type_value="resignation"
+        )
+        if user.email:
+            send_html_email_async(
+                to_email=user.email,
+                subject="New Resignation Request",
+                html="<p>Your resignation request has been successfully submitted and is pending review.</p>"
+            )
+
+    @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated, IsAdminOrHR])
+    def update_status(self, request, pk=None):
+        resignation = self.get_object()
+        status_val = request.data.get('status')
+        notes = request.data.get('reviewer_notes', '')
+        
+        if status_val not in ['accepted', 'rejected']:
+            return Response({"error": "Invalid status."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        resignation.status = status_val
+        resignation.reviewer_notes = notes
+        resignation.reviewed_by = getattr(request.user, 'employee_profile', None)
+        resignation.reviewed_at = now()
+        resignation.save()
+        
+        from accounts.notifications import notify_user
+        from accounts.async_tasks import send_html_email_async
+        
+        emp_user = resignation.employee.user
+        notify_user(
+            user=emp_user,
+            title=f"Resignation {status_val.capitalize()}",
+            message=f"Your resignation request has been {status_val}.",
+            type_value="resignation",
+        )
+        if emp_user.email:
+            send_html_email_async(
+                to_email=emp_user.email,
+                subject=f"Resignation {status_val.capitalize()}",
+                html=f"<p>Your resignation request has been <b>{status_val}</b>.</p>"
+            )
+            
+        return Response(self.get_serializer(resignation).data)

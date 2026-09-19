@@ -91,21 +91,21 @@ export default function LetterTemplates() {
       <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-            {isPrivileged ? 'Document Templates' : 'My Documents'}
+            Document Center
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {isPrivileged ? 'Create offer letters, policies, and send them directly to employees.' : 'View and acknowledge your official documents.'}
+            {isPrivileged ? 'Create templates, issue documents to employees, and track sent letters.' : 'View and acknowledge your official documents.'}
           </p>
         </div>
         {isPrivileged && (
           <div className="flex gap-3">
-            <button
-              onClick={() => setShowSendModal(true)}
+            <Link
+              to="/letters/issue"
               className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-700"
             >
               <Send size={16} />
-              Send Letter
-            </button>
+              Issue Document
+            </Link>
             <Link
               to="/letters/new"
               className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"

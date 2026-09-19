@@ -63,6 +63,8 @@ class LeaveRequest(models.Model):
         choices=LeaveStatus.choices,
         default=LeaveStatus.PENDING,
     )
+    cancel_requested = models.BooleanField(default=False)
+    cancel_reason = models.TextField(blank=True)
     reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

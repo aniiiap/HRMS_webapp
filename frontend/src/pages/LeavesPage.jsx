@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter'
 import toast from 'react-hot-toast'
 import { useSearchParams } from 'react-router-dom'
 import { api, messageFromError } from '../api/client'
@@ -7,15 +8,21 @@ import Pagination from '../components/Pagination'
 import LeaveRulesPanel from '../components/leaves/LeaveRulesPanel'
 import AuditLogPanel from '../components/AuditLogPanel'
 import { useAuth } from '../context/AuthContext'
+import { Pencil, Check, X, XCircle } from 'lucide-react'
+
+dayjs.extend(isSameOrAfter)
 
 export default function LeavesPage() {
   const { isManagerPlus, user } = useAuth()
   const [searchParams] = useSearchParams()
   const [rows, setRows] = useState([])
   const [balances, setBalances] = useState([])
+  const [editingLeave, setEditingLeave] = useState(null)
+  const [cancelPromptId, setCancelPromptId] = useState(null)
+  const [cancelReason, setCancelReason] = useState('')
   const [error, setError] = useState('')
   const [form, setForm] = useState({ leave_type: '', start_date: '', end_date: '', half_day: 'none', reason: '' })
-  const [activeTab, setActiveTab] = useState('requests')
+  const [activeTab, setActiveTab] = useState('approvals')
   const [requestFilter, setRequestFilter] = useState('pending')
   const [requestPage, setRequestPage] = useState(1)
   const [requestPageSize, setRequestPageSize] = useState(10)
@@ -23,7 +30,7 @@ export default function LeavesPage() {
 
   useEffect(() => {
     const tab = searchParams.get('tab')
-    const valid = ['requests', 'balances', ...(isManagerPlus ? ['rules'] : [])]
+    const valid = ['approvals', 'balances', ...(isManagerPlus ? ['rules'] : [])]
     if (tab && valid.includes(tab)) setActiveTab(tab)
   }, [searchParams, isManagerPlus])
 
@@ -69,16 +76,31 @@ export default function LeavesPage() {
     }
   }
 
+  async function requestCancel(id) {
+    if (!cancelReason.trim()) {
+      toast.error('Please enter a reason for cancellation.')
+      return
+    }
+    try {
+      await api.post(`/api/leaves/${id}/request_cancel/`, { reason: cancelReason })
+      toast.success('Cancellation requested successfully.')
+      setCancelPromptId(null)
+      setCancelReason('')
+      await load()
+    } catch (err) {
+      toast.error(messageFromError(err))
+    }
+  }
+
   const filteredRows = useMemo(() => {
     let list = rows
-    if (activeTab === 'requests') {
-      list = list.filter((r) => r.employee === user?.employee_id)
-    } else if (activeTab === 'approvals') {
-      list = list.filter((r) => r.employee !== user?.employee_id)
-    }
     
     if (isManagerPlus && activeTab === 'approvals' && requestFilter !== 'all') {
-      list = list.filter((r) => r.status === requestFilter)
+      if (requestFilter === 'cancel_requested') {
+        list = list.filter((r) => r.cancel_requested)
+      } else {
+        list = list.filter((r) => r.status === requestFilter && !r.cancel_requested)
+      }
     }
     return list
   }, [isManagerPlus, requestFilter, rows, activeTab, user?.employee_id])
@@ -128,8 +150,7 @@ export default function LeavesPage() {
       <div className="card overflow-hidden border border-slate-200/80 dark:border-slate-700/80">
         <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-800/90 px-3 py-2">
           {[
-            { id: 'requests', label: 'My Requests' },
-            ...(isManagerPlus ? [{ id: 'approvals', label: 'Approvals' }] : []),
+            { id: 'approvals', label: 'Approvals' },
             ...(isManagerPlus ? [{ id: 'rules', label: 'Rules' }] : []),
             { id: 'balances', label: 'Balances' },
             ...(user?.role === 'admin' || user?.role === 'hr' ? [{ id: 'history', label: 'History' }] : []),
@@ -139,7 +160,7 @@ export default function LeavesPage() {
               type="button"
               onClick={() => {
                 setActiveTab(tab.id)
-                if (tab.id === 'requests' || tab.id === 'approvals') {
+                if (tab.id === 'approvals') {
                   setRequestPage(1)
                   setRequestFilter('all')
                 }
@@ -154,42 +175,40 @@ export default function LeavesPage() {
         </div>
       </div>
 
-      {(activeTab === 'requests' || activeTab === 'approvals') && (
+      {(activeTab === 'approvals') && (
         <>
-          {activeTab === 'requests' && (
-            <form onSubmit={applyLeave} className="card grid gap-3 p-4 md:grid-cols-5">
-              <select required className="rounded-xl border border-slate-300 px-3 py-2" value={form.leave_type} onChange={(e) => setForm({ ...form, leave_type: e.target.value })}>
-                <option value="">Select leave type...</option>
-                {applicableRules.map((r) => (
-                  <option key={r.id} value={r.code}>{r.name}</option>
-                ))}
-                {applicableRules.length === 0 && <option value="paid_leave">Paid Leave</option>}
-              </select>
-              <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.start_date} min={new Date(new Date().setMonth(new Date().getMonth() - 2)).toISOString().split('T')[0]} onChange={(e) => {
-                const start_date = e.target.value;
-                setForm(f => ({ ...f, start_date, end_date: f.half_day !== 'none' ? start_date : (f.end_date < start_date ? start_date : f.end_date) }))
-              }} required />
-              <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.end_date} min={form.start_date} disabled={form.half_day !== 'none'} onChange={(e) => setForm({ ...form, end_date: e.target.value })} required />
-              <select className="rounded-xl border border-slate-300 px-3 py-2" value={form.half_day} onChange={(e) => {
-                const half_day = e.target.value;
-                setForm(f => ({ ...f, half_day, end_date: half_day !== 'none' && f.start_date ? f.start_date : f.end_date }))
-              }}>
-                <option value="none">Full Day</option>
-                <option value="first_half">First Half</option>
-                <option value="second_half">Second Half</option>
-              </select>
-              <input className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Reason" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
-              <button className="btn-primary">Apply</button>
-            </form>
-          )}
+          <form onSubmit={applyLeave} className="card grid gap-3 p-4 md:grid-cols-5">
+            <select required className="rounded-xl border border-slate-300 px-3 py-2" value={form.leave_type} onChange={(e) => setForm({ ...form, leave_type: e.target.value })}>
+              <option value="">Select leave type...</option>
+              {applicableRules.map((r) => (
+                <option key={r.id} value={r.code}>{r.name}</option>
+              ))}
+            </select>
+            <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.start_date} min={new Date(new Date().setMonth(new Date().getMonth() - 2)).toISOString().split('T')[0]} onChange={(e) => {
+              const start_date = e.target.value;
+              setForm(f => ({ ...f, start_date, end_date: f.half_day !== 'none' ? start_date : (f.end_date < start_date ? start_date : f.end_date) }))
+            }} required />
+            <input className="rounded-xl border border-slate-300 px-3 py-2" type="date" value={form.end_date} min={form.start_date} disabled={form.half_day !== 'none'} onChange={(e) => setForm({ ...form, end_date: e.target.value })} required />
+            <select className="rounded-xl border border-slate-300 px-3 py-2" value={form.half_day} onChange={(e) => {
+              const half_day = e.target.value;
+              setForm(f => ({ ...f, half_day, end_date: half_day !== 'none' && f.start_date ? f.start_date : f.end_date }))
+            }}>
+              <option value="none">Full Day</option>
+              <option value="first_half">First Half</option>
+              <option value="second_half">Second Half</option>
+            </select>
+            <input className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Reason" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
+            <button className="btn-primary">Apply</button>
+          </form>
 
-          {activeTab === 'approvals' && isManagerPlus && (
+          {isManagerPlus && (
             <div className="card overflow-hidden border border-slate-200/80 dark:border-slate-700/80">
               <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-800/90 px-3 py-2">
                 {[
                   { id: 'pending', label: 'Pending' },
                   { id: 'approved', label: 'Approved' },
                   { id: 'rejected', label: 'Rejected' },
+                  { id: 'cancel_requested', label: 'Cancel Requests' },
                   { id: 'all', label: 'All' },
                 ].map((tab) => (
                   <button
@@ -235,14 +254,79 @@ export default function LeavesPage() {
                       {r.half_day === 'first_half' && <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">(1st Half)</span>}
                       {r.half_day === 'second_half' && <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">(2nd Half)</span>}
                     </td>
-                    <td className="max-w-[260px] truncate px-4 py-3 text-xs text-slate-600 dark:text-slate-400">{r.reason || '-'}</td>
-                    <td className="px-4 py-3 capitalize">{r.status}</td>
+                    <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 whitespace-normal break-words max-w-[300px]">
+                      {r.reason || '-'}
+                    </td>
                     <td className="px-4 py-3">
-                      {activeTab === 'approvals' && isManagerPlus && r.status === 'pending' ? (
-                        <div className="flex gap-2">
-                          <button className="btn-secondary" onClick={() => void review(r.id, 'approved')}>Approve</button>
-                          <button className="btn-secondary" onClick={() => void review(r.id, 'rejected')}>Reject</button>
+                      {r.cancel_requested && (
+                        <span className="block text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1 leading-tight">
+                          Cancel Requested:<br />
+                          <span className="font-normal text-slate-500 dark:text-slate-400">{r.cancel_reason}</span>
+                        </span>
+                      )}
+                      {editingLeave?.id === r.id ? (
+                        <select 
+                          className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                          value={editingLeave.status} 
+                          onChange={e => setEditingLeave({...editingLeave, status: e.target.value})}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="approved">Approved</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
+                      ) : (
+                        <span className="capitalize">{r.status}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {isManagerPlus && r.employee !== user?.employee_id ? (
+                        <div className="flex gap-2 items-center">
+                          {editingLeave?.id === r.id ? (
+                            <>
+                              <button onClick={() => { review(r.id, editingLeave.status); setEditingLeave(null) }} className="text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 p-1 rounded-full transition-colors"><Check className="w-4 h-4" /></button>
+                              <button onClick={() => setEditingLeave(null)} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-1 rounded-full transition-colors"><X className="w-4 h-4" /></button>
+                            </>
+                          ) : (
+                            <>
+                              {r.status === 'pending' && (
+                                <>
+                                  <button onClick={() => review(r.id, 'approved')} className="text-green-600 hover:text-green-700 font-medium text-xs border border-green-200 bg-green-50 px-2 py-1 rounded">Approve</button>
+                                  <button onClick={() => review(r.id, 'rejected')} className="text-red-600 hover:text-red-700 font-medium text-xs border border-red-200 bg-red-50 px-2 py-1 rounded">Reject</button>
+                                </>
+                              )}
+                              {dayjs(r.start_date).isSameOrAfter(dayjs(), 'day') ? (
+                                <button onClick={() => setEditingLeave({id: r.id, status: r.status})} className="text-slate-400 hover:text-brand-600 transition-colors p-1 ml-1" title="Edit Status">
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                r.status !== 'pending' && <span className="text-[11px] text-slate-400 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 ml-1">Past</span>
+                              )}
+                            </>
+                          )}
                         </div>
+                      ) : r.employee === user?.employee_id ? (
+                        cancelPromptId === r.id ? (
+                          <div className="flex flex-col gap-1 w-40">
+                            <input 
+                              type="text" 
+                              className="rounded-lg border border-slate-300 px-2 py-1 text-xs w-full"
+                              placeholder="Reason..." 
+                              value={cancelReason}
+                              onChange={e => setCancelReason(e.target.value)}
+                              autoFocus
+                            />
+                            <div className="flex gap-1">
+                              <button onClick={() => void requestCancel(r.id)} className="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1 rounded flex-1">Confirm</button>
+                              <button onClick={() => { setCancelPromptId(null); setCancelReason('') }} className="text-xs bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1 rounded">Cancel</button>
+                            </div>
+                          </div>
+                        ) : dayjs(r.start_date).isSameOrAfter(dayjs(), 'day') && r.status !== 'rejected' && !r.cancel_requested ? (
+                          <button onClick={() => setCancelPromptId(r.id)} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
+                            <XCircle className="w-3 h-3" /> Request Cancel
+                          </button>
+                        ) : r.cancel_requested ? (
+                          <span className="text-[11px] text-slate-400 italic">Cancel Pending</span>
+                        ) : <span className="text-xs text-slate-400">-</span>
                       ) : (
                         <span className="text-xs text-slate-400">-</span>
                       )}

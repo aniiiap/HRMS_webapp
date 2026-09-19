@@ -16,14 +16,41 @@ def render_template_variables(html_content: str, employee: Employee) -> str:
         return ""
     
     # Define mapping of placeholders to data
+    sig_img = ""
+    seal_img = ""
+    logo_img = ""
+    if employee and hasattr(employee, 'organization') and employee.organization:
+        org = employee.organization
+        if getattr(org, 'signature_image', None):
+            sig_img = f'<img src="{org.signature_image.url}" style="max-height: 80px;" alt="Signature" />'
+        if getattr(org, 'seal_image', None):
+            seal_img = f'<img src="{org.seal_image.url}" style="max-height: 80px;" alt="Company Seal" />'
+        if getattr(org, 'company_logo', None):
+            logo_img = f'<img src="{org.company_logo.url}" style="max-height: 80px;" alt="Company Logo" />'
+
+    salary_val = ""
+    if employee:
+        if hasattr(employee, 'compensation') and employee.compensation:
+            salary_val = str(employee.compensation.monthly_gross or "")
+        else:
+            salary_val = str(getattr(employee, 'salary', ''))
+
     replacements = {
         "employee_name": employee.user.get_full_name() if employee and hasattr(employee, 'user') else "",
         "employee_email": employee.user.email if employee and hasattr(employee, 'user') else "",
+        "personal_email": employee.personal_email if employee else "",
+        "employee_code": employee.employee_code if employee else "",
+        "phone": employee.phone if employee else "",
+        "address": employee.address if employee else "",
+        "date_of_birth": employee.date_of_birth.strftime("%B %d, %Y") if employee and getattr(employee, 'date_of_birth', None) else "",
         "designation": employee.designation if employee else "",
         "department": employee.department if employee else "",
         "organization_name": employee.organization.name if employee and hasattr(employee, 'organization') and employee.organization else "",
-        "salary": str(getattr(employee, 'salary', '')) if employee else "",
+        "salary": salary_val,
         "joining_date": employee.date_of_joining.strftime("%B %d, %Y") if employee and hasattr(employee, 'date_of_joining') and employee.date_of_joining else "",
+        "company_signature": sig_img,
+        "company_seal": seal_img,
+        "company_logo": logo_img,
     }
     
     for key, value in replacements.items():
@@ -47,16 +74,18 @@ def send_letter_email(employee: Employee, subject: str, note_html: str, pdf_byte
     api_key = getattr(settings, "RESEND_API_KEY", "")
     from_email = getattr(settings, "RESEND_FROM_EMAIL", "")
 
+    target_email = employee.personal_email if getattr(employee, 'personal_email', None) else employee.user.email
+
     if not api_key or not from_email:
         # For local dev without keys, just return success
-        print("RESEND NOT CONFIGURED: Fake sending email to", employee.user.email)
+        print("RESEND NOT CONFIGURED: Fake sending email to", target_email)
         return True, "Email 'sent' to console."
 
     pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
 
     payload = {
         "from": from_email,
-        "to": [employee.user.email],
+        "to": [target_email],
         "subject": subject,
         "html": note_html,
         "attachments": [

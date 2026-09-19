@@ -53,8 +53,6 @@ from .serializers import (
 
 
 def _apply_review(leave: LeaveRequest, reviewer, status_value: str, note: str):
-    if leave.status != LeaveStatus.PENDING:
-        raise ValueError("Leave is already processed.")
     leave.status = status_value
     leave.review_note = note or ""
     leave.reviewed_by = reviewer
@@ -378,6 +376,10 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
                 ser.validated_data["status"],
                 ser.validated_data.get("review_note", ""),
             )
+            # Clear cancel flags if they existed since admin has taken an action
+            if leave.cancel_requested:
+                leave.cancel_requested = False
+                leave.save(update_fields=["cancel_requested"])
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -415,6 +417,71 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         )
         return Response(LeaveRequestSerializer(leave).data)
 
+    @action(detail=True, methods=["post"])
+    def request_cancel(self, request, pk=None):
+        leave = self.get_object()
+        if leave.employee.user != request.user:
+            return Response({"error": "You can only request cancellation for your own leaves."}, status=status.HTTP_403_FORBIDDEN)
+        
+        reason = request.data.get("reason", "").strip()
+        if not reason:
+            return Response({"error": "Cancellation reason is required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        leave.cancel_requested = True
+        leave.cancel_reason = reason
+        leave.save(update_fields=["cancel_requested", "cancel_reason"])
+        
+        try:
+            emp_user = leave.employee.user
+            notify_roles(
+                organization_id=leave.employee.organization_id,
+                roles=[UserRole.ADMIN, UserRole.HR, UserRole.MANAGER],
+                title="Leave Cancellation Requested",
+                message=f"{emp_user.first_name} {emp_user.last_name} requested to cancel a leave: {reason}",
+                type_value="leave_cancellation",
+                link=f"/leaves?tab=approvals",
+                send_email=True,
+                email_html=f"<p><b>{emp_user.first_name} {emp_user.last_name}</b> requested to cancel a leave.</p><p>Reason: {reason}</p><p>Please log in to the HRMS portal to approve or reject this cancellation.</p>"
+            )
+        except Exception:
+            pass
+            
+        return Response(LeaveRequestSerializer(leave).data)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        leave = self.get_object()
+        
+        if leave.employee.user != request.user:
+            return Response({"error": "You can only cancel your own leaves."}, status=status.HTTP_403_FORBIDDEN)
+            
+        if leave.status == LeaveStatus.REJECTED:
+            return Response({"error": "Leave is already rejected/cancelled."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            _apply_review(
+                leave,
+                request.user,
+                LeaveStatus.REJECTED,
+                "Cancelled by employee",
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            
+        emp_user = leave.employee.user
+        try:
+            notify_roles(
+                organization_id=leave.employee.organization_id,
+                roles=[UserRole.ADMIN, UserRole.HR, UserRole.MANAGER],
+                title="Leave Cancelled",
+                message=f"{emp_user.first_name} {emp_user.last_name} has cancelled their leave request.",
+                type_value="leave_cancellation",
+                link=f"/leaves?tab=history",
+            )
+        except Exception:
+            pass
+            
+        return Response({"status": "ok"})
 
 class LeavePolicyViewSet(viewsets.ModelViewSet):
     queryset = LeavePolicy.objects.all()
