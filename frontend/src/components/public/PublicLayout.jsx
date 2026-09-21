@@ -169,13 +169,30 @@ export default function PublicLayout() {
               </Link>
             </div>
 
-            {/* Mobile Menu Button */}
-            <button
-              className="md:hidden p-2 text-slate-600 dark:text-slate-300"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
+            <div className="flex items-center gap-3 md:hidden">
+              {user ? (
+                <Link
+                  to={user.is_superuser && !user.organization_id ? '/platform' : '/dashboard'}
+                  className="text-sm font-semibold text-brand-600 dark:text-brand-400"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <Link
+                  to="/login"
+                  className="text-sm font-semibold text-brand-600 dark:text-brand-400"
+                >
+                  Sign in
+                </Link>
+              )}
+              {/* Mobile Menu Button */}
+              <button
+                className="p-1 text-slate-600 dark:text-slate-300"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
           </div>
         </div>
 

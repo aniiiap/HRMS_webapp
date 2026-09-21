@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, ChevronRight, Zap, Building, Play, Users, Cal
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import CountUp from 'react-countup'
 import { useInView } from 'react-intersection-observer'
+import { useAuth } from '../../context/AuthContext'
 
 const fadeUpVariant = {
   hidden: { opacity: 0, y: 40 },
@@ -66,8 +67,8 @@ function PayrollDeepDiveSection() {
   ];
 
   return (
-    <section ref={containerRef} className="relative h-[300vh] bg-white dark:bg-[#0A1622] border-b border-slate-200 dark:border-slate-800">
-      <div className="sticky top-0 h-screen flex items-center overflow-hidden">
+    <section ref={containerRef} className="relative h-auto lg:h-[300vh] bg-white dark:bg-[#0A1622] border-b border-slate-200 dark:border-slate-800">
+      <div className="lg:sticky lg:top-0 lg:h-screen flex flex-col lg:flex-row lg:items-center overflow-hidden py-24 lg:py-0">
         <div className="max-w-[1400px] w-full mx-auto px-6 lg:px-12 grid lg:grid-cols-[1fr_1.3fr] gap-10 lg:gap-16">
           
           {/* Left Text */}
@@ -413,6 +414,7 @@ function TestimonialSection() {
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [statsRef, statsInView] = useInView({ triggerOnce: true, threshold: 0.2 })
 
   // Parallax effects
@@ -462,10 +464,10 @@ export default function LandingPage() {
             
             <motion.div variants={fadeUpVariant} className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
               <button 
-                onClick={() => navigate('/demo')}
+                onClick={() => navigate(user ? (user.is_superuser && !user.organization_id ? '/platform' : '/dashboard') : '/login')}
                 className="w-full sm:w-auto rounded-full bg-teal-600 text-white hover:bg-teal-500 px-8 py-4 text-base font-bold shadow-[0_8px_30px_rgb(13,148,136,0.3)] hover:-translate-y-1 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 group"
               >
-                Request a Demo
+                Get Started
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
               <Link to="/products" className="w-full sm:w-auto rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-white border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 px-8 py-4 text-base font-bold shadow-sm backdrop-blur-sm hover:-translate-y-1 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 group">
@@ -750,7 +752,7 @@ export default function LandingPage() {
                 icon: Zap,
                 img: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
                 dataText: "Multi-region compliance engine",
-                hasDot: false
+                hasDot: true
               },
               {
                 title: "Time & Attendance",
