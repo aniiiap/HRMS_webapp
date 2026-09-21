@@ -70,7 +70,9 @@ class OrganizationViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mi
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
-    queryset = Employee.objects.select_related("user", "manager").all()
+    queryset = Employee.objects.select_related(
+        "user", "manager", "manager__user", "shift_template", "organization"
+    ).all()
     filterset_fields = ["department", "designation", "manager"]
     search_fields = [
         "employee_code",
@@ -90,12 +92,21 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return qs.none()
         
+        search_param = self.request.query_params.get('search')
         is_active_param = self.request.query_params.get('is_active')
+        
+        # Don't apply default is_active=True filter for detail views or specific actions
+        # so that admins can retrieve and update deactivated users.
+        is_detail_view = 'pk' in self.kwargs
+
         if is_active_param is not None:
             if is_active_param.lower() == 'true':
                 qs = qs.filter(user__is_active=True)
             elif is_active_param.lower() == 'false':
                 qs = qs.filter(user__is_active=False)
+        elif not search_param and not is_detail_view:
+            # Default to showing only active users in list view unless a search is performed
+            qs = qs.filter(user__is_active=True)
 
         if user.is_superuser or user.role in (
             UserRole.ADMIN,
@@ -973,6 +984,7 @@ class ResignationViewSet(viewsets.ModelViewSet):
         ]
         
         notify_roles(
+            organization_id=profile.organization_id,
             title="New Resignation Request",
             message=f"{profile.employee_code} - {user.first_name} {user.last_name} has submitted a resignation request.",
             type_value="resignation",
@@ -989,11 +1001,13 @@ class ResignationViewSet(viewsets.ModelViewSet):
             type_value="resignation"
         )
         if user.email:
-            send_html_email_async(
-                to_email=user.email,
-                subject="New Resignation Request",
-                html="<p>Your resignation request has been successfully submitted and is pending review.</p>"
-            )
+            from accounts.async_tasks import send_html_email_batch_async
+            send_html_email_batch_async(payloads=[{
+                "to": user.email,
+                "subject": "New Resignation Request",
+                "html": "<p>Your resignation request has been successfully submitted and is pending review.</p>",
+                "attachments": attachments
+            }])
 
     @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated, IsAdminOrHR])
     def update_status(self, request, pk=None):
@@ -1011,7 +1025,24 @@ class ResignationViewSet(viewsets.ModelViewSet):
         resignation.save()
         
         from accounts.notifications import notify_user
-        from accounts.async_tasks import send_html_email_async
+        from accounts.async_tasks import send_html_email_batch_async
+        import base64
+        import io
+        from xhtml2pdf import pisa
+        
+        reason_html = resignation.reason or "No reason provided."
+        formatted_html = f"<html><head><meta charset='utf-8'></head><body>{reason_html}</body></html>"
+        
+        pdf_buffer = io.BytesIO()
+        pisa.CreatePDF(formatted_html, dest=pdf_buffer)
+        pdf_bytes = pdf_buffer.getvalue()
+        
+        attachment_content = base64.b64encode(pdf_bytes).decode('utf-8')
+        attachments = [{
+            "filename": f"Resignation_Letter_{resignation.employee.employee_code}.pdf",
+            "content": attachment_content,
+            "content_type": "application/pdf",
+        }]
         
         emp_user = resignation.employee.user
         notify_user(
@@ -1021,10 +1052,11 @@ class ResignationViewSet(viewsets.ModelViewSet):
             type_value="resignation",
         )
         if emp_user.email:
-            send_html_email_async(
-                to_email=emp_user.email,
-                subject=f"Resignation {status_val.capitalize()}",
-                html=f"<p>Your resignation request has been <b>{status_val}</b>.</p>"
-            )
+            send_html_email_batch_async(payloads=[{
+                "to": emp_user.email,
+                "subject": f"Resignation {status_val.capitalize()}",
+                "html": f"<p>Your resignation request has been <b>{status_val}</b>.</p>",
+                "attachments": attachments
+            }])
             
         return Response(self.get_serializer(resignation).data)

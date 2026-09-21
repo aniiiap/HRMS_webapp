@@ -367,12 +367,13 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     )
     def review(self, request, pk=None):
         leave = self.get_object()
+        user = request.user
         ser = LeaveReviewSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         try:
             _apply_review(
                 leave,
-                request.user,
+                user,
                 ser.validated_data["status"],
                 ser.validated_data.get("review_note", ""),
             )
@@ -434,14 +435,12 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         try:
             emp_user = leave.employee.user
             notify_roles(
-                organization_id=leave.employee.organization_id,
-                roles=[UserRole.ADMIN, UserRole.HR, UserRole.MANAGER],
                 title="Leave Cancellation Requested",
                 message=f"{emp_user.first_name} {emp_user.last_name} requested to cancel a leave: {reason}",
                 type_value="leave_cancellation",
-                link=f"/leaves?tab=approvals",
                 send_email=True,
-                email_html=f"<p><b>{emp_user.first_name} {emp_user.last_name}</b> requested to cancel a leave.</p><p>Reason: {reason}</p><p>Please log in to the HRMS portal to approve or reject this cancellation.</p>"
+                email_html=f"<p><b>{emp_user.first_name} {emp_user.last_name}</b> requested to cancel a leave.</p><p>Reason: {reason}</p><p>Please log in to the HRMS portal to approve or reject this cancellation.</p>",
+                organization_id=leave.employee.organization_id,
             )
         except Exception:
             pass
@@ -471,12 +470,10 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         emp_user = leave.employee.user
         try:
             notify_roles(
-                organization_id=leave.employee.organization_id,
-                roles=[UserRole.ADMIN, UserRole.HR, UserRole.MANAGER],
                 title="Leave Cancelled",
                 message=f"{emp_user.first_name} {emp_user.last_name} has cancelled their leave request.",
                 type_value="leave_cancellation",
-                link=f"/leaves?tab=history",
+                organization_id=leave.employee.organization_id,
             )
         except Exception:
             pass

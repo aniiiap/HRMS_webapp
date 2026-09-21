@@ -437,6 +437,8 @@ export default function AttendancePage() {
   const cellClass = (status) => {
     if (status === 'present') return 'bg-emerald-500/95 ring-1 ring-emerald-300/60 dark:ring-emerald-400/20'
     if (status === 'absent') return 'bg-rose-500/95 ring-1 ring-rose-300/60 dark:ring-rose-400/20'
+    if (status === 'upcoming') return 'bg-slate-500/95 ring-1 ring-slate-300/60 dark:bg-slate-700 dark:ring-slate-500/60'
+    if (status === 'in_progress') return 'bg-purple-500/95 ring-1 ring-purple-300/60 dark:bg-purple-700 dark:ring-purple-500/60'
     if (status === 'leave') return 'bg-blue-500/95 ring-1 ring-blue-300/60 dark:ring-blue-400/20'
     if (status === 'wfh') return 'bg-lime-500/95 ring-1 ring-lime-300/60 dark:ring-lime-400/20'
     if (status === 'anomaly') return 'bg-amber-500/95 ring-1 ring-amber-300/60 dark:ring-amber-400/20'
@@ -445,8 +447,8 @@ export default function AttendancePage() {
     if (status === 'holiday_worked') return 'bg-fuchsia-600/95 ring-1 ring-fuchsia-400/60 dark:ring-fuchsia-500/20'
     if (status === 'weekend') return 'bg-slate-300 ring-1 ring-slate-300/80 dark:bg-slate-600 dark:ring-slate-500/60'
     if (status === 'lop') return 'bg-orange-500/95 ring-1 ring-orange-300/60 dark:ring-orange-400/20'
-    if (status === 'half_day') return 'bg-teal-500/95 ring-1 ring-teal-300/60 dark:ring-teal-400/20'
-    return 'bg-slate-100 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700'
+    if (status === 'half_day') return 'bg-violet-500/95 ring-1 ring-violet-300/60 dark:ring-violet-400/20'
+    return 'bg-slate-50 ring-1 ring-slate-200/80 dark:bg-slate-800/50 dark:ring-slate-700/60'
   }
 
   const cellLabel = (status, days, day) => {
@@ -454,6 +456,7 @@ export default function AttendancePage() {
     if (code) return code
     if (status === 'present') return 'P'
     if (status === 'absent') return 'A'
+    if (status === 'in_progress') return 'IP'
     if (status === 'leave') return 'L'
     if (status === 'wfh') return 'WFH'
     if (status === 'holiday') return 'H'
@@ -527,6 +530,8 @@ export default function AttendancePage() {
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-emerald-500" />Present</span>
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-rose-500" />Absent</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-slate-500" />Upcoming</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-purple-500" />In Progress</span>
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-blue-500" />Leave</span>
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-amber-500" />Anomaly</span>
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-amber-500 flex items-center justify-center text-[9px] font-bold text-white leading-none pb-[1px]">P</span>Anomaly Approved</span>

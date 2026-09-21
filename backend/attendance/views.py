@@ -158,7 +158,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             else:
                 emp_qs = emp_qs.filter(pk=profile.pk)
         else:
-            return Response({"year": year, "month": month, "days_in_month": last_day, "rows": [], "legend": {}})
+            emp_qs = emp_qs.none()
+            
+        search_query = request.query_params.get("search")
+        if not search_query:
+            emp_qs = emp_qs.filter(user__is_active=True)
 
         employees = list(emp_qs)
         employee_ids = [e.id for e in employees]
@@ -317,6 +321,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         if manager_id:
             emp_qs = emp_qs.filter(manager_id=manager_id)
 
+        if not search:
+            emp_qs = emp_qs.filter(user__is_active=True)
+
         employees = list(emp_qs.order_by("employee_code"))
         employee_ids = [e.id for e in employees]
 
@@ -358,7 +365,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         departments = sorted({e.department for e in employees if e.department})
 
         result_rows = []
-        summary = {"present": 0, "absent": 0, "leave": 0, "anomaly": 0, "wfh": 0, "weekend": 0, "holiday": 0, "holiday_worked": 0}
+        summary = {"present": 0, "absent": 0, "upcoming": 0, "leave": 0, "anomaly": 0, "wfh": 0, "weekend": 0, "holiday": 0, "holiday_worked": 0}
 
         for e in employees:
             name = f"{e.user.first_name} {e.user.last_name}".strip() or e.user.email

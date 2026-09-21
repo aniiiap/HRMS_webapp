@@ -186,6 +186,14 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
         if role:
             employee.user.role = role
             employee.user.save(update_fields=["role"])
+            
+        shift_template = validated_data.get("shift_template")
+        if shift_template:
+            from .models import ShiftTemplateAssignment
+            from .shift_assignments import set_primary_shift_assignment
+            ShiftTemplateAssignment.objects.get_or_create(employee=employee, shift_template=shift_template)
+            set_primary_shift_assignment(employee, shift_template)
+            
         return employee
 
     def update(self, instance, validated_data):
@@ -204,6 +212,14 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
             update_user_fields.append("email")
         if update_user_fields:
             employee.user.save(update_fields=update_user_fields)
+            
+        shift_template = validated_data.get("shift_template")
+        if shift_template:
+            from .models import ShiftTemplateAssignment
+            from .shift_assignments import set_primary_shift_assignment
+            ShiftTemplateAssignment.objects.get_or_create(employee=employee, shift_template=shift_template)
+            set_primary_shift_assignment(employee, shift_template)
+            
         return employee
 
 
@@ -303,6 +319,11 @@ class EmployeeOnboardSerializer(serializers.Serializer):
         validated_data["organization"] = org
         try:
             emp = Employee.objects.create(user=user, manager=manager, **validated_data)
+            if shift_template:
+                from .models import ShiftTemplateAssignment
+                from .shift_assignments import set_primary_shift_assignment
+                ShiftTemplateAssignment.objects.get_or_create(employee=emp, shift_template=shift_template)
+                set_primary_shift_assignment(emp, shift_template)
         except IntegrityError as exc:
             user.delete()
             raise serializers.ValidationError(

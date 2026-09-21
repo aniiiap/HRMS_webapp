@@ -40,6 +40,8 @@ def day_status_for_employee(
             return "present", "P"
             
         anomaly = attendance_anomaly(attendance)
+        if anomaly == "in_progress":
+            return "in_progress", "IP"
         if anomaly == "anomaly_approved":
             return "anomaly_approved", "P"
         if anomaly != "none" or not attendance.check_out:
@@ -65,5 +67,17 @@ def day_status_for_employee(
         
     if day_date > today:
         return "no_record", "NA"
+        
+    if day_date == today:
+        from .rule_settings import resolve_shift_rule, shift_start_datetime
+        from datetime import timedelta
+        
+        settings = resolve_shift_rule(employee)
+        if settings and settings.shift_start:
+            start_dt = shift_start_datetime(day_date, settings)
+            if start_dt:
+                grace = timedelta(minutes=getattr(settings, 'grace_minutes', 0) or 0)
+                if timezone.localtime() < (start_dt + grace):
+                    return "upcoming", "UP"
         
     return "absent", "A"

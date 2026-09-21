@@ -181,6 +181,8 @@ function EditLogModal({ editing, onClose, onSave }) {
 const STATUS_LEGEND = [
   { code: 'P', label: 'Present', color: 'bg-emerald-500' },
   { code: 'A', label: 'Absent', color: 'bg-rose-500' },
+  { code: 'UP', label: 'Upcoming', color: 'bg-slate-500 dark:bg-slate-700' },
+  { code: 'IP', label: 'In Progress', color: 'bg-purple-500 dark:bg-purple-400' },
   { code: 'L', label: 'Leave', color: 'bg-blue-500' },
   { code: 'WO', label: 'Weekly off', color: 'bg-slate-500' },
   { code: 'WFH', label: 'Work from home', color: 'bg-lime-400' },
@@ -212,6 +214,7 @@ function formatTime(value) {
 function cellClass(status) {
   if (status === 'present') return 'bg-emerald-500 text-white'
   if (status === 'absent') return 'bg-rose-500 text-white'
+  if (status === 'upcoming') return 'bg-slate-500 text-white dark:bg-slate-700'
   if (status === 'leave') return 'bg-blue-500 text-white'
   if (status === 'wfh') return 'bg-lime-500 text-white'
   if (status === 'anomaly') return 'bg-amber-500 text-white'
@@ -224,8 +227,10 @@ function cellCode(status, days, day) {
   if (code) return code
   if (status === 'present') return 'P'
   if (status === 'absent') return 'A'
+  if (status === 'upcoming') return 'UP'
   if (status === 'leave') return 'L'
   if (status === 'wfh') return 'WFH'
+  if (status === 'in_progress') return 'IP'
   if (status === 'anomaly') return 'AN'
   if (status === 'weekend') return 'WO'
   return 'NA'
@@ -235,6 +240,8 @@ function StatusBadge({ code }) {
   const map = {
     P: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
     A: 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300',
+    UP: 'bg-slate-500 text-white dark:bg-slate-700',
+    IP: 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300',
     L: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300',
     WFH: 'bg-lime-100 text-lime-800 dark:bg-lime-950/50 dark:text-lime-300',
     WO: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
@@ -267,6 +274,7 @@ function SummaryCards({ summary }) {
   const cards = [
     { label: 'Present', value: summary.present || 0, className: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300' },
     { label: 'Absent', value: summary.absent || 0, className: 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300' },
+    { label: 'Upcoming', value: summary.upcoming || 0, className: 'border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300' },
     { label: 'Leave', value: (summary.leave || 0) + (summary.wfh || 0), className: 'border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-300' },
     { label: 'Anomaly', value: summary.anomaly || 0, className: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300' },
   ]
@@ -433,6 +441,8 @@ export default function AttendanceLogsPanel({
                 <option value="all">Status</option>
                 <option value="present">Present</option>
                 <option value="absent">Absent</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="in_progress">In Progress</option>
                 <option value="leave">Leave</option>
                 <option value="wfh">Work from home</option>
                 <option value="anomaly">Anomaly</option>
