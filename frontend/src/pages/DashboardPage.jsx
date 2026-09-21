@@ -391,7 +391,7 @@ export default function DashboardPage() {
           resolve(coords)
         },
         () => reject(new Error('Location permission is required for attendance punch.')),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+        { enableHighAccuracy: false, timeout: 4000, maximumAge: 120000 },
       )
     })
   }

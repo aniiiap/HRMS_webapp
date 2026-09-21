@@ -115,7 +115,7 @@ export default function AttendancePage() {
           resolve(coords)
         },
         () => reject(new Error('Location permission is required or location request timed out.')),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+        { enableHighAccuracy: false, timeout: 4000, maximumAge: 120000 },
       )
     })
   }
