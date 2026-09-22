@@ -28,12 +28,20 @@ def render_template_variables(html_content: str, employee: Employee) -> str:
         if getattr(org, 'company_logo', None):
             logo_img = f'<img src="{org.company_logo.url}" style="max-height: 80px;" alt="Company Logo" />'
 
-    salary_val = ""
+    salary_monthly = 0
     if employee:
         if hasattr(employee, 'compensation') and employee.compensation:
-            salary_val = str(employee.compensation.monthly_gross or "")
+            salary_monthly = employee.compensation.monthly_gross or 0
         else:
-            salary_val = str(getattr(employee, 'salary', ''))
+            salary_monthly = getattr(employee, 'salary', 0) or 0
+    try:
+        salary_monthly = float(salary_monthly)
+    except (ValueError, TypeError):
+        salary_monthly = 0
+        
+    salary_annum = salary_monthly * 12
+    salary_monthly_str = f"{salary_monthly:,.2f}".rstrip('0').rstrip('.')
+    salary_annum_str = f"{salary_annum:,.2f}".rstrip('0').rstrip('.')
 
     replacements = {
         "employee_name": employee.user.get_full_name() if employee and hasattr(employee, 'user') else "",
@@ -46,35 +54,98 @@ def render_template_variables(html_content: str, employee: Employee) -> str:
         "designation": employee.designation if employee else "",
         "department": employee.department if employee else "",
         "organization_name": employee.organization.name if employee and hasattr(employee, 'organization') and employee.organization else "",
-        "salary": salary_val,
+        "salary": salary_monthly_str,
+        "salary_per_month": salary_monthly_str,
+        "salary_per_annum": salary_annum_str,
         "joining_date": employee.date_of_joining.strftime("%B %d, %Y") if employee and hasattr(employee, 'date_of_joining') and employee.date_of_joining else "",
         "company_signature": sig_img,
         "company_seal": seal_img,
         "company_logo": logo_img,
     }
-    
+
     for key, value in replacements.items():
-        # Match {{ optionally with spaces/html }} key {{ optionally with spaces/html }}
-        # Example: {{ <span>employee_name</span> }}
+        # Match {{ variable }} or {{variable}} and replace
+        # Also handle cases where quill might wrap it in tags, e.g. <p>{{ variable }}</p>
+        # A simple string replace is usually enough, but regex is safer for spacing
         pattern = r"{{\s*(?:<[^>]+>)*\s*" + key + r"\s*(?:<[^>]+>)*\s*}}"
         html_content = re.sub(pattern, value or "", html_content, flags=re.IGNORECASE)
         
     return html_content
 
-def generate_pdf_from_html(html_content):
-    """Generate PDF from HTML content using xhtml2pdf."""
+def generate_pdf_from_html(html_content, organization=None):
+    """Generate PDF from HTML content using xhtml2pdf, applying organization branding."""
+    
+    # Extract branding elements
+    watermark_css = ""
+    margin_top = "2cm"
+    margin_bottom = "2cm"
+    
+    if organization:
+        if getattr(organization, 'letterhead_background', None):
+            watermark_css = f'background-image: url("{organization.letterhead_background.url}");'
+            # Added more space between header part of background and text
+            margin_top = "3cm"
+            margin_bottom = "3cm"
+            
+    # Ensure the HTML has proper structure and CSS for PDF rendering
+    # This prevents text from cutting off on the right and fixes character encoding issues
+    if "<html" not in html_content.lower():
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Document</title>
+            <style>
+                @page {{
+                    size: a4 portrait;
+                    margin-top: {margin_top};
+                    margin-bottom: {margin_bottom};
+                    margin-left: 2cm;
+                    margin-right: 2cm;
+                    {watermark_css}
+                }}
+                body {{
+                    font-family: Helvetica, Arial, sans-serif;
+                    font-size: 11pt;
+                    color: #000000;
+                    line-height: 1.5;
+                }}
+                p, div, span, td, th {{
+                    word-wrap: break-word;
+                    word-break: break-word;
+                    white-space: pre-wrap;
+                }}
+                /* Ensure images don't exceed page width */
+                img {{
+                    max-width: 100%;
+                    height: auto;
+                }}
+            </style>
+        </head>
+        <body>
+            {html_content}
+        </body>
+        </html>
+        """
+
+    # Replace non-breaking spaces with standard spaces so xhtml2pdf can wrap text
+    html_content = html_content.replace("&nbsp;", " ")
     result = io.BytesIO()
     pdf = pisa.pisaDocument(io.BytesIO(html_content.encode("utf-8")), result, encoding='UTF-8')
     if not pdf.err:
         return result.getvalue()
     raise Exception(f"Failed to generate PDF: {pdf.err}")
 
-def send_letter_email(employee: Employee, subject: str, note_html: str, pdf_bytes: bytes, file_name: str):
-    """Sends the letter via Resend with the PDF attached."""
+def recipient_email(employee) -> str:
+    return employee.personal_email if getattr(employee, 'personal_email', None) else employee.user.email
+
+def send_letter_email(employee, subject: str, note_html: str, pdf_bytes=None, file_name=None, attachments=None):
+    """Sends the letter via Resend with one or more PDF attachments."""
     api_key = getattr(settings, "RESEND_API_KEY", "")
     from_email = getattr(settings, "RESEND_FROM_EMAIL", "")
 
-    target_email = employee.personal_email if getattr(employee, 'personal_email', None) else employee.user.email
+    target_email = recipient_email(employee)
 
     if not api_key or not from_email:
         # For local dev without keys, just return success

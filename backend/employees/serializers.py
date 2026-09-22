@@ -29,6 +29,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "signature_image",
             "seal_image",
             "company_logo",
+            "letterhead_background",
             "expense_backdate_limit_days",
             "resignation_notice_period_days",
             "resignation_auto_msg_enabled",

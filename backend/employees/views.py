@@ -743,7 +743,13 @@ class EmployeeDocumentViewSet(viewsets.ModelViewSet):
         import cloudinary.utils
 
         doc = self.get_object()
+        
+        doc = self.get_object()
         file_url = doc.file if isinstance(doc.file, str) else str(doc.file)
+        if file_url.startswith('/api/letters/'):
+            from django.http import HttpResponseRedirect
+            return HttpResponseRedirect(file_url)
+
 
         filename = doc.title or ''
         url_path = file_url.split('?')[0]

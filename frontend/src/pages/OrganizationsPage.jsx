@@ -238,6 +238,35 @@ export default function OrganizationsPage() {
                   </button>
                 )}
               </div>
+
+              {/* Letterhead Background Upload Section */}
+              <div className="flex flex-col gap-2 min-w-[140px]">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Letterhead Background</label>
+                {org.letterhead_background && (
+                  <img src={org.letterhead_background} alt="Letterhead Background" className="h-16 w-16 object-contain border border-slate-200 dark:border-slate-700 bg-white rounded-md mb-2 p-1" />
+                )}
+                <label className="btn-secondary cursor-pointer justify-center">
+                  <Upload size={16} />
+                  <span>Upload Background</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, org.id, 'letterhead_background', 'Letterhead Background')}
+                    disabled={loadingFile}
+                  />
+                </label>
+                {org.letterhead_background && (
+                  <button
+                    onClick={() => confirmFileDelete(org.id, 'letterhead_background', 'Letterhead Background')}
+                    disabled={loadingFile}
+                    className="btn text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-900/20 justify-center rounded-xl px-3 py-2 transition"
+                  >
+                    <Trash2 size={16} className="mr-1 inline" />
+                    Remove Background
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           

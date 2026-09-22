@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { FileText, Plus, Send, Clock, Edit2, Trash2, Search } from 'lucide-react'
 import { api } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'
@@ -8,6 +8,8 @@ import dayjs from 'dayjs'
 import SendLetterModal from './SendLetterModal'
 
 export default function LetterTemplates() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user, isPrivileged } = useAuth()
   const [templates, setTemplates] = useState([])
   const [history, setHistory] = useState([])
@@ -17,12 +19,18 @@ export default function LetterTemplates() {
   const [searchTimeout, setSearchTimeout] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showSendModal, setShowSendModal] = useState(false)
-  const [activeTab, setActiveTab] = useState(isPrivileged ? 'templates' : 'history') // templates | history
+  const [activeTab, setActiveTab] = useState(
+    !isPrivileged || searchParams.get('tab') === 'history' ? 'history' : 'templates'
+  ) // templates | history
 
   useEffect(() => {
     fetchTemplates()
     fetchHistory(1)
   }, [])
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'history') setActiveTab('history')
+  }, [searchParams])
 
   const fetchTemplates = async () => {
     try {
@@ -138,6 +146,12 @@ export default function LetterTemplates() {
           }`}
         >
           Sent History
+        </button>
+        <button
+          onClick={() => navigate('/letters/generated')}
+          className="border-b-2 border-transparent px-1 py-4 text-sm font-medium text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400"
+        >
+          Generated Documents
         </button>
       </div>
       )}

@@ -11,15 +11,22 @@ class LetterTemplateSerializer(serializers.ModelSerializer):
 class SentLetterSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source="employee.user.get_full_name", read_only=True)
     employee_email = serializers.CharField(source="employee.user.email", read_only=True)
+    employee_code = serializers.CharField(source="employee.employee_code", read_only=True)
+    recipient_email = serializers.SerializerMethodField()
     template_name = serializers.CharField(source="template.name", read_only=True)
 
     class Meta:
         model = SentLetter
         fields = [
-            "id", "employee", "employee_name", "employee_email", "template", 
+            "id", "employee", "employee_name", "employee_email", "employee_code",
+            "recipient_email", "template",
             "template_name", "subject", "note", "pdf_file", "status", "signed_at", "sent_at"
         ]
         read_only_fields = ["id", "pdf_file", "status", "signed_at", "sent_at"]
+
+    def get_recipient_email(self, obj):
+        from .services import recipient_email
+        return recipient_email(obj.employee)
 
 class SendLetterRequestSerializer(serializers.Serializer):
     employee_ids = serializers.ListField(child=serializers.IntegerField())

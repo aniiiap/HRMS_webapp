@@ -5,7 +5,7 @@ import 'react-quill-new/dist/quill.snow.css'
 import { api, messageFromError } from '../../api/client'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/ui/PageHeader'
-import { ArrowLeft, Save, Send } from 'lucide-react'
+import { ArrowLeft, FileDown } from 'lucide-react'
 import { useConfirm } from '../../context/ConfirmContext'
 
 export default function IssueLetterPage() {
@@ -72,20 +72,7 @@ export default function IssueLetterPage() {
     }
   }
 
-  const handleSaveDraft = async () => {
-    if (!selectedTemplate || !selectedEmployee) return toast.error('Please select template and employee')
-    setLoading(true)
-    try {
-      // Assuming we have an endpoint for draft
-      // We'll just POST it to send endpoint with draft flag, but backend send doesn't support draft yet.
-      // Wait, let's just make it send directly for now, or implement draft endpoint if we have it.
-      toast.error('Draft saving coming soon!')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSend = async () => {
+  const handleGenerate = async () => {
     if (!selectedTemplate || !selectedEmployee || !content) {
       return toast.error('Please fill all required fields')
     }
@@ -93,24 +80,26 @@ export default function IssueLetterPage() {
     const emp = employees.find(x => x.id === parseInt(selectedEmployee))
     
     const confirmed = await confirm({
-      title: 'Send Document',
-      description: `Are you sure you want to send this document to ${emp.first_name} ${emp.last_name}?`,
-      confirmText: 'Yes, Send Now',
-      confirmColor: 'bg-brand-600'
+      title: 'Generate Document',
+      message: `Generate this PDF for ${emp.first_name} ${emp.last_name}? It will be saved to their profile documents and appear in Generated Documents.`,
+      confirmLabel: 'Yes, Generate',
     })
     
     if (!confirmed) return
 
     setLoading(true)
     try {
-      await api.post('/api/letters/history/send/', {
+      const { data } = await api.post('/api/letters/history/generate/', {
         employee_ids: [parseInt(selectedEmployee)],
         template_id: parseInt(selectedTemplate),
         subject,
         body_html: content
       })
-      toast.success('Document sent successfully!')
-      navigate('/letters')
+      if (data?.warnings?.length) {
+        toast.error(data.warnings.join('. '))
+      }
+      toast.success('Document generated and uploaded to the employee profile')
+      navigate('/letters/generated')
     } catch (err) {
       toast.error(messageFromError(err))
     } finally {
@@ -163,11 +152,8 @@ export default function IssueLetterPage() {
           </div>
           
           <div className="card p-6 flex flex-col gap-3">
-            {/* <button onClick={handleSaveDraft} disabled={loading} className="btn-secondary flex items-center justify-center gap-2">
-              <Save size={18} /> Save as Draft
-            </button> */}
-            <button onClick={handleSend} disabled={loading || rendering} className="btn-primary flex items-center justify-center gap-2">
-              <Send size={18} /> {loading ? 'Sending...' : 'Send Document'}
+            <button onClick={handleGenerate} disabled={loading || rendering} className="btn-primary flex items-center justify-center gap-2">
+              <FileDown size={18} /> {loading ? 'Generating...' : 'Generate'}
             </button>
           </div>
         </div>

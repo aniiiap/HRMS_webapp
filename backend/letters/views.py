@@ -5,9 +5,10 @@ from rest_framework.response import Response
 from django.core.files.base import ContentFile
 from django.utils import timezone
 from .models import LetterTemplate, SentLetter
-from employees.models import Employee
+from employees.models import Employee, EmployeeDocument
 from .serializers import LetterTemplateSerializer, SentLetterSerializer, SendLetterRequestSerializer
-from .services import generate_pdf_from_html, send_letter_email, render_template_variables
+from .services import generate_pdf_from_html, send_letter_email, render_template_variables, recipient_email
+from accounts.permissions import IsAdminOrHR
 
 class LetterTemplateViewSet(viewsets.ModelViewSet):
     serializer_class = LetterTemplateSerializer
@@ -26,11 +27,35 @@ from rest_framework.pagination import PageNumberPagination
 class SentLetterPagination(PageNumberPagination):
     page_size = 10
 
-class SentLetterViewSet(viewsets.ReadOnlyModelViewSet):
+class SentLetterViewSet(viewsets.ModelViewSet):
     serializer_class = SentLetterSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = SentLetterPagination
     search_fields = ["subject", "employee__user__first_name", "employee__user__last_name", "template__name"]
+
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            return [permissions.IsAuthenticated(), IsAdminOrHR()]
+        return [permissions.IsAuthenticated()]
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Remove any linked EmployeeDocument entries pointing to this letter
+        try:
+            from employees.models import EmployeeDocument
+            EmployeeDocument.objects.filter(
+                employee=instance.employee,
+                file=f"/api/letters/history/{instance.id}/download/"
+            ).delete()
+        except Exception:
+            pass
+        # Delete the actual PDF file from storage if it exists
+        if instance.pdf_file:
+            try:
+                instance.pdf_file.delete(save=False)
+            except Exception:
+                pass
+        return super().destroy(request, *args, **kwargs)
 
     def get_queryset(self):
         if hasattr(self.request.user, 'role') and self.request.user.role == 'employee':
@@ -42,6 +67,17 @@ class SentLetterViewSet(viewsets.ReadOnlyModelViewSet):
         from django.http import HttpResponse
         import traceback
         sent_letter = self.get_object()
+        
+        if sent_letter.status == "draft" and sent_letter.draft_html:
+            try:
+                pdf_bytes = generate_pdf_from_html(sent_letter.draft_html, organization=sent_letter.organization)
+                response = HttpResponse(pdf_bytes, content_type='application/pdf')
+                filename = f"draft_{sent_letter.id}.pdf"
+                response['Content-Disposition'] = f'inline; filename="{filename}"'
+                return response
+            except Exception as e:
+                return Response({"error": f"Failed to generate draft PDF: {str(e)}", "tb": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         if not sent_letter.pdf_file:
             return Response({"error": "No PDF file found."}, status=status.HTTP_404_NOT_FOUND)
         
@@ -52,12 +88,11 @@ class SentLetterViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             pdf_bytes = sent_letter.pdf_file.read()
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
-            # Use inline disposition so Chrome PDF viewer opens it
             filename = sent_letter.pdf_file.name.split('/')[-1] if sent_letter.pdf_file.name else 'document.pdf'
             response['Content-Disposition'] = f'inline; filename="{filename}"'
             return response
         except FileNotFoundError:
-            return Response({"error": "This older PDF is no longer available due to the storage migration. Please send a new letter."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "This older PDF is no longer available."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": f"Failed to read PDF: {str(e)}", "tb": traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -96,7 +131,7 @@ class SentLetterViewSet(viewsets.ReadOnlyModelViewSet):
                 html_content = render_template_variables(base_html, employee)
                 
                 try:
-                    pdf_bytes = generate_pdf_from_html(html_content)
+                    pdf_bytes = generate_pdf_from_html(html_content, organization=org)
                 except Exception as e:
                     continue # Skip if PDF fails
 
@@ -146,7 +181,7 @@ class SentLetterViewSet(viewsets.ReadOnlyModelViewSet):
             else:
                 html_content = base_html # Or replace with dummy data manually
 
-            pdf_bytes = generate_pdf_from_html(html_content)
+            pdf_bytes = generate_pdf_from_html(html_content, organization=org)
             
             from django.http import HttpResponse
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
@@ -185,3 +220,100 @@ class SentLetterViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"rendered_html": rendered_html})
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+    def _attach_to_employee_profile(self, request, employee, title, pdf_bytes, file_name, sent_letter):
+        try:
+            from employees.models import EmployeeDocument
+            doc = EmployeeDocument(
+                employee=employee,
+                title=title,
+                file=f"/api/letters/history/{sent_letter.id}/download/"
+            )
+            doc.save()
+        except Exception as e:
+            import traceback
+            print(f"Failed to attach document to employee profile: {e}\n{traceback.format_exc()}")
+
+    @action(detail=False, methods=["get"], url_path="generated")
+    def generated(self, request):
+        queryset = self.get_queryset().filter(status="draft").order_by('-sent_at')
+        groups = {}
+        for doc in queryset:
+            emp_id = doc.employee.id
+            if emp_id not in groups:
+                groups[emp_id] = {
+                    "employee_id": emp_id,
+                    "employee_name": doc.employee.user.get_full_name(),
+                    "recipient_email": recipient_email(doc.employee),
+                    "documents": []
+                }
+            groups[emp_id]["documents"].append({
+                "id": doc.id,
+                "subject": doc.subject,
+                "sent_at": doc.sent_at,
+            })
+        return Response({"groups": list(groups.values())})
+
+    @action(detail=True, methods=["post"], url_path="send_generated")
+    def send_generated(self, request, pk=None):
+        doc = self.get_object()
+        if doc.status != "draft":
+            return Response({"error": "Only draft documents can be sent."}, status=400)
+        pdf_bytes = generate_pdf_from_html(doc.draft_html, organization=doc.organization)
+        file_name = f"{doc.subject.replace(' ', '_')}.pdf"
+        doc.pdf_file.save(file_name, ContentFile(pdf_bytes), save=False)
+        doc.status = "sent"
+        doc.save()
+        self._attach_to_employee_profile(request, doc.employee, doc.subject, pdf_bytes, file_name, doc)
+        email_html = f"<p>Hi {doc.employee.user.first_name},</p><p>Please find the attached document.</p>"
+        send_letter_email(doc.employee, doc.subject, email_html, pdf_bytes, file_name)
+        return Response({"success": True})
+
+    @action(detail=False, methods=["post"], url_path="send_generated_batch")
+    def send_generated_batch(self, request):
+        employee_id = request.data.get("employee_id")
+        docs = self.get_queryset().filter(employee_id=employee_id, status="draft")
+        for doc in docs:
+            pdf_bytes = generate_pdf_from_html(doc.draft_html, organization=doc.organization)
+            file_name = f"{doc.subject.replace(' ', '_')}.pdf"
+            doc.pdf_file.save(file_name, ContentFile(pdf_bytes), save=False)
+            doc.status = "sent"
+            doc.save()
+            self._attach_to_employee_profile(request, doc.employee, doc.subject, pdf_bytes, file_name, doc)
+            email_html = f"<p>Hi {doc.employee.user.first_name},</p><p>Please find the attached document.</p>"
+            send_letter_email(doc.employee, doc.subject, email_html, pdf_bytes, file_name)
+        return Response({"success": True})
+        
+    @action(detail=False, methods=["post"], url_path="generate")
+    def generate(self, request):
+        try:
+            ser = SendLetterRequestSerializer(data=request.data)
+            if not ser.is_valid(): return Response(ser.errors, status=400)
+            data = ser.validated_data
+            org = request.user.organization
+            employee_ids = data.get("employee_ids", [])
+            if not employee_ids: return Response({"error": "No employees selected."}, status=400)
+            employees = Employee.objects.filter(id__in=employee_ids, organization=org)
+            if not employees.exists(): return Response({"error": "Employees not found."}, status=404)
+            template = None
+            if data.get("template_id"):
+                try: template = LetterTemplate.objects.get(id=data["template_id"], organization=org)
+                except: pass
+            base_html = data["body_html"]
+            subject = data["subject"]
+            note = data.get("note", "")
+            sent_letters = []
+            for employee in employees:
+                html_content = render_template_variables(base_html, employee)
+                sent_letter = SentLetter(
+                    organization=org, employee=employee, template=template,
+                    subject=subject, note=note, status="draft", draft_html=html_content
+                )
+                sent_letter.save()
+                self._attach_to_employee_profile(request, employee, subject, None, None, sent_letter)
+                sent_letters.append(sent_letter)
+            return Response(SentLetterSerializer(sent_letters, many=True).data, status=201)
+        except Exception as e:
+            import traceback
+            return Response({"error": f"Internal Server Error: {str(e)}", "traceback": traceback.format_exc()}, status=500)

@@ -26,6 +26,8 @@ const PlatformOrganizationsPage = lazy(() => import('./pages/platform/PlatformOr
 const LetterTemplates = lazy(() => import('./pages/letters/LetterTemplates'))
 const LetterEditor = lazy(() => import('./pages/letters/LetterEditor'))
 const IssueLetterPage = lazy(() => import('./pages/letters/IssueLetterPage'))
+const GeneratedDocumentsPage = lazy(() => import('./pages/letters/GeneratedDocumentsPage'))
+const GeneratedDocumentGroupPage = lazy(() => import('./pages/letters/GeneratedDocumentGroupPage'))
 const ResignationPage = lazy(() => import('./pages/ResignationPage'))
 const ExpensesPage = lazy(() => import('./pages/ExpensesPage'))
 const AdminExpensesPage = lazy(() => import('./pages/AdminExpensesPage'))
@@ -158,6 +160,8 @@ export default function App() {
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/letters" element={<LetterTemplates />} />
             <Route path="/letters/issue" element={<IssueLetterPage />} />
+            <Route path="/letters/generated" element={<GeneratedDocumentsPage />} />
+            <Route path="/letters/generated/:employeeId" element={<GeneratedDocumentGroupPage />} />
             <Route path="/letters/:id" element={<LetterEditor />} />
           </Route>
           

@@ -10,7 +10,7 @@ Quill.register('modules/imageResize', ImageResize)
 
 import { api } from '../../api/client'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Save, Plus } from 'lucide-react'
+import { ArrowLeft, Save, Plus, X } from 'lucide-react'
 
 const AVAILABLE_VARIABLES = [
   { label: 'Employee Name', value: 'employee_name' },
@@ -23,7 +23,8 @@ const AVAILABLE_VARIABLES = [
   { label: 'Joining Date', value: 'joining_date' },
   { label: 'Designation', value: 'designation' },
   { label: 'Department', value: 'department' },
-  { label: 'Salary', value: 'salary' },
+  { label: 'Salary per Month', value: 'salary_per_month' },
+  { label: 'Salary per Annum', value: 'salary_per_annum' },
   { label: 'Organization Name', value: 'organization_name' },
   { label: 'Company Signature', value: 'company_signature' },
   { label: 'Company Seal', value: 'company_seal' },
@@ -40,13 +41,32 @@ export default function LetterEditor() {
   const [subject, setSubject] = useState('')
   const [content, setContent] = useState('')
   const [saving, setSaving] = useState(false)
-  const [showVarDropdown, setShowVarDropdown] = useState(false)
+  const [showVarDropdownTop, setShowVarDropdownTop] = useState(false)
+  const [showVarDropdownFab, setShowVarDropdownFab] = useState(false)
+  const [isFabVisible, setIsFabVisible] = useState(false)
+  const [fabDismissed, setFabDismissed] = useState(false)
+  const [fabTop, setFabTop] = useState(20)
 
   useEffect(() => {
     if (!isNew) {
       fetchTemplate()
     }
   }, [id])
+
+  const handleSelectionChange = (range, source, editor) => {
+    if (range) {
+      try {
+        const bounds = editor.getBounds(range.index)
+        if (bounds) {
+          // Add ~44px to account for the top formatting toolbar's height
+          setFabTop(Math.max(0, bounds.top + 44))
+          if (!fabDismissed) {
+            setIsFabVisible(true)
+          }
+        }
+      } catch (e) {}
+    }
+  }
 
   const fetchTemplate = async () => {
     try {
@@ -92,7 +112,8 @@ export default function LetterEditor() {
     // Insert with spaces so it looks nice in the editor
     quill.insertText(cursorPosition, `{{${variableValue}}}`)
     quill.setSelection(cursorPosition + variableValue.length + 4)
-    setShowVarDropdown(false)
+    setShowVarDropdownTop(false)
+    setShowVarDropdownFab(false)
   }
 
   const modules = {
@@ -166,12 +187,12 @@ export default function LetterEditor() {
               <span className="text-sm font-medium text-slate-500 px-2">Document Editor</span>
               <div className="relative">
                 <button 
-                  onClick={() => setShowVarDropdown(!showVarDropdown)}
+                  onClick={() => setShowVarDropdownTop(!showVarDropdownTop)}
                   className="inline-flex items-center gap-1.5 rounded-md bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-100 dark:bg-brand-900/30 dark:text-brand-400 dark:hover:bg-brand-900/50 transition-colors"
                 >
                   <Plus size={16} /> Insert Variable
                 </button>
-                {showVarDropdown && (
+                {showVarDropdownTop && (
                   <div className="absolute right-0 top-full mt-1 w-56 rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800 max-h-64 overflow-y-auto p-1">
                     <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700/50 mb-1">Standard Fields</div>
                     {AVAILABLE_VARIABLES.map(v => (
@@ -189,14 +210,58 @@ export default function LetterEditor() {
               </div>
             </div>
             
-            <ReactQuill
-              ref={quillRef}
-              theme="snow"
-              value={content}
-              onChange={setContent}
-              modules={modules}
-              className="bg-white dark:bg-slate-900 [&_.ql-editor]:min-h-[400px] [&_.ql-editor]:text-base [&_.ql-toolbar]:border-none [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-slate-200 [&_.ql-container]:border-none dark:[&_.ql-toolbar]:border-slate-800"
-            />
+            <div className="relative">
+              <ReactQuill
+                ref={quillRef}
+                theme="snow"
+                value={content}
+                onChange={setContent}
+                onChangeSelection={handleSelectionChange}
+                modules={modules}
+                className="bg-white dark:bg-slate-900 [&_.ql-editor]:min-h-[400px] [&_.ql-editor]:pb-20 [&_.ql-editor]:text-base [&_.ql-toolbar]:border-none [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-slate-200 [&_.ql-container]:border-none dark:[&_.ql-toolbar]:border-slate-800"
+              />
+              {/* Floating Action Button for Variables */}
+              {isFabVisible && (
+                <div 
+                  className="absolute right-4 z-50 transition-all duration-200 ease-out group flex items-center gap-2"
+                  style={{ top: fabTop }}
+                >
+                  <button
+                    onClick={() => {
+                      setIsFabVisible(false)
+                      setFabDismissed(true)
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600"
+                    title="Hide inline variable inserter"
+                  >
+                    <X size={12} />
+                  </button>
+                  <div className="relative flex flex-col items-end">
+                    {showVarDropdownFab && (
+                      <div className="absolute right-full mr-2 top-0 w-56 rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800 max-h-64 overflow-y-auto p-1 origin-top-right">
+                        <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700/50 mb-1">Standard Fields</div>
+                        {AVAILABLE_VARIABLES.map(v => (
+                          <button
+                            key={v.value}
+                            onClick={() => insertVariable(v.value)}
+                            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-700 rounded-lg dark:text-slate-300 dark:hover:bg-brand-900/30 dark:hover:text-brand-400 transition-colors"
+                          >
+                            {v.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => setShowVarDropdownFab(!showVarDropdownFab)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-white shadow-[0_4px_14px_0_rgba(10,179,156,0.39)] hover:bg-brand-700 hover:shadow-[0_6px_20px_rgba(10,179,156,0.23)] transition-all dark:bg-brand-500"
+                      title="Insert Variable"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

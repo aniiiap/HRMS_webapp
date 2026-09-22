@@ -23,6 +23,9 @@ class Organization(models.Model):
         default=OrganizationPlan.TRIAL,
     )
     
+    # Document Branding
+    letterhead_background = models.ImageField(verbose_name="Letterhead Background", upload_to="organization_branding/", null=True, blank=True, help_text="Full page letterhead background image for generated documents")
+    
     # Resignation settings
     resignation_notice_period_days = models.PositiveIntegerField(default=30, help_text="Minimum notice period days for resignation.")
     resignation_auto_msg_enabled = models.BooleanField(default=False, help_text="Enable automatic warning message on resignation.")
