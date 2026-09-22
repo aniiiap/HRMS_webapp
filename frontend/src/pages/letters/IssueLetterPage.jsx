@@ -22,6 +22,7 @@ export default function IssueLetterPage() {
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(false)
   const [rendering, setRendering] = useState(false)
+  const [useLetterhead, setUseLetterhead] = useState(true)
 
   useEffect(() => {
     loadData()
@@ -93,7 +94,8 @@ export default function IssueLetterPage() {
         employee_ids: [parseInt(selectedEmployee)],
         template_id: parseInt(selectedTemplate),
         subject,
-        body_html: content
+        body_html: content,
+        use_letterhead: useLetterhead
       })
       if (data?.warnings?.length) {
         toast.error(data.warnings.join('. '))
@@ -148,6 +150,17 @@ export default function IssueLetterPage() {
                 value={subject} 
                 onChange={(e) => setSubject(e.target.value)} 
               />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                id="useLetterhead" 
+                checked={useLetterhead} 
+                onChange={(e) => setUseLetterhead(e.target.checked)}
+                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              <label htmlFor="useLetterhead" className="text-sm font-medium text-slate-700">Apply Letterhead Background</label>
             </div>
           </div>
           

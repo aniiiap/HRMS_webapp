@@ -20,7 +20,7 @@ class SentLetterSerializer(serializers.ModelSerializer):
         fields = [
             "id", "employee", "employee_name", "employee_email", "employee_code",
             "recipient_email", "template",
-            "template_name", "subject", "note", "pdf_file", "status", "signed_at", "sent_at"
+            "template_name", "subject", "note", "pdf_file", "status", "use_letterhead", "signed_at", "sent_at"
         ]
         read_only_fields = ["id", "pdf_file", "status", "signed_at", "sent_at"]
 
@@ -34,5 +34,6 @@ class SendLetterRequestSerializer(serializers.Serializer):
     subject = serializers.CharField(max_length=255)
     body_html = serializers.CharField()
     note = serializers.CharField(required=False, allow_blank=True)
+    use_letterhead = serializers.BooleanField(default=True)
     append_signature = serializers.BooleanField(default=False)
     signature_image = serializers.ImageField(required=False, allow_null=True)

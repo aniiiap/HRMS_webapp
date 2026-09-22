@@ -70,7 +70,8 @@ class SentLetterViewSet(viewsets.ModelViewSet):
         
         if sent_letter.status == "draft" and sent_letter.draft_html:
             try:
-                pdf_bytes = generate_pdf_from_html(sent_letter.draft_html, organization=sent_letter.organization)
+                org = sent_letter.organization if sent_letter.use_letterhead else None
+                pdf_bytes = generate_pdf_from_html(sent_letter.draft_html, organization=org)
                 response = HttpResponse(pdf_bytes, content_type='application/pdf')
                 filename = f"draft_{sent_letter.id}.pdf"
                 response['Content-Disposition'] = f'inline; filename="{filename}"'
@@ -131,7 +132,9 @@ class SentLetterViewSet(viewsets.ModelViewSet):
                 html_content = render_template_variables(base_html, employee)
                 
                 try:
-                    pdf_bytes = generate_pdf_from_html(html_content, organization=org)
+                    use_letterhead = data.get("use_letterhead", True)
+                    pdf_org = org if use_letterhead else None
+                    pdf_bytes = generate_pdf_from_html(html_content, organization=pdf_org)
                 except Exception as e:
                     continue # Skip if PDF fails
 
@@ -147,7 +150,8 @@ class SentLetterViewSet(viewsets.ModelViewSet):
                         template=template,
                         subject=subject,
                         note=note,
-                        status="sent"
+                        status="sent",
+                        use_letterhead=use_letterhead
                     )
                     sent_letter.pdf_file.save(file_name, ContentFile(pdf_bytes), save=False)
                     sent_letter.save()
@@ -181,7 +185,9 @@ class SentLetterViewSet(viewsets.ModelViewSet):
             else:
                 html_content = base_html # Or replace with dummy data manually
 
-            pdf_bytes = generate_pdf_from_html(html_content, organization=org)
+            use_letterhead = data.get("use_letterhead", True)
+            pdf_org = org if use_letterhead else None
+            pdf_bytes = generate_pdf_from_html(html_content, organization=pdf_org)
             
             from django.http import HttpResponse
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
@@ -260,7 +266,8 @@ class SentLetterViewSet(viewsets.ModelViewSet):
         doc = self.get_object()
         if doc.status != "draft":
             return Response({"error": "Only draft documents can be sent."}, status=400)
-        pdf_bytes = generate_pdf_from_html(doc.draft_html, organization=doc.organization)
+        org = doc.organization if doc.use_letterhead else None
+        pdf_bytes = generate_pdf_from_html(doc.draft_html, organization=org)
         file_name = f"{doc.subject.replace(' ', '_')}.pdf"
         doc.pdf_file.save(file_name, ContentFile(pdf_bytes), save=False)
         doc.status = "sent"
@@ -275,7 +282,8 @@ class SentLetterViewSet(viewsets.ModelViewSet):
         employee_id = request.data.get("employee_id")
         docs = self.get_queryset().filter(employee_id=employee_id, status="draft")
         for doc in docs:
-            pdf_bytes = generate_pdf_from_html(doc.draft_html, organization=doc.organization)
+            org = doc.organization if doc.use_letterhead else None
+            pdf_bytes = generate_pdf_from_html(doc.draft_html, organization=org)
             file_name = f"{doc.subject.replace(' ', '_')}.pdf"
             doc.pdf_file.save(file_name, ContentFile(pdf_bytes), save=False)
             doc.status = "sent"
@@ -306,9 +314,11 @@ class SentLetterViewSet(viewsets.ModelViewSet):
             sent_letters = []
             for employee in employees:
                 html_content = render_template_variables(base_html, employee)
+                use_letterhead = data.get("use_letterhead", True)
                 sent_letter = SentLetter(
                     organization=org, employee=employee, template=template,
-                    subject=subject, note=note, status="draft", draft_html=html_content
+                    subject=subject, note=note, status="draft", draft_html=html_content,
+                    use_letterhead=use_letterhead
                 )
                 sent_letter.save()
                 self._attach_to_employee_profile(request, employee, subject, None, None, sent_letter)
