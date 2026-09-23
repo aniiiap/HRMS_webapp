@@ -271,12 +271,15 @@ def password_reset_request_view(request):
     ser.is_valid(raise_exception=True)
     email = ser.validated_data["email"]
     
-    if user_can_reset_password(email):
+    try:
         user = User.objects.get(email__iexact=email)
-        _token, _url, _ok, _detail = issue_and_send_password_reset(
-            user,
-            frontend_origin=request.headers.get("Origin")
-        )
+        if user_can_reset_password(user):
+            _token, _url, _ok, _detail = issue_and_send_password_reset(
+                user,
+                frontend_origin=request.headers.get("Origin")
+            )
+    except User.DoesNotExist:
+        pass
     
     return Response(
         {"message": "If that email exists in our system, you will receive a password reset link shortly."},
