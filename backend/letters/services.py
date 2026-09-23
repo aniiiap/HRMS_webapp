@@ -114,7 +114,7 @@ def generate_pdf_from_html(html_content, organization=None):
                 p, div, span, td, th {{
                     word-wrap: break-word;
                     word-break: break-word;
-                    white-space: pre-wrap;
+                    white-space: normal;
                 }}
                 /* Ensure images don't exceed page width */
                 img {{
@@ -130,7 +130,11 @@ def generate_pdf_from_html(html_content, organization=None):
         """
 
     # Replace non-breaking spaces with standard spaces so xhtml2pdf can wrap text
-    html_content = html_content.replace("&nbsp;", " ")
+    html_content = html_content.replace("&nbsp;", " ").replace("\xa0", " ").replace("\u202F", " ").replace("\u2007", " ")
+    
+    # Optional: If HTML was pasted with existing html/body tags, xhtml2pdf might ignore our wrapper CSS
+    # But usually Quill only saves body contents.
+    
     result = io.BytesIO()
     pdf = pisa.pisaDocument(io.BytesIO(html_content.encode("utf-8")), result, encoding='UTF-8')
     if not pdf.err:
