@@ -38,11 +38,11 @@ const allGeneral = [
   { to: '/employees', label: 'Employees', icon: Users, iconFx: 'icon-fx-pop' },
   { to: '/attendance', label: 'Attendance', icon: CalendarDays, iconFx: 'icon-fx-nudge' },
   { to: '/announcements', label: 'Announcements', icon: Megaphone, iconFx: 'icon-fx-rise' },
+  { to: '/leaves', label: 'Leaves', icon: Briefcase, iconFx: 'icon-fx-tilt' },
   { to: '/letters', label: 'Document Center', icon: FileText, iconFx: 'icon-fx-tilt' },
 ]
 
 const allMore = [
-  { to: '/leaves', label: 'Leaves', icon: Briefcase, iconFx: 'icon-fx-tilt' },
   { to: '/holidays', label: 'Holiday Calendar', icon: Calendar, iconFx: 'icon-fx-pop' },
   { to: '/expenses', label: 'Expenses', icon: Receipt, iconFx: 'icon-fx-rise' },
   { to: '/resignation', label: 'Resignation', icon: FileText, iconFx: 'icon-fx-rise' },

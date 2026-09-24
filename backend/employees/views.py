@@ -60,6 +60,29 @@ class OrganizationViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mi
             return qs.filter(pk=oid, is_active=True)
         return qs.none()
 
+    @action(detail=True, methods=["get", "put", "patch"], url_path="id-card-template")
+    def id_card_template_view(self, request, pk=None):
+        org = self.get_object()
+        from .models import IDCardTemplate
+        from .serializers import IDCardTemplateSerializer
+        
+        # Get or create
+        template, created = IDCardTemplate.objects.get_or_create(organization=org)
+        
+        if request.method == "GET":
+            return Response(IDCardTemplateSerializer(template).data)
+            
+        # For PUT/PATCH
+        from accounts.permissions import IsAdminOrHR
+        if not IsAdminOrHR().has_permission(request, self):
+            return Response(status=403)
+            
+        ser = IDCardTemplateSerializer(template, data=request.data, partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors, status=400)
+
     def get_permissions(self):
         # Allow read for all Authenticated employees (needed for notice period settings)
         # but update only for Admin/HR
@@ -129,6 +152,29 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if self.request.query_params.get("nopaginate") == "true":
             return None
         return super().paginate_queryset(queryset)
+
+    @action(detail=True, methods=["get", "put", "patch"], url_path="id-card-template")
+    def id_card_template_view(self, request, pk=None):
+        org = self.get_object()
+        from .models import IDCardTemplate
+        from .serializers import IDCardTemplateSerializer
+        
+        # Get or create
+        template, created = IDCardTemplate.objects.get_or_create(organization=org)
+        
+        if request.method == "GET":
+            return Response(IDCardTemplateSerializer(template).data)
+            
+        # For PUT/PATCH
+        from accounts.permissions import IsAdminOrHR
+        if not IsAdminOrHR().has_permission(request, self):
+            return Response(status=403)
+            
+        ser = IDCardTemplateSerializer(template, data=request.data, partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors, status=400)
 
     def get_permissions(self):
         base = [permissions.IsAuthenticated()]
@@ -245,6 +291,28 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         employee.user.save(update_fields=["is_active", "onboarding_pending"])
         return Response(EmployeeSerializer(employee, context={"request": request}).data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=["get"], url_path="id-card", permission_classes=[permissions.IsAuthenticated])
+    def id_card(self, request, pk=None):
+        from django.http import HttpResponse
+        from .services import generate_id_card_pdf
+        from .models import IDCardTemplate
+
+        employee = self.get_object()
+        # Verify access
+        if not (request.user.role in ['Admin', 'HR'] or getattr(request.user, 'employee_profile', None) == employee):
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+            
+        org = employee.organization
+        template = IDCardTemplate.objects.filter(organization=org).first()
+        
+        try:
+            pdf_bytes = generate_id_card_pdf(employee, template)
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="{employee.employee_code}_ID_Card.pdf"'
+            return response
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=False, methods=["get", "patch"], permission_classes=[permissions.IsAuthenticated], url_path="me")
     def me(self, request):
         profile = getattr(request.user, "employee_profile", None)
@@ -255,7 +323,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             return Response(EmployeeSerializer(profile, context={"request": request}).data, status=status.HTTP_200_OK)
 
         # Employee self-service editable fields.
-        editable_emp_fields = {"phone", "address", "date_of_birth", "profile_image"}
+        editable_emp_fields = {"phone", "address", "date_of_birth", "profile_image", "blood_group", "emergency_contact"}
         for field in editable_emp_fields:
             if field in request.data:
                 setattr(profile, field, request.data.get(field))
@@ -725,6 +793,29 @@ class EmployeeDocumentViewSet(viewsets.ModelViewSet):
         if profile:
             return qs.filter(employee=profile)
         return qs.none()
+
+    @action(detail=True, methods=["get", "put", "patch"], url_path="id-card-template")
+    def id_card_template_view(self, request, pk=None):
+        org = self.get_object()
+        from .models import IDCardTemplate
+        from .serializers import IDCardTemplateSerializer
+        
+        # Get or create
+        template, created = IDCardTemplate.objects.get_or_create(organization=org)
+        
+        if request.method == "GET":
+            return Response(IDCardTemplateSerializer(template).data)
+            
+        # For PUT/PATCH
+        from accounts.permissions import IsAdminOrHR
+        if not IsAdminOrHR().has_permission(request, self):
+            return Response(status=403)
+            
+        ser = IDCardTemplateSerializer(template, data=request.data, partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors, status=400)
 
     def get_permissions(self):
         if self.action in ("update", "partial_update"):

@@ -62,6 +62,7 @@ function ImageModal({ employee, onClose }) {
 }
 
 export default function EmployeesPage() {
+  const { user } = useAuth();
   const { isPrivileged } = useAuth()
   const confirm = useConfirm()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -89,6 +90,7 @@ export default function EmployeesPage() {
     shift_template: '',
     manager: '',
     location_restriction_enabled: true,
+    custom_fields_data: {},
   })
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({
@@ -99,6 +101,7 @@ export default function EmployeesPage() {
     shift_template: '',
     role: 'employee',
     location_restriction_enabled: true,
+    custom_fields_data: {},
   })
   const [busyId, setBusyId] = useState(null)
   const [brokenProfileIds, setBrokenProfileIds] = useState({})
@@ -111,6 +114,12 @@ export default function EmployeesPage() {
     geofencing_enabled: true,
   })
   const [locationBusy, setLocationBusy] = useState(false)
+  const [orgId, setOrgId] = useState(null)
+  const [orgSelfService, setOrgSelfService] = useState(true)
+  const [customFields, setCustomFields] = useState([])
+  const [newCustomFieldName, setNewCustomFieldName] = useState('')
+  const [newCustomFieldRequired, setNewCustomFieldRequired] = useState(false)
+  const [newCustomFieldAskUser, setNewCustomFieldAskUser] = useState(true)
 
   async function load() {
     try {
@@ -131,6 +140,16 @@ export default function EmployeesPage() {
       setAllEmployees(Array.isArray(allEmpRes.data) ? allEmpRes.data : allEmpRes.data.results || [])
       if (isPrivileged) {
         const { data: loc } = await api.get('/api/employees/location-settings/')
+          
+          const { data: orgs } = await api.get('/api/organizations/')
+          const orgList = Array.isArray(orgs) ? orgs : (orgs.results || [])
+          if (orgList.length > 0) {
+            setOrgId(orgList[0].id)
+            setCustomFields(orgList[0].custom_employee_fields || [])
+            setOrgSelfService(orgList[0].profile_self_service_enabled !== false)
+            setOrgSelfService(orgList[0].profile_self_service_enabled !== false)
+          }
+
         setLocationForm({
           name: loc?.name || 'Main Office',
           address: loc?.address || '',
@@ -153,6 +172,42 @@ export default function EmployeesPage() {
 
   // Removed client-side search since we now do server-side pagination and search
   const employeeRows = rows || []
+  
+  async function addCustomField() {
+    if (!newCustomFieldName.trim()) {
+      toast.error('Field name cannot be empty');
+      return;
+    }
+    if (!orgId) {
+      toast.error('Organization not loaded yet');
+      return;
+    }
+    const newField = { name: newCustomFieldName.trim(), required: newCustomFieldRequired, ask_from_user: newCustomFieldAskUser };
+    const updatedFields = [...customFields, newField];
+    try {
+      await api.patch('/api/organizations/' + orgId + '/', { custom_employee_fields: updatedFields });
+      setCustomFields(updatedFields);
+      setNewCustomFieldName('');
+      setNewCustomFieldRequired(false);
+        setNewCustomFieldAskUser(true);
+      toast.success('Custom field added');
+    } catch (err) {
+      toast.error('Error adding field');
+    }
+  }
+
+  async function removeCustomField(index) {
+    if (!orgId) return;
+    const updatedFields = customFields.filter((_, i) => i !== index);
+    try {
+      await api.patch('/api/organizations/' + orgId + '/', { custom_employee_fields: updatedFields });
+      setCustomFields(updatedFields);
+      toast.success('Custom field removed');
+    } catch (err) {
+      toast.error('Error removing field');
+    }
+  }
+
   async function onboard(e) {
     e.preventDefault()
     setError('')
@@ -174,6 +229,7 @@ export default function EmployeesPage() {
         date_of_joining: '',
         shift_template: '',
         location_restriction_enabled: true,
+    custom_fields_data: {},
       })
       let msg = `Created ${data.employee_code} (${data.email}).`
       if (data.invite_sent) msg += ' Invite email sent for password setup.'
@@ -399,7 +455,30 @@ export default function EmployeesPage() {
           <p className="col-span-full text-sm text-slate-600">
             Add employee details and send a secure invite. The employee will fill out their own personal details upon first login.
           </p>
-          {[
+          
+        {user?.is_superuser && (
+          <div className="col-span-full mb-4 flex items-center justify-between rounded-xl border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-900/50 dark:bg-brand-950/20">
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Profile Self-Service (Super Admin Only)</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">If enabled, new employees will complete their own profile setup.</p>
+            </div>
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input type="checkbox" className="peer sr-only" checked={orgSelfService} onChange={async (e) => {
+                const val = e.target.checked;
+                setOrgSelfService(val);
+                if (orgId) {
+                  try {
+                    await api.patch(`/api/organizations/${orgId}/`, { profile_self_service_enabled: val });
+                    toast.success('Self-service setting updated');
+                  } catch(err) {}
+                }
+              }} />
+              <div className="peer h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-slate-700 dark:border-gray-600"></div>
+            </label>
+          </div>
+        )}
+
+            {[
             'email',
             'first_name',
             'last_name',
@@ -410,14 +489,14 @@ export default function EmployeesPage() {
               key={k}
               className="rounded-xl border border-slate-300 px-3 py-2"
               placeholder={
-                (k === 'date_of_joining' ? 'Date of joining' : k.replace('_', ' ')) + (k !== 'email' ? ' (Optional)' : '')
+                (k === 'date_of_joining' ? 'Date of joining' : k.replace('_', ' ')) + (k !== 'email' && orgSelfService ? ' (Optional)' : (!orgSelfService && k !== 'email' ? ' *' : ''))
               }
               type={k === 'date_of_joining' ? (form[k] ? 'date' : 'text') : 'text'}
               onFocus={k === 'date_of_joining' ? (e) => (e.target.type = 'date') : undefined}
               onBlur={k === 'date_of_joining' ? (e) => { if (!form[k]) e.target.type = 'text' } : undefined}
               value={form[k]}
               onChange={(e) => setForm({ ...form, [k]: e.target.value })}
-              required={k === 'email'}
+              required={k === 'email' || (!orgSelfService && ['first_name', 'last_name', 'phone', 'date_of_joining'].includes(k))}
             />
           ))}
 
@@ -455,8 +534,9 @@ export default function EmployeesPage() {
                     setForm({ ...form, department: e.target.value })
                   }
                 }}
+                required={!orgSelfService}
               >
-                <option value="">Select Department (Optional)</option>
+                <option value="">Select Department {orgSelfService ? '(Optional)' : '*'}</option>
                 {uniqueDepartments.map(d => <option key={d} value={d}>{d}</option>)}
                 <option value="__add_new__" className="font-semibold text-brand-600">+ Add New Department...</option>
               </select>
@@ -497,8 +577,9 @@ export default function EmployeesPage() {
                     setForm({ ...form, designation: e.target.value })
                   }
                 }}
+                required={!orgSelfService}
               >
-                <option value="">Select Designation (Optional)</option>
+                <option value="">Select Designation {orgSelfService ? '(Optional)' : '*'}</option>
                 {uniqueDesignations.map(d => <option key={d} value={d}>{d}</option>)}
                 <option value="__add_new__" className="font-semibold text-brand-600">+ Add New Designation...</option>
               </select>
@@ -521,10 +602,87 @@ export default function EmployeesPage() {
               ))
             }
           </select>
-          <label className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700">
+          
+          <label className="col-span-full inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700">
             <input type="checkbox" checked={form.location_restriction_enabled} onChange={(e) => setForm({ ...form, location_restriction_enabled: e.target.checked })} />
             Restrict attendance to office location
           </label>
+
+          {/* Dynamic Custom Fields */}
+          {customFields.length > 0 && (
+            <div className="col-span-full mt-4 space-y-3">
+              <h4 className="text-sm font-semibold text-slate-800">Custom Fields</h4>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                {customFields.map((cf, idx) => (
+                  <div key={idx}>
+                    <input
+                      type="text"
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                      placeholder={`${cf.name} ${cf.required ? '*' : '(Optional)'}`}
+                      value={(form.custom_fields_data || {})[cf.name] || ''}
+                      onChange={(e) => setForm({
+                        ...form,
+                        custom_fields_data: {
+                          ...(form.custom_fields_data || {}),
+                          [cf.name]: e.target.value
+                        }
+                      })}
+                      required={cf.required}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="col-span-full mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+            <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Manage Custom Fields</h4>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="text"
+                placeholder="New field name"
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                value={newCustomFieldName}
+                onChange={(e) => setNewCustomFieldName(e.target.value)}
+              />
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={newCustomFieldRequired}
+                  onChange={(e) => setNewCustomFieldRequired(e.target.checked)}
+                />
+                Required field
+              </label>
+              
+                <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={newCustomFieldAskUser}
+                    onChange={(e) => setNewCustomFieldAskUser(e.target.checked)}
+                    className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                  />
+                  Ask from user
+                </label>
+
+                <button type="button" onClick={addCustomField} className="btn-secondary py-2 text-sm">
+                Add Field
+              </button>
+            </div>
+            {customFields.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {customFields.map((cf, idx) => (
+                  <div key={idx} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                    <span className="font-medium">{cf.name}</span>
+                    {cf.required && <span className="text-[10px] uppercase text-brand-600">Req</span>}
+                    <button type="button" onClick={() => removeCustomField(idx)} className="text-slate-400 hover:text-red-500">
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button className="btn-primary">Onboard</button>
         </form>
       )}
@@ -860,3 +1018,6 @@ export default function EmployeesPage() {
     </div>
   )
 }
+
+
+

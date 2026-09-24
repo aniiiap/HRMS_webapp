@@ -51,6 +51,10 @@ class Organization(models.Model):
         help_text="Max days in the past an expense can be incurred. Leave blank for unlimited."
     )
     
+    # Custom fields for employees
+    custom_employee_fields = models.JSONField(default=list, blank=True, help_text="List of dicts: [{'name': 'UAN', 'required': True}]")
+    profile_self_service_enabled = models.BooleanField(default=True)
+    
     class Meta:
         ordering = ["name"]
 
@@ -126,6 +130,9 @@ class Employee(models.Model):
         related_name="direct_reports",
     )
     profile_image = models.ImageField(upload_to="profiles/", blank=True, null=True)
+    blood_group = models.CharField(max_length=5, blank=True)
+    emergency_contact = models.CharField(max_length=32, blank=True)
+    custom_fields_data = models.JSONField(default=dict, blank=True, help_text="Key-value pairs matching custom_employee_fields in Organization")
 
     class Meta:
         ordering = ["employee_code"]
@@ -328,3 +335,24 @@ class Resignation(models.Model):
 
     def __str__(self):
         return f"{self.employee.employee_code} - {self.status}"
+
+class IDCardTemplate(models.Model):
+    organization = models.OneToOneField(Organization, on_delete=models.CASCADE, related_name="id_card_template")
+    front_background_image = models.ImageField(upload_to="id_cards/front/", null=True, blank=True)
+    back_background_image = models.ImageField(upload_to="id_cards/back/", null=True, blank=True)
+    authorized_signature_image = models.ImageField(upload_to="id_cards/signatures/", null=True, blank=True)
+    
+    text_color = models.CharField(max_length=20, default="#000000")
+    
+    show_blood_group = models.BooleanField(default=True)
+    show_emergency_contact = models.BooleanField(default=True)
+    show_dob = models.BooleanField(default=False)
+    show_address = models.BooleanField(default=False)
+    
+    terms_conditions = models.TextField(blank=True, default="This card is the property of the company. If found, please return to the company address.")
+    
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"ID Card Template for {self.organization.name}"
+

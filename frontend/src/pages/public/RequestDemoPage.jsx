@@ -11,13 +11,14 @@ export default function RequestDemoPage() {
     email: '',
     phone: '',
     company: '',
-    employees: '1-50',
+    employees: '1-10',
     message: '',
   });
   
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [countOption, setCountOption] = useState('1-10');
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -36,9 +37,10 @@ export default function RequestDemoPage() {
         email: '',
         phone: '',
         company: '',
-        employees: '1-50',
+        employees: '1-10',
         message: '',
       });
+      setCountOption('1-10');
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong. Please try again later.');
     } finally {
@@ -116,8 +118,8 @@ export default function RequestDemoPage() {
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Global Headquarters</h3>
                   <p className="text-slate-600 dark:text-slate-400">
-                    6203 San Ignacio Avenue Suite 110<br />
-                    San Jose, CA 95119
+                    Plot No. 60, 61, 62, Navkar Trade Center,<br />
+                    Near Mirchi Mandi, Bhilwara, Rajasthan - 311001
                   </p>
                 </div>
               </motion.div>
@@ -229,16 +231,38 @@ export default function RequestDemoPage() {
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Employee Count</label>
                   <select
-                    name="employees"
-                    value={formData.employees}
-                    onChange={handleChange}
+                    value={countOption}
+                    onChange={(e) => {
+                      setCountOption(e.target.value);
+                      if (e.target.value !== 'other') {
+                        handleChange({ target: { name: 'employees', value: e.target.value } });
+                      } else {
+                        handleChange({ target: { name: 'employees', value: '' } });
+                      }
+                    }}
                     className="w-full px-5 py-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all appearance-none cursor-pointer"
                   >
-                    <option value="1-50">1 - 50 employees</option>
-                    <option value="51-200">51 - 200 employees</option>
+                    <option value="1-10">1 - 10 employees</option>
+                    <option value="11-20">11 - 20 employees</option>
+                    <option value="21-30">21 - 30 employees</option>
+                    <option value="31-50">31 - 50 employees</option>
+                    <option value="51-100">51 - 100 employees</option>
+                    <option value="101-200">101 - 200 employees</option>
                     <option value="201-500">201 - 500 employees</option>
                     <option value="500+">500+ employees</option>
+                    <option value="other">Other (Please specify)</option>
                   </select>
+                  {countOption === 'other' && (
+                    <input
+                      type="text"
+                      name="employees"
+                      value={formData.employees}
+                      onChange={handleChange}
+                      placeholder="Enter custom employee count"
+                      required
+                      className="mt-3 w-full px-5 py-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all"
+                    />
+                  )}
                 </div>
 
                 <div>

@@ -39,6 +39,7 @@ export default function LetterEditor() {
 
   const [name, setName] = useState('')
   const [subject, setSubject] = useState('')
+  const [emailMessage, setEmailMessage] = useState('Please find the attached document. We request you to review, sign, and affix the company seal where required. Once completed, please upload the signed copy to your profile.')
   const [content, setContent] = useState('')
   const [saving, setSaving] = useState(false)
   const [showVarDropdownTop, setShowVarDropdownTop] = useState(false)
@@ -73,6 +74,7 @@ export default function LetterEditor() {
       const { data } = await api.get(`/api/letters/templates/${id}/`)
       setName(data.name)
       setSubject(data.subject_template)
+      if (data.email_message) setEmailMessage(data.email_message)
       setContent(data.body_html)
     } catch (err) {
       toast.error('Failed to load template')
@@ -88,7 +90,7 @@ export default function LetterEditor() {
 
     setSaving(true)
     try {
-      const payload = { name, subject_template: subject, body_html: content }
+      const payload = { name, subject_template: subject, email_message: emailMessage, body_html: content }
       if (isNew) {
         await api.post('/api/letters/templates/', payload)
         toast.success('Template created')
@@ -178,6 +180,17 @@ export default function LetterEditor() {
                   className="block w-full rounded-lg border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                 />
               </div>
+            </div>
+            <div className="mt-6">
+              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Email Message</label>
+              <textarea
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                placeholder="Message to be sent in the email body..."
+                rows={3}
+                className="block w-full rounded-lg border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              />
+              <p className="mt-1 text-xs text-slate-500">This message will appear in the body of the email sent to the employee with the letter attached.</p>
             </div>
           </div>
 

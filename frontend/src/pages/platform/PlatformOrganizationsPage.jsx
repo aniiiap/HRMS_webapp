@@ -72,6 +72,18 @@ export default function PlatformOrganizationsPage() {
     }
   }
 
+  
+  async function toggleSelfService(org) {
+    try {
+      const val = org.profile_self_service_enabled === false ? true : false;
+      await api.patch(`/api/platform/organizations/${org.id}/`, { profile_self_service_enabled: val });
+      setRows(rows.map(r => r.id === org.id ? { ...r, profile_self_service_enabled: val } : r));
+      toast.success(`${org.name} self-service ${val ? 'enabled' : 'disabled'}`);
+    } catch (err) {
+      toast.error('Failed to update setting');
+    }
+  }
+
   async function toggleActive(org) {
     try {
       await api.post(`/api/platform/organizations/${org.id}/set-active/`, { is_active: !org.is_active })
@@ -223,6 +235,7 @@ export default function PlatformOrganizationsPage() {
               <th className="px-4 py-3">Employees</th>
               <th className="px-4 py-3">Admins</th>
               <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Self-Service</th>
               <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
@@ -245,7 +258,15 @@ export default function PlatformOrganizationsPage() {
                 <td className="px-4 py-3">
                   <StatusBadge status={o.is_active ? 'approved' : 'rejected'} label={o.is_active ? 'Active' : 'Inactive'} />
                 </td>
-                <td className="px-4 py-3">
+                
+                  <td className="px-4 py-3">
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input type="checkbox" className="peer sr-only" checked={o.profile_self_service_enabled !== false} onChange={() => toggleSelfService(o)} />
+                      <div className="peer h-5 w-9 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-slate-700 dark:border-gray-600"></div>
+                    </label>
+                  </td>
+
+                  <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <button type="button" className="text-xs font-semibold text-brand-600" onClick={() => toggleActive(o)}>
                       {o.is_active ? 'Deactivate' : 'Activate'}

@@ -5,7 +5,7 @@ from employees.serializers import EmployeeSerializer
 class LetterTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = LetterTemplate
-        fields = ["id", "name", "subject_template", "body_html", "created_at", "updated_at"]
+        fields = ["id", "name", "subject_template", "email_message", "body_html", "created_at", "updated_at"]
         read_only_fields = ["id", "created_at", "updated_at"]
 
 class SentLetterSerializer(serializers.ModelSerializer):
@@ -33,6 +33,7 @@ class SendLetterRequestSerializer(serializers.Serializer):
     template_id = serializers.IntegerField(required=False, allow_null=True)
     subject = serializers.CharField(max_length=255)
     body_html = serializers.CharField()
+    email_message = serializers.CharField(required=False, allow_blank=True)
     note = serializers.CharField(required=False, allow_blank=True)
     use_letterhead = serializers.BooleanField(default=True)
     append_signature = serializers.BooleanField(default=False)

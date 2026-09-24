@@ -91,6 +91,20 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
         if self.instance and self.instance.status != LeaveStatus.PENDING:
             return attrs
 
+        from django.db.models import Q
+        overlapping = LeaveRequest.objects.filter(
+            employee=employee,
+            status__in=[LeaveStatus.PENDING, LeaveStatus.APPROVED],
+            start_date__lte=end,
+            end_date__gte=start
+        )
+        if self.instance:
+            overlapping = overlapping.exclude(pk=self.instance.pk)
+        
+        if overlapping.exists():
+            raise serializers.ValidationError("You already have an approved or pending leave during this period.")
+
+
         code = normalize_leave_type_code(leave_type)
         attrs["leave_type"] = code
         rule = resolve_leave_rule(employee, code)

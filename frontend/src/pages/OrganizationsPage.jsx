@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import EmptyState from '../components/ui/EmptyState'
 import StatusBadge from '../components/ui/StatusBadge'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import IDCardSettings from '../components/IDCardSettings'
 
 export default function OrganizationsPage() {
   const { isPrivileged, isPlatformAdmin } = useAuth()
@@ -17,6 +18,7 @@ export default function OrganizationsPage() {
   
   const [backdateLimit, setBackdateLimit] = useState('')
   const [savingLimit, setSavingLimit] = useState(false)
+  const [activeTab, setActiveTab] = useState('general')
 
   const fetchOrgs = async () => {
     try {
@@ -128,7 +130,24 @@ export default function OrganizationsPage() {
       {error && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-300">{error}</div>}
 
       {org ? (
-        <div className="card p-6">
+        <>
+          <div className="flex gap-4 border-b border-slate-200 dark:border-slate-800 pb-2 mb-4">
+            <button
+              onClick={() => setActiveTab('general')}
+              className={`pb-2 px-1 text-sm font-medium transition ${activeTab === 'general' ? 'border-b-2 border-brand-600 text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              General Settings
+            </button>
+            <button
+              onClick={() => setActiveTab('idcard')}
+              className={`pb-2 px-1 text-sm font-medium transition ${activeTab === 'idcard' ? 'border-b-2 border-brand-600 text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              ID Card Configuration
+            </button>
+          </div>
+
+          {activeTab === 'general' ? (
+            <div className="card p-6">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
@@ -269,8 +288,11 @@ export default function OrganizationsPage() {
               </div>
             </div>
           </div>
-          
-        </div>
+          </div>
+          ) : (
+            <IDCardSettings orgId={org.id} />
+          )}
+        </>
       ) : (
         <EmptyState
           title="No organization linked"

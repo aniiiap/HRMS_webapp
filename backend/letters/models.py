@@ -5,6 +5,7 @@ class LetterTemplate(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="letter_templates")
     name = models.CharField(max_length=255)
     subject_template = models.CharField(max_length=255, blank=True)
+    email_message = models.TextField(blank=True, default="Please find the attached document. We request you to review, sign, and affix the company seal where required. Once completed, please upload the signed copy to your profile.")
     body_html = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

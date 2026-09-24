@@ -34,6 +34,8 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "resignation_notice_period_days",
             "resignation_auto_msg_enabled",
             "resignation_auto_msg_text",
+            "custom_employee_fields",
+            "profile_self_service_enabled",
         )
         read_only_fields = ("id", "created_at")
 
@@ -75,6 +77,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     manager_name = serializers.SerializerMethodField()
     shift_template_name = serializers.CharField(source="shift_template.name", read_only=True)
     organization_name = serializers.CharField(source="organization.name", read_only=True, allow_null=True)
+    organization_logo = serializers.ImageField(source="organization.company_logo", read_only=True, allow_null=True)
 
     class Meta:
         model = Employee
@@ -91,6 +94,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "onboarding_pending",
             "organization",
             "organization_name",
+            "organization_logo",
             "employee_code",
             "department",
             "designation",
@@ -111,6 +115,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "manager",
             "manager_name",
             "profile_image",
+            "blood_group",
+            "emergency_contact",
+            "custom_fields_data",
         )
         read_only_fields = (
             "id",
@@ -123,6 +130,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "manager_name",
             "shift_template_name",
             "organization_name",
+            "organization_logo",
         )
 
     def get_manager_name(self, obj):
@@ -254,6 +262,7 @@ class EmployeeOnboardSerializer(serializers.Serializer):
     office_latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
     office_longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
     location_radius_meters = serializers.IntegerField(required=False, min_value=10, max_value=2000, default=200)
+    custom_fields_data = serializers.JSONField(required=False, default=dict)
     manager = serializers.PrimaryKeyRelatedField(
         queryset=Employee.objects.all(), required=False, allow_null=True
     )
@@ -266,6 +275,8 @@ class EmployeeOnboardSerializer(serializers.Serializer):
         org = validated_data.pop("organization", None)
         shift_template = validated_data.pop("shift_template", None)
         email = validated_data.pop("email")
+        custom_fields_data = validated_data.pop("custom_fields_data", {})
+        
         if shift_template:
             validated_data["shift_template"] = shift_template
             validated_data["shift_start_time"] = shift_template.start_time
@@ -318,8 +329,15 @@ class EmployeeOnboardSerializer(serializers.Serializer):
                 {"organization": "No organization exists. Create one before onboarding employees."}
             )
         validated_data["organization"] = org
+        
         try:
-            emp = Employee.objects.create(user=user, manager=manager, **validated_data)
+            emp = Employee.objects.create(user=user, manager=manager, custom_fields_data=custom_fields_data, **validated_data)
+            
+            # Skip self service if org has disabled it
+            if org and not org.profile_self_service_enabled:
+                user.onboarding_pending = False
+                user.save(update_fields=["onboarding_pending"])
+
             if shift_template:
                 from .models import ShiftTemplateAssignment
                 from .shift_assignments import set_primary_shift_assignment
@@ -485,6 +503,9 @@ class EmployeeCompleteProfileSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=32, required=False, allow_blank=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
     address = serializers.CharField(required=False, allow_blank=True)
+    blood_group = serializers.CharField(required=False, allow_blank=True)
+    emergency_contact = serializers.CharField(required=False, allow_blank=True)
+    custom_fields_data = serializers.JSONField(required=False, default=dict)
     
     def save(self, **kwargs):
         user = self.context['request'].user
@@ -499,9 +520,18 @@ class EmployeeCompleteProfileSerializer(serializers.Serializer):
             employee.phone = self.validated_data.get('phone', employee.phone)
             employee.date_of_birth = self.validated_data.get('date_of_birth', employee.date_of_birth)
             employee.address = self.validated_data.get('address', employee.address)
+            employee.blood_group = self.validated_data.get('blood_group', employee.blood_group)
+            employee.emergency_contact = self.validated_data.get('emergency_contact', employee.emergency_contact)
+            
+            if 'custom_fields_data' in self.validated_data:
+                # Merge with existing
+                current_data = employee.custom_fields_data or {}
+                current_data.update(self.validated_data['custom_fields_data'])
+                employee.custom_fields_data = current_data
+
             if not employee.personal_email:
                 employee.personal_email = user.email
-            employee.save(update_fields=['phone', 'date_of_birth', 'address', 'personal_email'])
+            employee.save(update_fields=['phone', 'date_of_birth', 'address', 'personal_email', 'blood_group', 'emergency_contact', 'custom_fields_data'])
         
         return user
 from .models import Resignation
@@ -515,3 +545,12 @@ class ResignationSerializer(serializers.ModelSerializer):
         model = Resignation
         fields = '__all__'
         read_only_fields = ('employee', 'submitted_at', 'status', 'reviewed_by', 'reviewed_at', 'reviewer_notes')
+
+from .models import IDCardTemplate
+
+class IDCardTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IDCardTemplate
+        fields = "__all__"
+        read_only_fields = ["organization"]
+

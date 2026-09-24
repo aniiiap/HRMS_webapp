@@ -16,6 +16,7 @@ import { employeeDisplayName } from '../components/employee/profileUtils'
 import EmployeeCompensationSection from '../components/payroll/EmployeeCompensationSection'
 import SalaryStructureBuilder from '../components/payroll/SalaryStructureBuilder'
 import EmployeeAssetsTab from '../components/employee/EmployeeAssetsTab'
+import IDCardPreview from '../components/employee/IDCardPreview'
 
 const TABS = [
   { id: 'profile', label: 'Personal' },
@@ -28,6 +29,7 @@ const TABS = [
   { id: 'compensation', label: 'Compensation' },
   { id: 'payroll', label: 'Payroll' },
   { id: 'assets', label: 'Assets' },
+  { id: 'idcard', label: 'ID Card' },
 ]
 
 export default function EmployeeProfilePage() {
@@ -50,7 +52,7 @@ export default function EmployeeProfilePage() {
   const [saving, setSaving] = useState(false)
 
   const canEditPayroll = isPrivileged
-  const canEditProfile = isPrivileged && employee?.role !== 'admin'
+  const canEditProfile = (isPrivileged && employee?.role !== 'admin') || user?.email === employee?.email
   const canUploadDocs = isPrivileged || (user?.email === employee?.email)
 
   const handleDocUpload = async (file) => {
@@ -96,6 +98,7 @@ export default function EmployeeProfilePage() {
         address: data.address || '',
         official_email: data.email || '',
         personal_email: data.personal_email || '',
+        custom_fields_data: data.custom_fields_data || {},
         manager: data.manager || '',
       })
     } catch (err) {

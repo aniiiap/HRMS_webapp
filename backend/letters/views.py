@@ -127,6 +127,12 @@ class SentLetterViewSet(viewsets.ModelViewSet):
             note = data.get("note", "")
             sent_letters = []
 
+            email_message = data.get("email_message", "")
+            if not email_message and template:
+                email_message = template.email_message
+            if not email_message:
+                email_message = "Please find the attached document. We request you to review, sign, and affix the company seal where required. Once completed, please upload the signed copy to your profile."
+
             for employee in employees:
                 # Mail merge variables
                 html_content = render_template_variables(base_html, employee)
@@ -139,7 +145,14 @@ class SentLetterViewSet(viewsets.ModelViewSet):
                     continue # Skip if PDF fails
 
                 file_name = f"{subject.replace(' ', '_')}.pdf"
-                email_html = f"<p>Hi {employee.user.first_name},</p><p>{note}</p><p>Please find the attached document.</p>" if note else f"<p>Hi {employee.user.first_name},</p><p>Please find the attached document.</p>"
+                
+                # Merge note and email_message
+                email_content = ""
+                if note:
+                    email_content += f"<p>{note}</p>"
+                email_content += f"<p>{email_message}</p>"
+                
+                email_html = f"<p>Hi {employee.user.first_name},</p>{email_content}"
 
                 success, msg = send_letter_email(employee, subject, email_html, pdf_bytes, file_name)
 
@@ -273,7 +286,8 @@ class SentLetterViewSet(viewsets.ModelViewSet):
         doc.status = "sent"
         doc.save()
         self._attach_to_employee_profile(request, doc.employee, doc.subject, pdf_bytes, file_name, doc)
-        email_html = f"<p>Hi {doc.employee.user.first_name},</p><p>Please find the attached document.</p>"
+        email_message = doc.template.email_message if doc.template and doc.template.email_message else "Please find the attached document. We request you to review, sign, and affix the company seal where required. Once completed, please upload the signed copy to your profile."
+        email_html = f"<p>Hi {doc.employee.user.first_name},</p><p>{email_message}</p>"
         send_letter_email(doc.employee, doc.subject, email_html, pdf_bytes, file_name)
         return Response({"success": True})
 
@@ -289,7 +303,8 @@ class SentLetterViewSet(viewsets.ModelViewSet):
             doc.status = "sent"
             doc.save()
             self._attach_to_employee_profile(request, doc.employee, doc.subject, pdf_bytes, file_name, doc)
-            email_html = f"<p>Hi {doc.employee.user.first_name},</p><p>Please find the attached document.</p>"
+            email_message = doc.template.email_message if doc.template and doc.template.email_message else "Please find the attached document. We request you to review, sign, and affix the company seal where required. Once completed, please upload the signed copy to your profile."
+            email_html = f"<p>Hi {doc.employee.user.first_name},</p><p>{email_message}</p>"
             send_letter_email(doc.employee, doc.subject, email_html, pdf_bytes, file_name)
         return Response({"success": True})
         

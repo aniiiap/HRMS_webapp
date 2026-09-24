@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import EmployeeDocumentsTab from '../components/employee/EmployeeDocumentsTab'
 import EmployeeAssetsTab from '../components/employee/EmployeeAssetsTab'
+import IDCardPreview from '../components/employee/IDCardPreview'
 
 const TABS = [
   { id: 'personal', label: 'Personal' },
@@ -13,6 +14,7 @@ const TABS = [
   { id: 'workweek', label: 'Work Week' },
   { id: 'documents', label: 'Documents' },
   { id: 'assets', label: 'Assets' },
+  { id: 'idcard', label: 'ID Card' },
 ]
 
 export default function ProfilePage() {
@@ -31,6 +33,8 @@ export default function ProfilePage() {
     phone: '',
     address: '',
     date_of_birth: '',
+    blood_group: '',
+    emergency_contact: '',
   })
   const [profileFile, setProfileFile] = useState(null)
   const [profileImageBroken, setProfileImageBroken] = useState(false)
@@ -56,6 +60,8 @@ export default function ProfilePage() {
         phone: data.phone || '',
         address: data.address || '',
         date_of_birth: data.date_of_birth || '',
+        blood_group: data.blood_group || '',
+        emergency_contact: data.emergency_contact || '',
       })
     } catch (err) {
       setError(messageFromError(err))
@@ -178,6 +184,25 @@ export default function ProfilePage() {
             disabled={!editMode}
           />
         </label>
+        <label className="text-sm text-slate-600 dark:text-slate-300">
+          Blood Group
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
+            value={form.blood_group || ''}
+            onChange={(e) => setForm({ ...form, blood_group: e.target.value })}
+            disabled={!editMode}
+            placeholder="e.g. O+"
+          />
+        </label>
+        <label className="text-sm text-slate-600 dark:text-slate-300">
+          Emergency Contact
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
+            value={form.emergency_contact || ''}
+            onChange={(e) => setForm({ ...form, emergency_contact: e.target.value })}
+            disabled={!editMode}
+          />
+        </label>
         <label className="md:col-span-2 text-sm text-slate-600 dark:text-slate-300">
           Address
           <textarea
@@ -205,6 +230,8 @@ export default function ProfilePage() {
       <EmployeeDocumentsTab documents={documents} canUpload={true} onUpload={handleDocUpload} onDelete={handleDocDelete} />
     ) : activeTab === 'assets' ? (
       <EmployeeAssetsTab employee={profile} />
+    ) : activeTab === 'idcard' ? (
+      <IDCardPreview employee={profile} />
     ) : (
       <div className="text-sm text-slate-600 dark:text-slate-300">
         <p>Default work week: Monday - Friday</p>

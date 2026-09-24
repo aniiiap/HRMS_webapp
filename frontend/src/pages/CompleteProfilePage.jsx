@@ -7,13 +7,17 @@ export default function CompleteProfilePage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [customFields, setCustomFields] = useState([])
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
     phone: '',
     date_of_birth: '',
-    address: ''
+    address: '',
+    blood_group: '',
+    emergency_contact: '',
+    custom_fields_data: {}
   })
   const [documents, setDocuments] = useState({
     document_aadhaar: null,
@@ -36,6 +40,10 @@ export default function CompleteProfilePage() {
         }
       }).catch(err => console.error("Could not fetch profile data", err))
     }
+    api.get('/api/organizations/').then(res => {
+      const orgs = res.data.results || res.data;
+      if (orgs && orgs.length > 0) setCustomFields(orgs[0].custom_employee_fields || []);
+    }).catch(() => {});
   }, [user?.employee_id])
 
   const handleChange = (e) => {
@@ -54,7 +62,13 @@ export default function CompleteProfilePage() {
     
     const payload = new FormData()
     Object.keys(formData).forEach(k => {
-      if (formData[k]) payload.append(k, formData[k])
+      if (formData[k]) {
+        if (k === 'custom_fields_data') {
+          payload.append(k, JSON.stringify(formData[k]));
+        } else {
+          payload.append(k, formData[k]);
+        }
+      }
     })
     
     Object.keys(documents).forEach(k => {
@@ -111,6 +125,34 @@ export default function CompleteProfilePage() {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Address *</label>
                 <textarea required rows={3} name="address" value={formData.address} onChange={handleChange} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Blood Group (Optional)</label>
+                <input name="blood_group" value={formData.blood_group} onChange={handleChange} placeholder="e.g. O+" className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Emergency Contact (Optional)</label>
+                <input name="emergency_contact" value={formData.emergency_contact} onChange={handleChange} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+              </div>
+                {customFields.filter(cf => cf.ask_from_user !== false).map((cf, idx) => (
+                  <div key={idx}>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      {cf.name} {cf.required && '*'}
+                    </label>
+                    <input
+                      type="text"
+                      required={cf.required}
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                      value={(formData.custom_fields_data || {})[cf.name] || ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        custom_fields_data: {
+                          ...(formData.custom_fields_data || {}),
+                          [cf.name]: e.target.value
+                        }
+                      })}
+                    />
+                  </div>
+                ))}
             </div>
           </div>
 
@@ -141,7 +183,11 @@ export default function CompleteProfilePage() {
             </div>
           </div>
 
-          <div className="flex justify-end">
+          
+          
+
+          <div className="mt-8 flex justify-end gap-3">
+
             <button type="submit" disabled={loading} className="btn-primary px-8">
               {loading ? 'Saving...' : 'Complete Profile'}
             </button>

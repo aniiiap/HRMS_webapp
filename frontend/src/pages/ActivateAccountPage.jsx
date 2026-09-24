@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Eye, EyeOff } from 'lucide-react'
 import { api, messageFromError } from '../api/client'
 
 export default function ActivateAccountPage() {
@@ -12,6 +13,7 @@ export default function ActivateAccountPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     if (token) {
@@ -64,22 +66,32 @@ export default function ActivateAccountPage() {
           placeholder="Email address"
           className="w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-slate-500 outline-none cursor-not-allowed dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
         />
-        <input
-          type="password"
-          placeholder="New password"
-          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-brand-400 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Confirm password"
-          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-brand-400 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          required
-        />
+        <div className="relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            placeholder="New password"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 pr-10 text-slate-900 outline-none focus:border-brand-400 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+        <div className="relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Confirm password"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 pr-10 text-slate-900 outline-none focus:border-brand-400 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+          />
+          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
         <button className="btn-primary w-full" disabled={loading}>
           {loading ? 'Creating account...' : 'Create account & continue'}
         </button>

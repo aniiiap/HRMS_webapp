@@ -1,8 +1,21 @@
 import dayjs from 'dayjs'
 import ProfileSectionCard, { ProfileField } from './ProfileSectionCard'
+import { useState, useEffect } from 'react'
+import { api } from '../../api/client'
 import { employeeDisplayName } from './profileUtils'
 
 export default function EmployeePersonalTab({ employee, editForm, setEditForm, canEdit, saving, onSave }) {
+
+  const [customFields, setCustomFields] = useState([])
+  useEffect(() => {
+    api.get('/api/organizations/').then(res => {
+      const orgs = res.data.results || res.data;
+      if (orgs && orgs.length > 0) {
+        setCustomFields(orgs[0].custom_employee_fields || []);
+      }
+    }).catch(() => {})
+  }, [])
+
   const dob = employee.date_of_birth ? dayjs(employee.date_of_birth).format('DD/MM/YYYY') : '—'
 
   return (
@@ -75,6 +88,7 @@ export default function EmployeePersonalTab({ employee, editForm, setEditForm, c
         </div>
       </ProfileSectionCard>
 
+      
       <ProfileSectionCard title="Address">
         {canEdit ? (
           <label className="block">
@@ -89,6 +103,53 @@ export default function EmployeePersonalTab({ employee, editForm, setEditForm, c
           <ProfileField label="Residential address" value={employee.address} />
         )}
       </ProfileSectionCard>
+
+      {(customFields.length > 0 || (employee.custom_fields_data && Object.keys(employee.custom_fields_data).length > 0)) && (
+        <ProfileSectionCard title="Custom Fields">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {canEdit ? (
+              customFields.length > 0 ? customFields.map((cf) => (
+                <label key={cf.name} className="block space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{cf.name}</p>
+                  <input
+                    type="text"
+                    className="input-field mt-1"
+                    value={(editForm.custom_fields_data || {})[cf.name] || ''}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      custom_fields_data: {
+                        ...(editForm.custom_fields_data || {}),
+                        [cf.name]: e.target.value
+                      }
+                    })}
+                  />
+                </label>
+              )) : Object.entries(employee.custom_fields_data || {}).map(([key, value]) => (
+                <label key={key} className="block space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{key}</p>
+                  <input
+                    type="text"
+                    className="input-field mt-1"
+                    value={(editForm.custom_fields_data || {})[key] || ''}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      custom_fields_data: {
+                        ...(editForm.custom_fields_data || {}),
+                        [key]: e.target.value
+                      }
+                    })}
+                  />
+                </label>
+              ))
+            ) : (
+              Object.entries(employee.custom_fields_data || {}).map(([key, value]) => (
+                <ProfileField key={key} label={key} value={value} />
+              ))
+            )}
+          </div>
+        </ProfileSectionCard>
+      )}
+
 
       {canEdit && (
         <div className="flex justify-end">
