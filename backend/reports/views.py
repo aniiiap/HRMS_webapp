@@ -684,7 +684,7 @@ class DashboardSummaryView(APIView):
 
         att_today = Attendance.objects.filter(date=today, employee_id__in=active_employee_ids)
         att_qs_org = Attendance.objects.filter(employee_id__in=active_employee_ids)
-        present_today = att_today.filter(check_in__isnull=False, check_out__isnull=False).values("employee_id").distinct().count()
+        present_today = att_today.filter(check_in__isnull=False).values("employee_id").distinct().count()
         leave_qs = LeaveRequest.objects.filter(employee_id__in=active_employee_ids)
         on_leave_today = leave_qs.filter(
             status=LeaveStatus.APPROVED,

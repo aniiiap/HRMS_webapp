@@ -664,7 +664,7 @@ export default function DashboardPage() {
             />
             <StatMini
               icon={UserMinus}
-              label="Total absent today"
+              label="Not clocked in"
               value={data?.absent_today ?? '—'}
               accent="bg-gradient-to-br from-slate-600 to-slate-800"
             />
