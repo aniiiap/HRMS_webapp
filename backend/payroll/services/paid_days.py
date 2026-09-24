@@ -174,7 +174,7 @@ def compute_paid_days_for_employee(
                 # Mandatory holidays are counted as paid automatically
                 holiday_days += remaining
                 credit_for_remaining = remaining
-            elif d > today:
+            elif d >= today:
                 # Future days are assumed present (optimistic mid-month projection)
                 present_days += remaining
                 credit_for_remaining = remaining
