@@ -65,8 +65,29 @@ def _leave_date_sets(employee: Employee, month_start: date, month_end: date, man
         # Determine leave amount per day (1.0 for full day, 0.5 for half day)
         leave_val = Decimal("0.5") if getattr(leave, "half_day", "none") in ("first_half", "second_half") else Decimal("1.0")
         
+        # Determine if sandwich rules apply (weekends/holidays count as leave)
+        sandwich_weekends = False
+        sandwich_holidays = False
+        
+        from leave_management.models import LeaveTypeRuleAssignment
+        rule_assignment = LeaveTypeRuleAssignment.objects.filter(
+            employee=employee, rule__code=leave.leave_type
+        ).select_related("rule").first()
+        if rule_assignment:
+            sandwich_weekends = rule_assignment.rule.count_weekends
+            sandwich_holidays = rule_assignment.rule.count_holidays
+        
         while d <= end_d:
-            if is_scheduled_working_day(employee, d) and d not in mandatory_holidays:
+            is_wknd = not is_scheduled_working_day(employee, d)
+            is_hol = d in mandatory_holidays
+            
+            should_count = True
+            if is_wknd and not sandwich_weekends:
+                should_count = False
+            if is_hol and not sandwich_holidays:
+                should_count = False
+                
+            if should_count:
                 if leave.leave_type in (LeaveType.LOP, "unpaid", "loss_of_pay"):
                     unpaid[d] = min(unpaid.get(d, Decimal("0")) + leave_val, Decimal("1.0"))
                 else:

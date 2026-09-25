@@ -51,6 +51,23 @@ def day_status_for_employee(
     # If no punch-in, check for special non-working days:
     if leave_type_code:
         code = normalize_leave_type_code(leave_type_code)
+        
+        sandwich_weekends = False
+        sandwich_holidays = False
+        from leave_management.models import LeaveTypeRuleAssignment
+        rule_assignment = LeaveTypeRuleAssignment.objects.filter(
+            employee=employee, rule__code=code
+        ).select_related("rule").first()
+        if rule_assignment:
+            sandwich_weekends = rule_assignment.rule.count_weekends
+            sandwich_holidays = rule_assignment.rule.count_holidays
+            
+        if is_holiday and not sandwich_holidays:
+            return "holiday", "H"
+            
+        if is_weekend_day(employee, day_date) and not sandwich_weekends:
+            return "weekend", "WO"
+            
         if code == "work_from_home":
             return "wfh", "WFH"
         if code == "loss_of_pay":
