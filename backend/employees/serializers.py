@@ -367,6 +367,7 @@ class ShiftTemplateSerializer(serializers.ModelSerializer):
             "early_checkout_grace_minutes",
             "is_night_shift",
             "saturday_working",
+            "saturday_end_time",
             "sunday_working",
             "enable_auto_deduction",
             "manual_deduction_day",

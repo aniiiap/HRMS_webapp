@@ -194,6 +194,11 @@ class ShiftTemplate(models.Model):
         default=False,
         help_text="If true, Saturday is a working day (6-day week). If false, Saturday is weekly off.",
     )
+    saturday_end_time = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="Optional early end time specifically for Saturdays (e.g., 14:00).",
+    )
     sunday_working = models.BooleanField(
         default=False,
         help_text="If true, Sunday is a working day. Typical 5-day week has this false.",

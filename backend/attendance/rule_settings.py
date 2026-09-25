@@ -12,6 +12,7 @@ from django.utils import timezone
 class ShiftRuleSettings:
     shift_start: time | None
     shift_end: time | None
+    saturday_end_time: time | None
     grace_minutes: int
     early_checkout_grace_minutes: int
     is_night_shift: bool
@@ -59,6 +60,7 @@ def resolve_shift_rule(employee) -> ShiftRuleSettings:
     return ShiftRuleSettings(
         shift_start=shift_start,
         shift_end=shift_end,
+        saturday_end_time=tpl("saturday_end_time", None),
         grace_minutes=int(grace or 0),
         early_checkout_grace_minutes=int(early_grace or 0),
         is_night_shift=bool(tpl("is_night_shift", False)),
@@ -87,10 +89,16 @@ def shift_end_datetime(attendance_date, settings: ShiftRuleSettings) -> datetime
     if not settings.shift_end:
         return None
     end_date = attendance_date
-    if settings.shift_end <= (settings.shift_start or time.min) or settings.is_night_shift:
+    
+    # Check for custom Saturday end time
+    shift_end = settings.shift_end
+    if attendance_date.weekday() == 5 and settings.saturday_end_time:
+        shift_end = settings.saturday_end_time
+        
+    if shift_end <= (settings.shift_start or time.min) or settings.is_night_shift:
         end_date = attendance_date + timedelta(days=1)
     return timezone.make_aware(
-        datetime.combine(end_date, settings.shift_end),
+        datetime.combine(end_date, shift_end),
         timezone.get_current_timezone(),
     )
 

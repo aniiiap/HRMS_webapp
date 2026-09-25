@@ -148,6 +148,21 @@ export default function AttendanceRuleEditForm({
               </div>
             </div>
 
+            {form.saturday_working && (
+              <div className="mt-2 ml-2 pl-4 border-l-2 border-slate-200 dark:border-slate-700">
+                <label className="block">
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Saturday End Time (Optional early checkout)</span>
+                  <input
+                    type="time"
+                    className="input-field mt-1 w-full"
+                    value={form.saturday_end_time || ''}
+                    onChange={(e) => setForm({ ...form, saturday_end_time: e.target.value })}
+                  />
+                  <p className="mt-1 text-[11px] text-slate-400">Leave blank to use the standard shift end time.</p>
+                </label>
+              </div>
+            )}
+
             <SectionBar title="Deduction & tracking" />
             <Toggle
               label="Enable auto deduction"
