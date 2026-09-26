@@ -916,6 +916,14 @@ export default function AttendancePage() {
                         <span className="inline-flex rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700">
                           Requested for approval
                         </span>
+                      ) : r.correction_request_status === 'approved' ? (
+                        <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                          Approved
+                        </span>
+                      ) : r.correction_request_status === 'rejected' ? (
+                        <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
+                          Rejected
+                        </span>
                       ) : isCorrectionExpired(r.date) ? (
                         <span
                           className="inline-flex cursor-help rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
@@ -939,7 +947,7 @@ export default function AttendancePage() {
                     </td>
                   </tr>
 
-                  {approvalOpen[r.id] && canRequest && r.correction_request_status !== 'pending' && !isCorrectionExpired(r.date) && (
+                  {approvalOpen[r.id] && canRequest && !['pending', 'approved', 'rejected'].includes(r.correction_request_status) && !isCorrectionExpired(r.date) && (
                     <tr className="border-t border-slate-100 bg-slate-50/80 dark:bg-slate-900/40">
                       <td colSpan={7} className="px-4 py-4">
                         <div className="mx-auto max-w-2xl space-y-3">
