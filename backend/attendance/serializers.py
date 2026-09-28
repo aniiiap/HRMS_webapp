@@ -160,7 +160,8 @@ class AttendanceSerializer(serializers.ModelSerializer):
     def get_anomaly(self, obj):
         from .utils import attendance_anomaly
 
-        return attendance_anomaly(obj)
+        has_leave = getattr(obj, "has_approved_leave", None)
+        return attendance_anomaly(obj, has_approved_leave=has_leave)
 
     def get_work_duration(self, obj):
         if not obj.check_in or not obj.check_out:

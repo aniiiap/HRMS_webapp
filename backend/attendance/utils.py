@@ -8,7 +8,7 @@ from .models import Attendance, AttendanceCorrectionStatus
 from .rule_settings import resolve_shift_rule, shift_end_datetime, shift_start_datetime, try_auto_clock_out
 
 
-def attendance_anomaly(attendance: Attendance) -> str:
+def attendance_anomaly(attendance: Attendance, has_approved_leave: bool | None = None) -> str:
     if any(req.status == AttendanceCorrectionStatus.APPROVED for req in attendance.correction_requests.all()):
         return "anomaly_approved"
 
@@ -30,6 +30,18 @@ def attendance_anomaly(attendance: Attendance) -> str:
 
     settings = resolve_shift_rule(attendance.employee)
     if not settings.enable_anomaly_tracking:
+        return "none"
+
+    # Exempt attendance anomalies (e.g., early checkout, late check-in) for dates with an approved leave.
+    if has_approved_leave is None:
+        from leave_management.models import LeaveRequest, LeaveStatus
+        has_approved_leave = LeaveRequest.objects.filter(
+            employee=attendance.employee,
+            status=LeaveStatus.APPROVED,
+            start_date__lte=attendance.date,
+            end_date__gte=attendance.date,
+        ).exists()
+    if has_approved_leave:
         return "none"
 
     if attendance.check_in and attendance.check_out and settings.shift_start and settings.shift_end:

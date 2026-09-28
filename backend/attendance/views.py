@@ -68,6 +68,17 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        
+        from django.db.models import Exists, OuterRef
+        from leave_management.models import LeaveRequest, LeaveStatus
+        leave_sq = LeaveRequest.objects.filter(
+            employee=OuterRef('employee'),
+            status=LeaveStatus.APPROVED,
+            start_date__lte=OuterRef('date'),
+            end_date__gte=OuterRef('date'),
+        )
+        qs = qs.annotate(has_approved_leave=Exists(leave_sq))
+        
         user = self.request.user
         if not user.is_authenticated:
             return qs.none()
@@ -411,7 +422,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 except Exception:
                     profile_image_url = None
 
-            anomaly = attendance_anomaly(att) if att else "none"
+            anomaly = attendance_anomaly(att, has_approved_leave=(leave_data is not None)) if att else "none"
             settings = resolve_shift_rule(e)
             shift_start_time = settings.shift_start.strftime("%H:%M") if settings.shift_start else "09:00"
             shift_end_time = settings.shift_end.strftime("%H:%M") if settings.shift_end else "18:00"
