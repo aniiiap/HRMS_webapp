@@ -140,7 +140,7 @@ export function groupResultLines(row) {
     const c = (ln.component_code || '').toUpperCase()
     if (c === 'REIMBURSEMENT') {
         reimbursements += Number(ln.amount_prorated || 0)
-    } else if (c !== 'BASIC' && c !== 'HRA') {
+    } else if (c !== 'BASIC' && c !== 'HRA' && c !== 'BONUS' && c !== 'INCENTIVE') {
         allowances += Number(ln.amount_prorated || 0)
     }
   })

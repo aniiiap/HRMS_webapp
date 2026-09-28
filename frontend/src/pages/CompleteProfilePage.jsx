@@ -20,7 +20,8 @@ export default function CompleteProfilePage() {
     custom_fields_data: {}
   })
   const [documents, setDocuments] = useState({
-    document_aadhaar: null,
+    document_aadhaar_front: null,
+    document_aadhaar_back: null,
     document_pan: null,
     document_marksheets: null,
     document_additional: null,
@@ -161,8 +162,12 @@ export default function CompleteProfilePage() {
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Mandatory Documents</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Aadhaar Card *</label>
-                <input required type="file" accept=".pdf,.jpg,.jpeg,.png" name="document_aadhaar" onChange={handleFileChange} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 dark:file:bg-slate-800 dark:file:text-slate-300" />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Aadhaar Card - Front Side *</label>
+                <input required type="file" accept=".pdf,.jpg,.jpeg,.png" name="document_aadhaar_front" onChange={handleFileChange} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 dark:file:bg-slate-800 dark:file:text-slate-300" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Aadhaar Card - Back Side *</label>
+                <input required type="file" accept=".pdf,.jpg,.jpeg,.png" name="document_aadhaar_back" onChange={handleFileChange} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 dark:file:bg-slate-800 dark:file:text-slate-300" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">PAN Card *</label>

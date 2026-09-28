@@ -42,6 +42,7 @@ from .models import (
     PayrollStatutoryConfigRevision,
     PayrollTaxDeclaration,
     TaxDeclarationStatus,
+    BonusIncentive,
 )
 from .serializers import (
     CompensationRevisionSerializer,
@@ -57,6 +58,7 @@ from .serializers import (
     PayrollStatutoryConfigSerializer,
     PayrollStatutoryConfigRevisionSerializer,
     PayrollTaxDeclarationSerializer,
+    BonusIncentiveSerializer,
 )
 from .services.engine import compute_employee_payroll, recalculate_run
 from .services.paid_days import apply_auto_paid_days_to_result
@@ -1093,3 +1095,29 @@ class PayrollTaxDeclarationViewSet(viewsets.ModelViewSet):
         d.status = TaxDeclarationStatus.REJECTED
         d.save(update_fields=["status", "updated_at"])
         return Response(self.get_serializer(d).data)
+
+
+class BonusIncentiveViewSet(viewsets.ModelViewSet):
+    serializer_class = BonusIncentiveSerializer
+    filterset_fields = ["employee", "period_year", "period_month", "type"]
+    ordering_fields = ["-created_at"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return BonusIncentive.objects.none()
+        qs = BonusIncentive.objects.select_related("employee", "employee__user", "organization")
+        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
+            return filter_by_organization(qs, organization_id_from_request(self.request))
+        return qs.none()
+
+    def get_permissions(self):
+        return [permissions.IsAuthenticated(), IsAdminOrHR()]
+
+    def perform_create(self, serializer):
+        oid = organization_id_from_request(self.request)
+        if not oid:
+            raise ValidationError({"organization": "Required."})
+        org = Organization.objects.get(pk=int(oid))
+        serializer.save(organization=org, created_by=self.request.user)

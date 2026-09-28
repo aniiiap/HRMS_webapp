@@ -158,6 +158,8 @@ export default function PayRegisterPanel({
           'Reimbursements': g.reimbursements,
           'Gross Pay': row.gross_monthly_full,
           'Earned Gross': row.gross_prorated,
+          'Bonus': row.lines?.filter(l => l.component_code === 'BONUS').reduce((acc, curr) => acc + Number(curr.amount_prorated || 0), 0) || 0,
+          'Incentive': row.lines?.filter(l => l.component_code === 'INCENTIVE').reduce((acc, curr) => acc + Number(curr.amount_prorated || 0), 0) || 0,
           'Deductions': row.total_deductions,
           'Net Pay': row.net_pay,
           'Status': row.status || selectedRun?.status || 'draft'

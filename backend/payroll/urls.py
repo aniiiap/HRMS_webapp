@@ -15,6 +15,7 @@ from .views import (
     PayrollRunViewSet,
     PayrollStatutoryConfigViewSet,
     PayrollTaxDeclarationViewSet,
+    BonusIncentiveViewSet,
 )
 
 router = DefaultRouter()
@@ -29,6 +30,7 @@ router.register("payroll/salary-lines", EmployeeSalaryLineViewSet, basename="pay
 router.register("payroll/profiles", EmployeePayrollProfileViewSet, basename="payroll-profile")
 router.register("payroll/tax-declarations", PayrollTaxDeclarationViewSet, basename="payroll-tax-declaration")
 router.register("payroll/compensation", EmployeeCompensationViewSet, basename="payroll-compensation")
+router.register("payroll/bonuses", BonusIncentiveViewSet, basename="payroll-bonus")
 
 urlpatterns = [
     path("payroll/dashboard/", PayrollDashboardAPIView.as_view(), name="payroll-dashboard"),

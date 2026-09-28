@@ -17,6 +17,7 @@ import SalaryStructureBuilder from '../components/payroll/SalaryStructureBuilder
 import SetupPayrollSettingsPanel from '../components/payroll/SetupPayrollSettingsPanel'
 import StatutoryConfigHistory from '../components/payroll/StatutoryConfigHistory'
 import StatutoryReportsPanel from '../components/payroll/StatutoryReportsPanel'
+import BonusIncentivePanel from '../components/payroll/BonusIncentivePanel'
 import PageHeader from '../components/ui/PageHeader'
 import AuditLogPanel from '../components/AuditLogPanel'
 import { useAuth } from '../context/AuthContext'
@@ -734,6 +735,14 @@ export default function PayrollPage() {
                 onUpdateResult={updateResult}
               />
             </div>
+          )}
+
+          {payrollSection === 'run' && payrollSubTab === 'bonuses' && (
+            <BonusIncentivePanel
+              run={selectedRun}
+              employees={employees}
+              onRecalculate={selectedRunId ? () => void recalcRun(selectedRunId, { skipAttendance: true }) : undefined}
+            />
           )}
 
           {payrollSection === 'run' && payrollSubTab === 'payout' && (

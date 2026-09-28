@@ -13,6 +13,7 @@ export const PAYROLL_SECTIONS = [
       { id: 'overview', label: 'Overview' },
       { id: 'runs', label: 'Pay runs' },
       { id: 'register', label: 'Pay register' },
+      { id: 'bonuses', label: 'Bonuses & Incentives' },
       { id: 'payout', label: 'Payout' },
       { id: 'reports', label: 'Statutory & reports' },
     ],

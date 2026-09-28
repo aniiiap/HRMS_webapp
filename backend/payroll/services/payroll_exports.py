@@ -32,6 +32,8 @@ def export_pay_register_csv(run: PayrollRun) -> HttpResponse:
             "LOP Days",
             "Gross (Full)",
             "Gross (Prorated)",
+            "Bonus",
+            "Incentive",
             "Total Deductions",
             "PF",
             "ESI",
@@ -46,12 +48,17 @@ def export_pay_register_csv(run: PayrollRun) -> HttpResponse:
     qs = (
         PayrollEmployeeResult.objects.filter(run=run)
         .select_related("employee", "employee__user")
+        .prefetch_related("lines__component")
         .order_by("employee__employee_code")
     )
     for r in qs:
         u = r.employee.user
         name = f"{u.first_name} {u.last_name}".strip() or u.email
         dept = r.employee.department or ""
+        
+        bonus_val = sum(ln.amount_prorated for ln in r.lines.all() if ln.component.code == "BONUS")
+        incentive_val = sum(ln.amount_prorated for ln in r.lines.all() if ln.component.code == "INCENTIVE")
+
         w.writerow(
             [
                 r.employee.employee_code,
@@ -62,6 +69,8 @@ def export_pay_register_csv(run: PayrollRun) -> HttpResponse:
                 _str_dec(r.lop_days),
                 _str_dec(r.gross_monthly_full),
                 _str_dec(r.gross_prorated),
+                _str_dec(bonus_val),
+                _str_dec(incentive_val),
                 _str_dec(r.total_deductions),
                 _str_dec(r.pf_employee),
                 _str_dec(r.esi_employee),

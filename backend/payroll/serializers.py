@@ -21,6 +21,7 @@ from .models import (
     PayrollTaxDeclaration,
     SalaryCalculationMode,
     TaxDeclarationStatus,
+    BonusIncentive,
 )
 class PayrollRecordSerializer(serializers.ModelSerializer):
     employee_name = serializers.SerializerMethodField()
@@ -607,6 +608,20 @@ class PayrollTaxDeclarationSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("id", "updated_at", "employee_name")
+
+    def get_employee_name(self, obj):
+        u = obj.employee.user
+        return f"{u.first_name} {u.last_name}".strip() or u.email
+
+
+class BonusIncentiveSerializer(serializers.ModelSerializer):
+    employee_name = serializers.SerializerMethodField()
+    employee_code = serializers.CharField(source="employee.employee_code", read_only=True)
+
+    class Meta:
+        model = BonusIncentive
+        fields = "__all__"
+        read_only_fields = ("id", "organization", "created_by", "created_at", "updated_at", "employee_name", "employee_code")
 
     def get_employee_name(self, obj):
         u = obj.employee.user

@@ -18,6 +18,8 @@ from ..models import (
     EmployeeCompensation,
     EmployeePayrollProfile,
     EmployeeSalaryLine,
+    PayrollComponent,
+    PayrollComponentCategory,
     PayrollComponentKind,
     PayrollEmployeeResult,
     PayrollResultLine,
@@ -28,6 +30,7 @@ from ..models import (
     SalaryCalculationMode,
     TaxDeclarationStatus,
     TaxRegime,
+    BonusIncentive,
 )
 
 Q2 = Decimal("0.01")
@@ -254,7 +257,6 @@ def compute_employee_payroll(
 
     # Automatically fetch and add approved expense claims
     from expenses.models import ExpenseClaim, ExpenseClaimStatus
-    from payroll.models import PayrollComponent, PayrollComponentCategory
     
     unreimbursed_claims = ExpenseClaim.objects.filter(
         employee=employee,
@@ -288,7 +290,44 @@ def compute_employee_payroll(
             }
         )
 
-    gross_prorated = _q(sum((b["prorated"] for b in breakdown if b["component"].code != "REIMBURSEMENT"), Decimal("0")))
+    # Add Bonuses & Incentives
+    bonuses = BonusIncentive.objects.filter(
+        employee=employee,
+        period_year=run.period_year,
+        period_month=run.period_month
+    )
+    total_bonuses = Decimal("0")
+    for b in bonuses:
+        b_amount = _q(b.amount)
+        if b_amount > Decimal("0"):
+            code = "BONUS" if b.type == "bonus" else "INCENTIVE"
+            name = "Bonus" if b.type == "bonus" else "Incentive"
+            comp, _ = PayrollComponent.objects.get_or_create(
+                organization=run.organization,
+                code=code,
+                defaults={
+                    "name": name,
+                    "category": PayrollComponentCategory.ADHOC,
+                    "kind": PayrollComponentKind.EARNING,
+                    "taxable": True,
+                    "prorate_with_attendance": False,
+                    "is_system": True,
+                }
+            )
+            total_bonuses += b_amount
+            # Exclude from gross_full per user request, but keep it taxable
+            taxable_full += b_amount
+            esi_gross_full += b_amount
+            breakdown.append(
+                {
+                    "component": comp,
+                    "kind": PayrollComponentKind.EARNING,
+                    "full": b_amount,
+                    "prorated": b_amount,
+                }
+            )
+
+    gross_prorated = _q(sum((b["prorated"] for b in breakdown if b["component"].code not in ("REIMBURSEMENT", "BONUS", "INCENTIVE")), Decimal("0")))
     taxable_prorated = _q(
         sum((b["prorated"] for b in breakdown if b["component"].taxable), Decimal("0"))
     )
@@ -363,11 +402,11 @@ def compute_employee_payroll(
         )
 
     total_ded = _q(pf_ee + esi_ee + pt + tds)
-    net = _q(gross_prorated + total_expenses - total_ded)
+    net = _q(gross_prorated + total_expenses + total_bonuses - total_ded)
 
     if result.is_on_hold:
         net = Decimal("0")
-        total_ded = _q(gross_prorated + total_expenses)
+        total_ded = _q(gross_prorated + total_expenses + total_bonuses)
 
     with transaction.atomic():
         PayrollResultLine.objects.filter(result=result).delete()

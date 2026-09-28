@@ -638,3 +638,37 @@ class PayrollTaxDeclaration(models.Model):
 
     def __str__(self):
         return f"{self.employee.employee_code} {self.financial_year}"
+
+
+class BonusIncentiveType(models.TextChoices):
+    BONUS = "bonus", "Bonus"
+    INCENTIVE = "incentive", "Incentive"
+
+
+class BonusIncentive(models.Model):
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="bonuses"
+    )
+    employee = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, related_name="bonuses"
+    )
+    run = models.ForeignKey(
+        PayrollRun, on_delete=models.SET_NULL, null=True, blank=True, related_name="bonuses"
+    )
+    period_year = models.PositiveIntegerField()
+    period_month = models.PositiveIntegerField()
+    type = models.CharField(max_length=16, choices=BonusIncentiveType.choices)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    reason = models.CharField(max_length=255, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-period_year", "-period_month", "employee__employee_code"]
+
+    def __str__(self):
+        return f"{self.type} - {self.employee.employee_code} ({self.period_year}-{self.period_month})"
+
