@@ -691,6 +691,7 @@ export default function AttendancePage() {
                       <th className="px-3 py-3">Work duration</th>
                       <th className="px-3 py-3">Date</th>
                       <th className="px-3 py-3">Type</th>
+                      <th className="px-3 py-3">Reason</th>
                       <th className="px-3 py-3">Actions</th>
                     </tr>
                   </thead>
@@ -768,6 +769,9 @@ export default function AttendancePage() {
                                 {c.status}
                               </span>
                             )}
+                          </td>
+                          <td className="px-3 py-3 text-xs text-slate-600 dark:text-slate-400 min-w-[150px] max-w-[250px] whitespace-pre-wrap break-words" title={c.reason}>
+                            {c.reason || '—'}
                           </td>
                           <td className="px-3 py-3">
                             {isPending ? (
