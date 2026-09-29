@@ -61,8 +61,8 @@ def attendance_anomaly(attendance: Attendance, has_approved_leave: bool | None =
         late_grace = timedelta(minutes=settings.grace_minutes)
         early_grace = timedelta(minutes=settings.early_checkout_grace_minutes)
 
-        is_late_checkin = settings.track_in_time and local_ci > start_dt + late_grace
-        is_early_checkout = settings.track_out_time and local_co < end_dt - early_grace
+        is_late_checkin = settings.track_in_time and local_ci.replace(second=0, microsecond=0) > start_dt + late_grace
+        is_early_checkout = settings.track_out_time and local_co.replace(second=0, microsecond=0) < end_dt - early_grace
 
         if is_late_checkin and is_early_checkout:
             return "late_and_early"
@@ -78,7 +78,7 @@ def attendance_anomaly(attendance: Attendance, has_approved_leave: bool | None =
     elif attendance.check_in and settings.shift_start and settings.track_in_time:
         local_ci = timezone.localtime(attendance.check_in)
         start_dt = shift_start_datetime(attendance.date, settings)
-        if start_dt and local_ci > start_dt + timedelta(minutes=settings.grace_minutes):
+        if start_dt and local_ci.replace(second=0, microsecond=0) > start_dt + timedelta(minutes=settings.grace_minutes):
             return "late_checkin"
 
     return "none"

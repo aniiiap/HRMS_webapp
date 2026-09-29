@@ -94,7 +94,7 @@ def day_status_for_employee(
             start_dt = shift_start_datetime(day_date, settings)
             if start_dt:
                 grace = timedelta(minutes=getattr(settings, 'grace_minutes', 0) or 0)
-                if timezone.localtime() < (start_dt + grace):
+                if timezone.localtime().replace(second=0, microsecond=0) <= (start_dt + grace):
                     return "upcoming", "UP"
         
     return "absent", "A"
