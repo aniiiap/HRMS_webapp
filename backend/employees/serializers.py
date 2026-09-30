@@ -36,6 +36,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "resignation_auto_msg_text",
             "custom_employee_fields",
             "profile_self_service_enabled",
+            "attendance_anomaly_backdate_days",
         )
         read_only_fields = ("id", "created_at")
 

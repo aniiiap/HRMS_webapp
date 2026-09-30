@@ -401,14 +401,18 @@ class AttendanceCorrectionCreateSerializer(serializers.Serializer):
         attendance: Attendance = self.context["attendance"]
         request_type = attrs.get("request_type", AttendanceCorrectionType.MARK_PRESENT)
         today = timezone.localdate()
-        allowed_from = today - timedelta(days=3)
+        org_limit_days = 3
+        if attendance.employee and attendance.employee.organization:
+            org_limit_days = attendance.employee.organization.attendance_anomaly_backdate_days
+
+        allowed_from = today - timedelta(days=org_limit_days)
         if attendance.date >= today:
             raise serializers.ValidationError(
                 {"detail": "Attendance correction requests are allowed only for past dates."}
             )
         if attendance.date < allowed_from:
             raise serializers.ValidationError(
-                {"detail": "Approval request window expired. You can request correction only within 3 days."}
+                {"detail": f"Approval request window expired. You can request correction only within {org_limit_days} days."}
             )
         if request_type != AttendanceCorrectionType.MARK_LEAVE and not attendance.check_in:
             raise serializers.ValidationError({"detail": "Attendance without check-in cannot be regularized."})

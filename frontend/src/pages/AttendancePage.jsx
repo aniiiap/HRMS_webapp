@@ -6,6 +6,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { api, messageFromError } from '../api/client'
 import AttendanceRulesPanel from '../components/attendance/AttendanceRulesPanel'
 import AttendanceLogsPanel from '../components/attendance/AttendanceLogsPanel'
+import AttendanceSettingsPanel from '../components/attendance/AttendanceSettingsPanel'
 import AuditLogPanel from '../components/AuditLogPanel'
 import Pagination from '../components/Pagination'
 import { useAuth } from '../context/AuthContext'
@@ -120,8 +121,15 @@ export default function AttendancePage() {
     })
   }
 
+  const [orgConfig, setOrgConfig] = useState(null)
+
   async function load() {
     try {
+      const orgRes = await api.get('/api/organizations/')
+      const orgs = Array.isArray(orgRes.data) ? orgRes.data : orgRes.data.results || []
+      const currentOrg = orgs[0] || null
+      setOrgConfig(currentOrg)
+
       if (isManagerPlus) {
         const [{ data: heat }, { data: logData }, { data: corrData }, { data: rulesData }] = await Promise.all([
           api.get('/api/attendance/heatmap/', { params: { year, month } }),
@@ -433,8 +441,9 @@ export default function AttendancePage() {
   )
 
   const isCorrectionExpired = (rowDate) => {
+    const limit = orgConfig?.attendance_anomaly_backdate_days ?? 3
     const daysAgo = dayjs().startOf('day').diff(dayjs(rowDate).startOf('day'), 'day')
-    return daysAgo > requestWindowDays
+    return daysAgo > limit
   }
 
   const cellClass = (status) => {
@@ -500,6 +509,7 @@ export default function AttendancePage() {
               { id: 'logs', label: 'Logs' },
               { id: 'approvals', label: 'Approvals' },
               ...(isPrivileged ? [{ id: 'rules', label: 'Rules' }] : []),
+              ...(isPrivileged ? [{ id: 'settings', label: 'Settings' }] : []),
               ...(isPrivileged ? [{ id: 'history', label: 'History' }] : []),
             ].map((tab) => (
               <button
@@ -872,6 +882,7 @@ export default function AttendancePage() {
           )}
 
           {activeTab === 'rules' && isPrivileged && <AttendanceRulesPanel />}
+          {activeTab === 'settings' && isPrivileged && <AttendanceSettingsPanel />}
           {activeTab === 'history' && isPrivileged && <AuditLogPanel resourceType="Attendance" />}
         </div>
       </div>
@@ -934,7 +945,7 @@ export default function AttendancePage() {
                       ) : isCorrectionExpired(r.date) ? (
                         <span
                           className="inline-flex cursor-help rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
-                          title="You can request approval only within 3 days from the attendance date."
+                          title={`You can request approval only within ${orgConfig?.attendance_anomaly_backdate_days ?? 3} days from the attendance date.`}
                         >
                           Request expired
                         </span>
@@ -958,7 +969,9 @@ export default function AttendancePage() {
                     <tr className="border-t border-slate-100 bg-slate-50/80 dark:bg-slate-900/40">
                       <td colSpan={7} className="px-4 py-4">
                         <div className="mx-auto max-w-2xl space-y-3">
-                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Request approval for {r.date}</p>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            Request approval for {r.date}
+                          </p>
 
                           {!selectedType && (
                             <div className="flex flex-wrap gap-2">

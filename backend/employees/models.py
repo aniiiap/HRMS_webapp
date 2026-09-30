@@ -55,6 +55,12 @@ class Organization(models.Model):
     custom_employee_fields = models.JSONField(default=list, blank=True, help_text="List of dicts: [{'name': 'UAN', 'required': True}]")
     profile_self_service_enabled = models.BooleanField(default=True)
     
+    # Attendance settings
+    attendance_anomaly_backdate_days = models.PositiveIntegerField(
+        default=3, 
+        help_text="Max days in the past an employee can request an attendance correction."
+    )
+    
     class Meta:
         ordering = ["name"]
 
