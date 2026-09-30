@@ -114,10 +114,14 @@ def build_payslip_pdf(result: PayrollEmployeeResult) -> bytes:
     story.append(Spacer(1, 12))
 
     earnings = [["Earning", "Full month", "Prorated"]]
-    for line in result.lines.filter(kind="earning").select_related("component"):
+    db_lines = list(result.lines.filter(kind="earning").select_related("component"))
+    db_lines.sort(key=lambda l: (getattr(l, 'epoch_label', '') or 'ZZZ', l.component.code))
+    
+    for line in db_lines:
+        name = f"{line.component.name} ({line.epoch_label})" if getattr(line, 'epoch_label', '') else line.component.name
         earnings.append(
             [
-                line.component.name,
+                name,
                 _inr(line.amount_full_month),
                 _inr(line.amount_prorated),
             ]

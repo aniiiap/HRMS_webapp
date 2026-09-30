@@ -118,6 +118,7 @@ class PayrollResultLineSerializer(serializers.ModelSerializer):
             "kind",
             "amount_full_month",
             "amount_prorated",
+            "epoch_label",
         )
         read_only_fields = fields
 

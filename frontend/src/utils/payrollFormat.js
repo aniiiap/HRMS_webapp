@@ -124,11 +124,22 @@ export function estimateNetFromGross(preview, flags = {}) {
 export function groupResultLines(row) {
   const lines = row?.lines || []
   const earnings = lines.filter((l) => l.kind === 'earning' || !l.kind)
+  earnings.sort((a, b) => {
+    const eA = a.epoch_label || 'ZZZ'
+    const eB = b.epoch_label || 'ZZZ'
+    if (eA < eB) return -1
+    if (eA > eB) return 1
+    const cA = a.component_code || ''
+    const cB = b.component_code || ''
+    return cA.localeCompare(cB)
+  })
+  
   const deductions = lines.filter((l) => l.kind === 'deduction')
 
   const amount = (code) => {
-    const ln = lines.find((l) => (l.component_code || '').toUpperCase() === code)
-    return ln ? Number(ln.amount_prorated || 0) : 0
+    return lines
+      .filter((l) => (l.component_code || '').toUpperCase() === code)
+      .reduce((acc, curr) => acc + Number(curr.amount_prorated || 0), 0)
   }
 
   const basic = amount('BASIC')

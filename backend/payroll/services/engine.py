@@ -4,7 +4,7 @@ TDS uses FY 2025-26 slabs + Section 87A rebate via ``tds_calculator`` — not le
 """
 
 from calendar import monthrange
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
@@ -216,44 +216,109 @@ def compute_employee_payroll(
         statutory = PayrollStatutoryConfig.objects.get(organization_id=run.organization_id)
 
     profile = ensure_payroll_profile(employee)
-    lines = _active_salary_lines(employee, last_day)
-
-    _, comp_amounts = resolve_monthly_amounts(lines)
-
-    ratio = _proration_ratio(result.paid_days, run.working_days)
-
-    gross_full = Decimal("0")
-    taxable_full = Decimal("0")
+    
+    month_start = anchor
+    month_end = last_day
+    
+    # Identify mid-month salary revisions (Epochs)
+    qs_dates = EmployeeSalaryLine.objects.filter(
+        employee=employee,
+        effective_from__gt=month_start,
+        effective_from__lte=month_end
+    ).values_list('effective_from', flat=True)
+    
+    revision_dates = sorted(list(set(qs_dates)))
+    
     pf_basis = (
         getattr(statutory, "pf_employee_contribution_type", None)
         or getattr(statutory, "pf_wage_basis", None)
         or "basic_da"
     )
-    pf_wage_full = resolve_pf_wage_full(lines, comp_amounts, pf_basis)
+    
+    gross_full = Decimal("0")
+    taxable_full = Decimal("0")
+    pf_wage_full = Decimal("0")
     esi_gross_full = Decimal("0")
-
     breakdown: list[dict[str, Any]] = []
 
-    for line in lines:
-        c = line.component
-        if c.kind != PayrollComponentKind.EARNING:
-            continue
-        full = comp_amounts.get(c.id, Decimal("0"))
-        prorate = c.prorate_with_attendance
-        prorated = _q(full * ratio) if prorate else _q(full)
-        gross_full += full
-        if c.taxable:
-            taxable_full += full
-        if c.esi_wage_part:
-            esi_gross_full += full
-        breakdown.append(
-            {
-                "component": c,
-                "kind": PayrollComponentKind.EARNING,
-                "full": full,
-                "prorated": prorated,
-            }
-        )
+    ratio = _proration_ratio(result.paid_days, run.working_days)
+
+    if not revision_dates:
+        # Standard calculation (No mid-month changes)
+        lines = _active_salary_lines(employee, last_day)
+        _, comp_amounts = resolve_monthly_amounts(lines)
+        pf_wage_full = resolve_pf_wage_full(lines, comp_amounts, pf_basis)
+        
+        for line in lines:
+            c = line.component
+            if c.kind != PayrollComponentKind.EARNING:
+                continue
+            full = comp_amounts.get(c.id, Decimal("0"))
+            prorate = c.prorate_with_attendance
+            prorated = _q(full * ratio) if prorate else _q(full)
+            gross_full += full
+            if c.taxable:
+                taxable_full += full
+            if c.esi_wage_part:
+                esi_gross_full += full
+            breakdown.append(
+                {
+                    "component": c,
+                    "kind": PayrollComponentKind.EARNING,
+                    "full": full,
+                    "prorated": prorated,
+                    "epoch_label": "",
+                }
+            )
+    else:
+        # Epoch-based calculation for mid-month salary splits
+        boundaries = [month_start] + revision_dates + [month_end + timedelta(days=1)]
+        month_days = Decimal((month_end - month_start).days + 1)
+        breakdown_map = {}
+        
+        for i in range(len(boundaries) - 1):
+            epoch_start = boundaries[i]
+            epoch_end = boundaries[i+1] - timedelta(days=1)
+            epoch_days = Decimal((epoch_end - epoch_start).days + 1)
+            epoch_weight = epoch_days / month_days
+            epoch_ratio = ratio * epoch_weight
+            
+            lines = _active_salary_lines(employee, epoch_end)
+            _, comp_amounts = resolve_monthly_amounts(lines)
+            
+            pf_wage_full += resolve_pf_wage_full(lines, comp_amounts, pf_basis) * epoch_weight
+            
+            # Build the epoch label (e.g. '01 Sep - 18 Sep')
+            label = f"{epoch_start.strftime('%d %b')} - {epoch_end.strftime('%d %b')}"
+            
+            for line in lines:
+                c = line.component
+                if c.kind != PayrollComponentKind.EARNING:
+                    continue
+                
+                full = comp_amounts.get(c.id, Decimal("0"))
+                prorate = c.prorate_with_attendance
+                prorated = _q(full * epoch_ratio) if prorate else _q(full * epoch_weight)
+                weighted_full = full * epoch_weight
+                
+                gross_full += weighted_full
+                if c.taxable:
+                    taxable_full += weighted_full
+                if c.esi_wage_part:
+                    esi_gross_full += weighted_full
+                
+                breakdown.append({
+                    "component": c,
+                    "kind": PayrollComponentKind.EARNING,
+                    "full": _q(weighted_full),
+                    "prorated": _q(prorated),
+                    "epoch_label": label,
+                })
+                
+        gross_full = _q(gross_full)
+        taxable_full = _q(taxable_full)
+        pf_wage_full = _q(pf_wage_full)
+        esi_gross_full = _q(esi_gross_full)
 
     # Automatically fetch and add approved expense claims
     from expenses.models import ExpenseClaim, ExpenseClaimStatus
@@ -424,9 +489,10 @@ def compute_employee_payroll(
             PayrollResultLine.objects.create(
                 result=result,
                 component=b["component"],
-                kind=PayrollComponentKind.EARNING,
+                kind=b["kind"],
                 amount_full_month=b["full"],
                 amount_prorated=b["prorated"],
+                epoch_label=b.get("epoch_label", ""),
             )
 
         result.gross_monthly_full = _q(gross_full)

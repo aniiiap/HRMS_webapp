@@ -589,6 +589,7 @@ class PayrollResultLine(models.Model):
     kind = models.CharField(max_length=16, choices=PayrollComponentKind.choices)
     amount_full_month = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     amount_prorated = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    epoch_label = models.CharField(max_length=80, blank=True)
 
     class Meta:
         ordering = ["result_id", "kind", "component__code"]

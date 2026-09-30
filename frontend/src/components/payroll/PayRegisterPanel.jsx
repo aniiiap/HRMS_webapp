@@ -421,7 +421,7 @@ function RegisterBreakdown({ g, row, canEdit, onUpdateResult, onOpenManageExpens
             .map((ln) => (
               <BreakdownRow 
                 key={ln.id} 
-                label={ln.component_name} 
+                label={ln.epoch_label ? `${ln.component_name} (${ln.epoch_label})` : ln.component_name} 
                 value={fmtInrFull(ln.amount_prorated)} 
                 sub 
               />
