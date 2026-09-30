@@ -218,8 +218,16 @@ def compute_paid_days_for_employee(
 
     paid_from_attendance = sum(day_credits, Decimal("0"))
     
-    # Any slots remaining up to wd (e.g. weekends, holidays) are fully paid
-    remaining_slots = max(wd - Decimal(len(eval_days)), Decimal("0"))
+    # Calculate days in the month where the employee was not employed
+    unemployed_days = 0
+    if employee.date_of_joining and month_start < employee.date_of_joining:
+        unemployed_days += (min(employee.date_of_joining, month_end + timedelta(days=1)) - month_start).days
+    if getattr(employee, "date_of_exit", None) and month_end > employee.date_of_exit:
+        unemployed_days += (month_end - max(employee.date_of_exit, month_start - timedelta(days=1))).days
+    
+    # Any slots remaining up to wd (e.g. weekends, holidays in short months) are fully paid, 
+    # BUT we do not pay for days they were not employed.
+    remaining_slots = max(wd - Decimal(len(eval_days)) - Decimal(unemployed_days), Decimal("0"))
     paid = paid_from_attendance + remaining_slots
 
     paid = min(paid, wd)

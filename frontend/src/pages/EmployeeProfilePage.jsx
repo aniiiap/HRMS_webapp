@@ -113,7 +113,7 @@ export default function EmployeeProfilePage() {
     if (!id) return
 
     if (tab === 'attendance') {
-      const { data } = await api.get('/api/attendance/', { params: { employee: id } })
+      const { data } = await api.get('/api/attendance/', { params: { employee: id, page_size: 100 } })
       setAttendance(Array.isArray(data) ? data : data.results || [])
     }
 

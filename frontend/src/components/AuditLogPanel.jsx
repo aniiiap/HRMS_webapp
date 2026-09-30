@@ -4,6 +4,7 @@ import { api } from "../api/client"
 import { toast } from "react-hot-toast"
 import { format } from "date-fns"
 import { Trash2, Activity, User, Briefcase, Calendar, Info, Search, Filter } from "lucide-react"
+import Pagination from "./Pagination"
 
 // A helper function to make raw API descriptions user-friendly
 function formatLogAction(log) {
@@ -89,6 +90,10 @@ export default function AuditLogPanel({ resourceType }) {
   const [search, setSearch] = useState("")
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [debouncedSearch, setDebouncedSearch] = useState("")
 
   const isAdmin = user?.role === "admin" || user?.is_superuser
@@ -97,13 +102,14 @@ export default function AuditLogPanel({ resourceType }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search)
+      setPage(1) // Reset to first page on search
     }, 500)
     return () => clearTimeout(timer)
   }, [search])
 
   useEffect(() => {
     fetchLogs()
-  }, [resourceType, debouncedSearch, dateFrom, dateTo])
+  }, [resourceType, debouncedSearch, dateFrom, dateTo, page, pageSize])
 
   async function fetchLogs() {
     setLoading(true)
@@ -113,11 +119,22 @@ export default function AuditLogPanel({ resourceType }) {
       if (debouncedSearch) params.append("search", debouncedSearch)
       if (dateFrom) params.append("date_from", dateFrom)
       if (dateTo) params.append("date_to", dateTo)
+      params.append("page", page)
+      params.append("page_size", pageSize)
 
       const url = `/api/action-logs/?${params.toString()}`
       const res = await api.get(url)
       const data = res.data
-      setLogs(Array.isArray(data) ? data : data.results || [])
+      
+      if (data.results) {
+        setLogs(data.results)
+        setTotal(data.count)
+        setTotalPages(Math.ceil(data.count / pageSize))
+      } else {
+        setLogs(Array.isArray(data) ? data : [])
+        setTotal(Array.isArray(data) ? data.length : 0)
+        setTotalPages(1)
+      }
     } catch (err) {
       toast.error("Failed to load activity history")
     } finally {
@@ -131,7 +148,7 @@ export default function AuditLogPanel({ resourceType }) {
     try {
       await api.delete(`/api/action-logs/${id}/`)
       toast.success("Log deleted successfully")
-      setLogs(logs.filter((l) => l.id !== id))
+      fetchLogs()
     } catch (err) {
       toast.error("Failed to delete log")
     }
@@ -255,6 +272,21 @@ export default function AuditLogPanel({ resourceType }) {
           </tbody>
         </table>
       </div>
+      
+      {/* Pagination Controls */}
+      {logs.length > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={(p) => setPage(p)}
+          onPageSizeChange={(s) => {
+            setPageSize(s)
+            setPage(1)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -41,11 +41,18 @@ class AuditMiddleware(MiddlewareMixin):
                         from employees.models import Employee
                         emp_name = None
                         
-                        # 1. If employee ID is explicitly in the payload (like a POST request)
+                        # 1. If employee ID is explicitly in the payload
                         if 'employee' in payload and str(payload['employee']).isdigit():
                             emp = Employee.objects.filter(id=payload['employee']).select_related('user').first()
                             if emp and emp.user:
                                 emp_name = f"{emp.user.first_name} {emp.user.last_name}".strip() or emp.user.email
+                        
+                        elif 'correction_id' in payload and str(payload['correction_id']).isdigit():
+                            from attendance.models import AttendanceCorrectionRequest
+                            corr = AttendanceCorrectionRequest.objects.filter(id=payload['correction_id']).select_related('attendance__employee__user').first()
+                            if corr and corr.attendance and corr.attendance.employee and corr.attendance.employee.user:
+                                emp_user = corr.attendance.employee.user
+                                emp_name = f"{emp_user.first_name} {emp_user.last_name}".strip() or emp_user.email
                         
                         # 2. If it's a specific resource update/delete without employee in payload, fetch it from DB
                         elif str(resource_id).isdigit():
