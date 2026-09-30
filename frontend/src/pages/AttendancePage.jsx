@@ -393,8 +393,11 @@ export default function AttendancePage() {
     })
   }, [heatmap, q])
   const filteredRows = useMemo(() => {
-    if (!q) return rows
-    return rows.filter((r) => `${r.date || ''} ${r.notes || ''} ${r.check_in || ''} ${r.check_out || ''}`.toLowerCase().includes(q))
+    const currentMonth = dayjs().month()
+    const currentYear = dayjs().year()
+    const list = rows.filter((r) => dayjs(r.date).month() === currentMonth && dayjs(r.date).year() === currentYear)
+    if (!q) return list
+    return list.filter((r) => `${r.date || ''} ${r.notes || ''} ${r.check_in || ''} ${r.check_out || ''}`.toLowerCase().includes(q))
   }, [rows, q])
   const filteredLogs = useMemo(() => {
     const base = logs.filter((r) => dayjs(r.date).year() === year && dayjs(r.date).month() + 1 === month)
