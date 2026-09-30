@@ -7,6 +7,7 @@ import {
   formatDurationHuman,
   formatTime,
 } from './profileUtils'
+import Pagination from '../Pagination'
 
 const STATUS_LEGEND = [
   { code: 'P', label: 'Present' },
@@ -368,37 +369,17 @@ export default function EmployeeAttendanceLogsSubTab({ attendance = [] }) {
           </div>
 
           {monthlyRows.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-2.5 py-2 text-[10px] text-slate-500 dark:border-slate-800">
-              <div className="flex items-center gap-1.5">
-                <span>Show</span>
-                <select
-                  className="rounded border border-slate-300 px-1.5 py-0.5 text-[10px] dark:border-slate-600 dark:bg-slate-900"
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value))
-                    setPage(1)
-                  }}
-                >
-                  {[10, 20, 50].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <span>
-                  {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, monthlyRows.length)} of {monthlyRows.length}
-                </span>
-                <span>Page {page} of {totalPages}</span>
-                <div className="flex gap-0.5">
-                  <PagerBtn disabled={page <= 1} onClick={() => setPage(1)} label="«" />
-                  <PagerBtn disabled={page <= 1} onClick={() => setPage((p) => p - 1)} label="‹" />
-                  <PagerBtn disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} label="›" />
-                  <PagerBtn disabled={page >= totalPages} onClick={() => setPage(totalPages)} label="»" />
-                </div>
-              </div>
-            </div>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={monthlyRows.length}
+              pageSize={pageSize}
+              onPageChange={(p) => setPage(p)}
+              onPageSizeChange={(s) => {
+                setPageSize(s)
+                setPage(1)
+              }}
+            />
           )}
         </div>
       )}
@@ -431,18 +412,5 @@ function StatusCode({ code, tone }) {
     >
       {code}
     </span>
-  )
-}
-
-function PagerBtn({ disabled, onClick, label }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className="rounded border border-slate-300 px-1.5 py-0.5 disabled:opacity-40 dark:border-slate-600"
-    >
-      {label}
-    </button>
   )
 }

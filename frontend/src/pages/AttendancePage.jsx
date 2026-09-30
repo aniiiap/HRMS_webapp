@@ -125,7 +125,7 @@ export default function AttendancePage() {
       if (isManagerPlus) {
         const [{ data: heat }, { data: logData }, { data: corrData }, { data: rulesData }] = await Promise.all([
           api.get('/api/attendance/heatmap/', { params: { year, month } }),
-          api.get('/api/attendance/', { params: { ordering: '-date' } }),
+          api.get('/api/attendance/', { params: { ordering: '-date', page_size: 100 } }),
           api.get('/api/attendance/correction_requests/'),
           api.get('/api/leave-rules/'),
         ])
@@ -134,7 +134,7 @@ export default function AttendancePage() {
         setCorrections(Array.isArray(corrData) ? corrData : corrData.results || [])
         setLeaveRules(Array.isArray(rulesData) ? rulesData : rulesData.results || [])
       } else {
-        const { data } = await api.get('/api/attendance/', { params: { ordering: '-date' } })
+        const { data } = await api.get('/api/attendance/', { params: { ordering: '-date', page_size: 100 } })
         setRows(Array.isArray(data) ? data : data.results || [])
       }
     } catch (err) {

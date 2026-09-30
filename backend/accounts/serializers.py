@@ -342,3 +342,19 @@ class ActionLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = ActionLog
         fields = '__all__'
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        payload = ret.get('payload') or {}
+        if isinstance(payload, dict):
+            # Backwards compatibility for old logs missing the 'employee' key
+            if 'correction_id' in payload and 'employee' not in payload:
+                try:
+                    from attendance.models import AttendanceCorrectionRequest
+                    corr = AttendanceCorrectionRequest.objects.select_related('attendance__employee__user').get(id=payload['correction_id'])
+                    emp_user = corr.attendance.employee.user
+                    payload['employee'] = f"{emp_user.first_name} {emp_user.last_name}".strip() or emp_user.email
+                    ret['payload'] = payload
+                except Exception:
+                    pass
+        return ret
