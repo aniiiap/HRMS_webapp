@@ -14,6 +14,7 @@ export default function BonusIncentivePanel({ run, employees, onRecalculate }) {
   const [form, setForm] = useState({
     employees: [],
     type: 'bonus',
+    custom_type: '',
     amount: '',
     reason: ''
   })
@@ -62,6 +63,7 @@ export default function BonusIncentivePanel({ run, employees, onRecalculate }) {
     try {
       const payloadBase = {
         type: form.type,
+        custom_type: form.type === 'other' ? form.custom_type : '',
         amount: form.amount,
         reason: form.reason,
         period_year: run.period_year,
@@ -77,7 +79,7 @@ export default function BonusIncentivePanel({ run, employees, onRecalculate }) {
       
       setBonuses([...newBonuses, ...bonuses])
       setShowForm(false)
-      setForm({ employees: [], type: 'bonus', amount: '', reason: '' })
+      setForm({ employees: [], type: 'bonus', custom_type: '', amount: '', reason: '' })
       toast.success(`Successfully added for ${newBonuses.length} employee(s).`)
       if (onRecalculate) onRecalculate(run.id)
     } catch (err) {
@@ -146,14 +148,27 @@ export default function BonusIncentivePanel({ run, employees, onRecalculate }) {
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Type</label>
-                <select 
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" 
-                  value={form.type} 
-                  onChange={(e) => setForm({ ...form, type: e.target.value })}
-                >
-                  <option value="bonus">Bonus</option>
-                  <option value="incentive">Incentive</option>
-                </select>
+                <div className="flex gap-2">
+                  <select 
+                    className={`rounded-xl border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 ${form.type === 'other' ? 'w-1/2' : 'w-full'}`} 
+                    value={form.type} 
+                    onChange={(e) => setForm({ ...form, type: e.target.value })}
+                  >
+                    <option value="bonus">Bonus</option>
+                    <option value="incentive">Incentive</option>
+                    <option value="other">Other</option>
+                  </select>
+                  {form.type === 'other' && (
+                    <input 
+                      type="text" 
+                      required
+                      className="w-1/2 rounded-xl border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" 
+                      value={form.custom_type} 
+                      onChange={(e) => setForm({ ...form, custom_type: e.target.value })}
+                      placeholder="Specify type"
+                    />
+                  )}
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Amount (₹) *</label>
@@ -210,7 +225,7 @@ export default function BonusIncentivePanel({ run, employees, onRecalculate }) {
                   <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
                     {b.employee_name} <span className="text-xs text-slate-500">({b.employee_code})</span>
                   </td>
-                  <td className="px-4 py-3 capitalize">{b.type}</td>
+                  <td className="px-4 py-3 capitalize">{b.type === 'other' && b.custom_type ? b.custom_type : b.type}</td>
                   <td className="px-4 py-3 font-medium">{fmtInrFull(b.amount)}</td>
                   <td className="px-4 py-3 text-slate-500">{b.reason || '-'}</td>
                   <td className="px-4 py-3 text-right">

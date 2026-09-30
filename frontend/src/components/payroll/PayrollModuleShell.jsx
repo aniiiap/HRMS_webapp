@@ -12,8 +12,8 @@ export const PAYROLL_SECTIONS = [
     subs: [
       { id: 'overview', label: 'Overview' },
       { id: 'runs', label: 'Pay runs' },
-      { id: 'register', label: 'Pay register' },
       { id: 'bonuses', label: 'Bonuses & Incentives' },
+      { id: 'register', label: 'Pay register' },
       { id: 'payout', label: 'Payout' },
       { id: 'reports', label: 'Statutory & reports' },
     ],

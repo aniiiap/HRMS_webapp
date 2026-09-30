@@ -643,6 +643,7 @@ class PayrollTaxDeclaration(models.Model):
 class BonusIncentiveType(models.TextChoices):
     BONUS = "bonus", "Bonus"
     INCENTIVE = "incentive", "Incentive"
+    OTHER = "other", "Other"
 
 
 class BonusIncentive(models.Model):
@@ -658,6 +659,7 @@ class BonusIncentive(models.Model):
     period_year = models.PositiveIntegerField()
     period_month = models.PositiveIntegerField()
     type = models.CharField(max_length=16, choices=BonusIncentiveType.choices)
+    custom_type = models.CharField(max_length=80, blank=True, help_text="Custom name if type is 'other'")
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     reason = models.CharField(max_length=255, blank=True)
     created_by = models.ForeignKey(

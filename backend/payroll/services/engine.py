@@ -300,8 +300,13 @@ def compute_employee_payroll(
     for b in bonuses:
         b_amount = _q(b.amount)
         if b_amount > Decimal("0"):
-            code = "BONUS" if b.type == "bonus" else "INCENTIVE"
-            name = "Bonus" if b.type == "bonus" else "Incentive"
+            if b.type == "other":
+                code = f"OTHER_EARN_{b.id}" # Unique code for custom types
+                name = b.custom_type or "Other Earning"
+            else:
+                code = "BONUS" if b.type == "bonus" else "INCENTIVE"
+                name = "Bonus" if b.type == "bonus" else "Incentive"
+                
             comp, _ = PayrollComponent.objects.get_or_create(
                 organization=run.organization,
                 code=code,
@@ -314,6 +319,11 @@ def compute_employee_payroll(
                     "is_system": True,
                 }
             )
+            # If a component name was updated (custom type), we can update it (optional, but get_or_create won't update)
+            if comp.name != name:
+                comp.name = name
+                comp.save(update_fields=['name'])
+                
             total_bonuses += b_amount
             # Exclude from gross_full per user request, but keep it taxable
             taxable_full += b_amount
@@ -327,7 +337,7 @@ def compute_employee_payroll(
                 }
             )
 
-    gross_prorated = _q(sum((b["prorated"] for b in breakdown if b["component"].code not in ("REIMBURSEMENT", "BONUS", "INCENTIVE")), Decimal("0")))
+    gross_prorated = _q(sum((b["prorated"] for b in breakdown if b["component"].code not in ("REIMBURSEMENT", "BONUS", "INCENTIVE") and not b["component"].code.startswith("OTHER_EARN_")), Decimal("0")))
     taxable_prorated = _q(
         sum((b["prorated"] for b in breakdown if b["component"].taxable), Decimal("0"))
     )
