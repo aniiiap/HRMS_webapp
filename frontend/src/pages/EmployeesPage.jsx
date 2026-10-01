@@ -217,6 +217,8 @@ export default function EmployeesPage() {
         shift_template: form.shift_template ? Number(form.shift_template) : null,
         manager: form.manager ? Number(form.manager) : null,
       }
+      if (!payload.date_of_joining) delete payload.date_of_joining;
+      if (!payload.date_of_birth) delete payload.date_of_birth;
       const { data } = await api.post('/api/employees/onboard/', payload)
       setForm({
         email: '',
@@ -261,10 +263,13 @@ export default function EmployeesPage() {
     setError('')
     setBusyId(rowId)
     try {
-      await api.patch(`/api/employees/${rowId}/`, {
+      const payload = {
         ...editForm,
         shift_template: editForm.shift_template ? Number(editForm.shift_template) : null,
-      })
+      }
+      if (!payload.date_of_joining) payload.date_of_joining = null;
+      if (!payload.date_of_birth) payload.date_of_birth = null;
+      await api.patch(`/api/employees/${rowId}/`, payload)
       toast.success('Employee updated successfully.')
       setEditingId(null)
       await load()
