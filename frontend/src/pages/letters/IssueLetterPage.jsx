@@ -32,7 +32,7 @@ export default function IssueLetterPage() {
     try {
       const [tplRes, empRes] = await Promise.all([
         api.get('/api/letters/templates/'),
-        api.get('/api/employees/')
+        api.get('/api/employees/?is_active=all')
       ])
       setTemplates(tplRes.data.results || tplRes.data)
       setEmployees(empRes.data.results || empRes.data)
@@ -138,7 +138,11 @@ export default function IssueLetterPage() {
                 disabled={!selectedTemplate}
               >
                 <option value="">-- Choose Employee --</option>
-                {employees.map(e => <option key={e.id} value={e.id}>{e.first_name} {e.last_name} ({e.employee_code})</option>)}
+                {employees.map(e => (
+                  <option key={e.id} value={e.id}>
+                    {e.first_name} {e.last_name} ({e.employee_code}){e.is_active === false ? ' (Deactivated)' : ''}
+                  </option>
+                ))}
               </select>
             </div>
             

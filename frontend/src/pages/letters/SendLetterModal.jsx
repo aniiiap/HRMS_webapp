@@ -40,7 +40,7 @@ export default function SendLetterModal({ templates, onClose, onSent }) {
   }
 
   useEffect(() => {
-    api.get('/api/employees/?nopaginate=true').then(res => setEmployees(res.data.results || res.data))
+    api.get('/api/employees/?nopaginate=true&is_active=all').then(res => setEmployees(res.data.results || res.data))
   }, [])
 
   useEffect(() => {
@@ -141,7 +141,7 @@ export default function SendLetterModal({ templates, onClose, onSent }) {
                         className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600 dark:bg-slate-900"
                       />
                       <span className="text-sm text-slate-700 dark:text-slate-300">
-                        {e.first_name} {e.last_name} ({e.email})
+                        {e.first_name} {e.last_name} ({e.email}){e.is_active === false ? ' (Deactivated)' : ''}
                       </span>
                     </label>
                   ))}

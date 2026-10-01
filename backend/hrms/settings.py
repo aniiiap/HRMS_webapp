@@ -71,6 +71,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "hrms.middleware.audit.AuditMiddleware",
+    "hrms.middleware.resignation.AutoDeactivateResignedUsersMiddleware",
 ]
 
 ROOT_URLCONF = "hrms.urls"
