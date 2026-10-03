@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
   }
 
   const defaultHome = (u) => {
-    if (u?.onboarding_pending) return '/complete-profile'
+    if (u?.onboarding_pending && u?.role !== 'admin') return '/complete-profile'
     if (u?.is_superuser && !u?.organization_id) return '/platform'
     return '/dashboard'
   }

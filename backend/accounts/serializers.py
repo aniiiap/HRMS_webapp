@@ -181,7 +181,13 @@ class InviteAcceptSerializer(serializers.Serializer):
         user = invite.user
         user.set_password(self.validated_data["password"])
         user.is_active = True
-        user.save(update_fields=["password", "is_active"])
+        
+        update_fields = ["password", "is_active"]
+        if user.role == UserRole.ADMIN:
+            user.onboarding_pending = False
+            update_fields.append("onboarding_pending")
+            
+        user.save(update_fields=update_fields)
         invite.used_at = timezone.now()
         invite.save(update_fields=["used_at"])
         InviteToken.objects.filter(user=user, used_at__isnull=True).exclude(pk=invite.pk).delete()
