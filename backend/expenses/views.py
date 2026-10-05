@@ -12,10 +12,12 @@ class ExpenseCategoryViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if not user.is_authenticated or getattr(user, 'organization', None) is None:
+        org = getattr(user, 'organization', None)
+        if user.is_superuser and not org:
             return ExpenseCategory.objects.all()
-        return ExpenseCategory.objects.filter(organization=user.organization)
-        return ExpenseCategory.objects.filter(organization=user.organization)
+        if org:
+            return ExpenseCategory.objects.filter(organization=org)
+        return ExpenseCategory.objects.none()
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -33,20 +35,22 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
         user = self.request.user
         org = getattr(user, 'organization', None)
         
-        if not org:
+        if user.is_superuser and not org:
             qs = ExpenseClaim.objects.all()
-        else:
+        elif org:
             from django.db.models import Q
             qs = ExpenseClaim.objects.filter(
                 Q(employee__organization=org) | Q(employee__user__organization=org)
             )
+        else:
+            qs = ExpenseClaim.objects.none()
             
         # If not HR/Admin/Manager, only show their own claims
         # Or if explicitly requested via own=true query parameter
         if self.request.query_params.get('own') == 'true':
             qs = qs.filter(employee__user=user)
         elif user.is_superuser or user.role in ["admin", "hr", "owner"]:
-            pass # Keep all claims
+            pass # Keep all claims (from the filtered qs above)
         else:
             qs = qs.filter(employee__user=user)
             

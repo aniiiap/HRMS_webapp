@@ -49,8 +49,14 @@ class TicketViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = Ticket.objects.select_related('employee', 'employee__user', 'assigned_to').prefetch_related('messages', 'messages__sender')
-        if user.is_superuser or user.role in ["admin", "hr", "owner"]:
+        
+        if user.is_superuser:
             return qs.all().order_by('-created_at')
+            
+        if user.role in ["admin", "hr", "owner"]:
+            org_id = getattr(user, 'organization_id', None)
+            return qs.filter(employee__organization_id=org_id).order_by('-created_at') if org_id else qs.none()
+            
         return qs.filter(employee__user=user).order_by('-created_at')
 
     def perform_create(self, serializer):
@@ -142,8 +148,11 @@ class TicketMessageViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
-            if user.is_superuser or user.role in ["admin", "hr", "owner"]:
+            if user.is_superuser:
                 return TicketMessage.objects.all()
+            if user.role in ["admin", "hr", "owner"]:
+                org_id = getattr(user, 'organization_id', None)
+                return TicketMessage.objects.filter(ticket__employee__organization_id=org_id) if org_id else TicketMessage.objects.none()
             return TicketMessage.objects.filter(ticket__employee__user=user)
             
         ticket_id = self.request.query_params.get('ticket')

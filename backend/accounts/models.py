@@ -252,6 +252,7 @@ class AnnouncementDismissal(models.Model):
 
 class ActionLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="action_logs")
+    organization = models.ForeignKey('employees.Organization', on_delete=models.CASCADE, null=True, blank=True, related_name="action_logs")
     user_name = models.CharField(max_length=255, blank=True)
     action_type = models.CharField(max_length=50) # e.g. "UPDATE", "CREATE", "DELETE"
     resource_type = models.CharField(max_length=100) # e.g. "PayrollRun", "LeaveRequest"

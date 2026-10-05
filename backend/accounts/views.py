@@ -378,7 +378,10 @@ class ActionLogViewSet(mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets
     
     def get_queryset(self):
         user = self.request.user
-        queryset = ActionLog.objects.all().order_by("-timestamp")
+        if user.is_superuser and not user.organization_id:
+            queryset = ActionLog.objects.all().order_by("-timestamp")
+        else:
+            queryset = ActionLog.objects.filter(organization=user.organization).order_by("-timestamp")
         resource_type = self.request.query_params.get("resource_type")
         date_from = self.request.query_params.get("date_from")
         date_to = self.request.query_params.get("date_to")

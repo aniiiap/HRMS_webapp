@@ -80,6 +80,7 @@ class AuditMiddleware(MiddlewareMixin):
                     
                     ActionLog.objects.create(
                         user=user,
+                        organization=user.organization if user.is_authenticated else None,
                         user_name=f'{user.first_name} {user.last_name}'.strip() or user.email,
                         action_type=request.method,
                         resource_type=resource_type,
