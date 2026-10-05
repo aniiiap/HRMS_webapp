@@ -140,7 +140,7 @@ export default function HelpdeskPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <div className="flex space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-max">
+                <div className="flex space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-full overflow-x-auto scrollbar-hide">
                     {['all', 'open', 'in_progress', 'resolved', 'closed'].map(tab => (
                         <button
                             key={tab}

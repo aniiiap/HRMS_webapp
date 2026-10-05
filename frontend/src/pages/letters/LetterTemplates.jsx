@@ -96,7 +96,7 @@ export default function LetterTemplates() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex shrink-0 flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">
             Document Center
@@ -106,7 +106,7 @@ export default function LetterTemplates() {
           </p>
         </div>
         {isPrivileged && (
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3 w-full sm:w-auto">
             <Link
               to="/letters/issue"
               className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-700"
@@ -126,7 +126,7 @@ export default function LetterTemplates() {
       </div>
 
       {isPrivileged && (
-        <div className="flex gap-6 border-b border-slate-200 px-6 dark:border-slate-800">
+        <div className="flex gap-6 border-b border-slate-200 px-6 dark:border-slate-800 overflow-x-auto whitespace-nowrap scrollbar-hide">
         <button
           onClick={() => setActiveTab('templates')}
           className={`border-b-2 px-1 py-4 text-sm font-medium ${

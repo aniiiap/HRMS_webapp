@@ -220,7 +220,7 @@ export default function HolidayCalendar() {
           <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-indigo-600 dark:from-brand-400 dark:to-indigo-400 tracking-tight">Holiday Calendar</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1.5 font-medium">View and manage organizational holidays & events.</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto relative z-10">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full sm:w-auto relative z-10">
           <div className="flex bg-slate-100 dark:bg-slate-900/50 p-1 rounded-xl w-full sm:w-auto border border-slate-200/50 dark:border-slate-700/50 shadow-inner">
             <button onClick={() => setViewMode('list')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-md text-brand-600 dark:text-brand-400 scale-100' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white scale-95 hover:scale-100'}`}>
               <ListIcon className="h-4 w-4" /> List

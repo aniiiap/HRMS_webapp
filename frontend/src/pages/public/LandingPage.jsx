@@ -453,7 +453,7 @@ export default function LandingPage() {
             </motion.div>
             
             <motion.div variants={fadeUpVariant}>
-              <h1 className="text-5xl lg:text-7xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-8 leading-[1.1]">
+              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-8 leading-[1.1]">
                 Manage your global team with <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-emerald-500">confidence.</span>
               </h1>
             </motion.div>
@@ -496,7 +496,7 @@ export default function LandingPage() {
                  
                  <div className="flex-1 flex overflow-hidden">
                    {/* Sidebar */}
-                   <div className="w-[110px] shrink-0 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col p-2 z-10 relative">
+                   <div className="w-[70px] sm:w-[110px] shrink-0 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col p-1.5 sm:p-2 z-10 relative">
                       <div className="flex items-center gap-1 mb-4">
                          <img src="/Sw%20logo/globalworkspherelogo.png" alt="GlobalWorkSphere" className="h-[14px] md:h-[18px] w-auto object-contain -ml-0.5" />
                       </div>
@@ -543,7 +543,7 @@ export default function LandingPage() {
 
                      <div className="flex-1 flex gap-2.5 mt-6 relative z-10">
                        {/* Left Col */}
-                       <div className="w-[35%] flex flex-col gap-2">
+                       <div className="hidden sm:flex w-[35%] flex-col gap-2">
                          <div className="flex-1 bg-white dark:bg-slate-800/80 rounded shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center p-3 text-center">
                            <div className="w-16 h-12 bg-teal-50 dark:bg-teal-900/20 rounded mb-2 flex items-center justify-center">
                              <Users className="w-6 h-6 text-teal-500" />
@@ -563,7 +563,7 @@ export default function LandingPage() {
                        </div>
                        
                        {/* Right Col */}
-                       <div className="w-[65%] flex flex-col gap-2">
+                       <div className="w-full sm:w-[65%] flex flex-col gap-2">
                          {/* Top 4 stats */}
                          <div className="grid grid-cols-4 gap-2">
                            {[
@@ -574,9 +574,9 @@ export default function LandingPage() {
                            ].map((s, i)=>(
                              <div key={i} className="bg-white dark:bg-slate-800/80 rounded shadow-sm border border-slate-100 dark:border-slate-700 p-1.5 flex items-center gap-1.5">
                                <div className={`w-4 h-4 rounded flex items-center justify-center text-white shrink-0 ${s.bg}`}><s.icon className="w-2.5 h-2.5"/></div>
-                               <div>
+                               <div className="min-w-0">
                                  <div className="text-[7px] font-black text-slate-900 dark:text-white leading-none mb-0.5">{s.v}</div>
-                                 <div className="text-[4px] text-slate-500 leading-tight">{s.l}</div>
+                                 <div className="text-[4px] text-slate-500 leading-tight truncate">{s.l}</div>
                                </div>
                              </div>
                            ))}

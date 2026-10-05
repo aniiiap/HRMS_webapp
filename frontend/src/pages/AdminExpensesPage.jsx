@@ -174,7 +174,7 @@ export default function AdminExpensesPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-max overflow-x-auto">
+                    <div className="flex space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl max-w-full overflow-x-auto scrollbar-hide">
                         {['pending', 'approved', 'rejected', 'categories', 'settings'].map(tab => (
                             <button
                                 key={tab}
