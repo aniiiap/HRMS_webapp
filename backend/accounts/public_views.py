@@ -9,8 +9,7 @@ from django.conf import settings
 
 def _send_resend_email(to_emails, subject, html_content, text_content=None, reply_to=None):
     api_key = settings.RESEND_API_KEY
-    raw_from_email = settings.RESEND_FROM_EMAIL or 'noreply@globalworksphere.com'
-    from_email = f"GlobalWorkSphere <{raw_from_email}>"
+    from_email = settings.RESEND_FROM_EMAIL or 'Global WorkSphere <info@globalworksphere.com>'
     
     if not api_key:
         raise Exception("Email provider is not configured properly.")
@@ -79,7 +78,7 @@ def contact_us(request):
         <p>{message}</p>
         """
         admin_text = f"New Demo Request\n\nName: {name}\nEmail: {email}\nPhone: {phone}\nCompany: {company}\nEmployee Count: {employees}\n\nMessage:\n{message}"
-        _send_resend_email(['globalworksphere@gmail.com'], admin_subject, admin_body, text_content=admin_text, reply_to=email)
+        _send_resend_email(['info@globalworksphere.com'], admin_subject, admin_body, text_content=admin_text, reply_to=email)
 
         # 2. Send Thank You email to the user
         user_subject = "Thank you for requesting a demo - GlobalWorkSphere"

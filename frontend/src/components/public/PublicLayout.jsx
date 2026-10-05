@@ -247,8 +247,8 @@ export default function PublicLayout() {
               </p>
               <div className="flex items-center gap-2 text-sm text-slate-300">
                 <span className="font-semibold text-white">Email:</span>
-                <a href="mailto:globalworksphere@gmail.com" className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">
-                  globalworksphere@gmail.com
+                <a href="mailto:info@globalworksphere.com" className="hover:text-brand-400 hover:underline hover:underline-offset-4 transition-all">
+                  info@globalworksphere.com
                 </a>
               </div>
             </div>

@@ -97,7 +97,7 @@ export default function RequestDemoPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Email us</h3>
-                  <p className="text-slate-600 dark:text-slate-400">globalworksphere@gmail.com</p>
+                  <p className="text-slate-600 dark:text-slate-400">info@globalworksphere.com</p>
                 </div>
               </motion.div>
               
