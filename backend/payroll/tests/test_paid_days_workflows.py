@@ -19,6 +19,16 @@ User = get_user_model()
 class PaidDaysWorkflowTests(TestCase):
     def setUp(self):
         self.org = Organization.objects.create(name="Test Co", slug="test-co-wf")
+        from employees.models import ShiftTemplate
+        from datetime import time
+        ShiftTemplate.objects.create(
+            organization=self.org,
+            name="Default Shift",
+            is_company_default=True,
+            start_time=time(9, 0),
+            end_time=time(18, 0),
+            enable_auto_deduction=True
+        )
         self.user = User.objects.create_user(email="wf@example.com", password="x")
         self.employee = Employee.objects.create(
             user=self.user,

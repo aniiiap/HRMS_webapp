@@ -165,6 +165,15 @@ def compute_paid_days_for_employee(
         )
     }
 
+    from employees.models import ShiftTemplate
+    template = getattr(employee, "shift_template", None)
+    if not template:
+        template = ShiftTemplate.objects.filter(
+            organization_id=employee.organization_id,
+            is_company_default=True
+        ).first()
+    enable_auto_deduction = template.enable_auto_deduction if template else False
+
     unpaid_leave_days = Decimal("0")
     absent_days = Decimal("0")
     half_day_penalties = Decimal("0")
@@ -209,9 +218,18 @@ def compute_paid_days_for_employee(
                     absent_days += remaining
                     credit_for_remaining = Decimal("0")
                 else:
-                    # If employee checked in, count as fully present for the remaining fraction regardless of anomaly
-                    present_days += remaining
-                    credit_for_remaining = remaining
+                    penalty = Decimal("0")
+                    if enable_auto_deduction:
+                        anom = attendance_anomaly(att)
+                        if anom in ("late_checkin", "early_checkout"):
+                            penalty = Decimal("0.5")
+                        elif anom == "late_and_early":
+                            penalty = Decimal("1.0")
+
+                    penalty_to_apply = min(remaining, penalty)
+                    credit_for_remaining = remaining - penalty_to_apply
+                    half_day_penalties += penalty_to_apply
+                    present_days += credit_for_remaining
 
         # Total credit for this day is the paid leave plus any earned credit from the remaining portion
         day_credits.append(p_leave + credit_for_remaining)
