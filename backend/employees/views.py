@@ -148,6 +148,25 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             return EmployeeWriteSerializer
         return EmployeeSerializer
 
+    def perform_create(self, serializer):
+        request = self.request
+        if getattr(request.user, "is_superuser", False):
+            oid = request.data.get("organization") or organization_id_from_request(request)
+        else:
+            oid = organization_id_from_request(request)
+
+        if not oid:
+            raise ValidationError({"organization": "Required."})
+        org = Organization.objects.filter(pk=int(oid)).first()
+        if not org:
+            raise ValidationError({"organization": "Invalid organization."})
+        serializer.save(organization=org)
+
+    def perform_update(self, serializer):
+        # We don't change organization on update, but if we need to ensure it's not tampered with:
+        # Since it's read_only_fields in the serializer, body data is ignored.
+        serializer.save()
+
     def paginate_queryset(self, queryset):
         if self.request.query_params.get("nopaginate") == "true":
             return None

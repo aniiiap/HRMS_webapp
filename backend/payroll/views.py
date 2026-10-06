@@ -141,6 +141,23 @@ class PayrollComponentViewSet(viewsets.ModelViewSet):
             return qs.none()
         return qs.none()
 
+    def perform_create(self, serializer):
+        request = self.request
+        if getattr(request.user, "is_superuser", False):
+            oid = request.data.get("organization") or organization_id_from_request(request)
+        else:
+            oid = organization_id_from_request(request)
+
+        if not oid:
+            raise ValidationError({"organization": "Required."})
+        org = Organization.objects.filter(pk=int(oid)).first()
+        if not org:
+            raise ValidationError({"organization": "Invalid organization."})
+        serializer.save(organization=org)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
             return [permissions.IsAuthenticated(), IsAdminOrHR()]
@@ -226,7 +243,12 @@ class PayrollSalaryStructureViewSet(viewsets.ModelViewSet):
         return qs.none()
 
     def perform_create(self, serializer):
-        oid = self.request.data.get("organization") or organization_id_from_request(self.request)
+        request = self.request
+        if getattr(request.user, "is_superuser", False):
+            oid = request.data.get("organization") or organization_id_from_request(request)
+        else:
+            oid = organization_id_from_request(request)
+
         if not oid:
             raise ValidationError({"organization": "Required."})
         org = Organization.objects.filter(pk=int(oid)).first()
@@ -236,7 +258,12 @@ class PayrollSalaryStructureViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        oid = self.request.data.get("organization") or organization_id_from_request(self.request)
+        request = self.request
+        if getattr(request.user, "is_superuser", False):
+            oid = request.data.get("organization") or organization_id_from_request(request)
+        else:
+            oid = organization_id_from_request(request)
+
         if oid:
             org = Organization.objects.filter(pk=int(oid)).first()
             if org:
@@ -287,7 +314,11 @@ class PayrollSalaryStructureViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="create-blank")
     def create_blank(self, request):
-        oid = request.data.get("organization") or organization_id_from_request(request)
+        if getattr(request.user, "is_superuser", False):
+            oid = request.data.get("organization") or organization_id_from_request(request)
+        else:
+            oid = organization_id_from_request(request)
+
         if not oid:
             raise ValidationError({"organization": "Required."})
         org = Organization.objects.filter(pk=int(oid)).first()
@@ -426,8 +457,20 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
         if not wd and year and month:
             # Overwrite default 22 with the actual calendar days
             serializer.validated_data["working_days"] = monthrange(year, month)[1]
+
+        request = self.request
+        if getattr(request.user, "is_superuser", False):
+            oid = request.data.get("organization") or organization_id_from_request(request)
+        else:
+            oid = organization_id_from_request(request)
+
+        if not oid:
+            raise ValidationError({"organization": "Required."})
+        org = Organization.objects.filter(pk=int(oid)).first()
+        if not org:
+            raise ValidationError({"organization": "Invalid organization."})
             
-        run = serializer.save(status=PayrollRunStatus.DRAFT)
+        run = serializer.save(status=PayrollRunStatus.DRAFT, organization=org)
         employees = Employee.objects.filter(
             organization_id=run.organization_id,
             user__is_active=True,

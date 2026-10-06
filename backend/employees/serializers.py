@@ -172,6 +172,7 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
             "manager",
             "profile_image",
         )
+        read_only_fields = ("organization",)
 
     def validate_user(self, user):
         qs = Employee.objects.filter(user=user)
@@ -315,16 +316,24 @@ class EmployeeOnboardSerializer(serializers.Serializer):
             ) from exc
 
         validated_data["employee_code"] = code
-        if org is None:
-            request = self.context.get("request")
-            if request:
-                from .org_scope import organization_id_from_request, user_organization_id
 
+        request = self.context.get("request")
+        if request and not getattr(request.user, "is_superuser", False):
+            # Company-level user: bind to their own org unconditionally.
+            from .org_scope import organization_id_from_request, user_organization_id
+            oid = organization_id_from_request(request) or user_organization_id(request.user)
+            org = Organization.objects.filter(pk=oid, is_active=True).first() if oid else None
+        else:
+            # Platform superuser or no request context: use the value derived
+            # from the existing body/query-param resolution above.
+            if org is None and request:
+                from .org_scope import organization_id_from_request, user_organization_id
                 oid = organization_id_from_request(request) or user_organization_id(request.user)
                 if oid:
                     org = Organization.objects.filter(pk=oid, is_active=True).first()
-        if org is None:
-            org = Organization.objects.filter(is_active=True).order_by("id").first()
+            if org is None:
+                org = Organization.objects.filter(is_active=True).order_by("id").first()
+
         if org is None:
             raise serializers.ValidationError(
                 {"organization": "No organization exists. Create one before onboarding employees."}

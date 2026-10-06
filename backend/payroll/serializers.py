@@ -93,7 +93,7 @@ class PayrollComponentSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "is_system", "created_at", "updated_at")
+        read_only_fields = ("id", "organization", "is_system", "created_at", "updated_at")
 
     def validate(self, attrs):
         if self.instance and self.instance.is_system:
@@ -300,7 +300,7 @@ class PayrollRunSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "status", "result_count", "created_at", "updated_at")
+        read_only_fields = ("id", "organization", "status", "result_count", "created_at", "updated_at")
 
     def get_result_count(self, obj):
         return obj.employee_results.count()
@@ -354,8 +354,7 @@ class PayrollCtcTemplateSerializer(serializers.ModelSerializer):
             "include_variable_pay",
             "updated_at",
         )
-        read_only_fields = ("id", "updated_at")
-
+        read_only_fields = ("id", "organization", "updated_at")
 
 class PayrollStatutoryConfigSerializer(serializers.ModelSerializer):
     class Meta:
@@ -388,7 +387,7 @@ class PayrollStatutoryConfigSerializer(serializers.ModelSerializer):
             "company_ifsc",
             "updated_at",
         )
-        read_only_fields = ("id", "updated_at")
+        read_only_fields = ("id", "organization", "updated_at")
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
