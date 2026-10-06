@@ -3,7 +3,6 @@ import {
   BadgeCheck,
   Building2,
   CalendarDays,
-  Download,
   Droplets,
   FlipHorizontal2,
   HeartPulse,
@@ -89,7 +88,7 @@ export default function IDCardPreview({ employee }) {
           <ShieldCheck size={14} /> Digital identity
         </span>
         <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-900 dark:text-white">Your official ID card</h3>
-        <p className="max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">Review both sides, then download a print-ready copy whenever you need it.</p>
+        <p className="max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">Review both sides of your ID card.</p>
       </div>
 
       <div className="flex flex-col items-center gap-6 px-6 py-8 sm:px-8">
