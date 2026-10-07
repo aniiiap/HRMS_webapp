@@ -401,9 +401,9 @@ class ActionLogViewSet(mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets
                 Q(resource_id__icontains=search)
             )
             
-        if user.is_superuser or user.role == UserRole.ADMIN:
+        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
             return queryset
-        return queryset
+        return ActionLog.objects.none()
         
     def destroy(self, request, *args, **kwargs):
         if not (request.user.is_superuser or request.user.role == UserRole.ADMIN):
