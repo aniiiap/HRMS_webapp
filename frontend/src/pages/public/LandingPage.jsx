@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, CheckCircle2, ChevronRight, Zap, Building, Play, Users, Calendar, ShieldCheck, Smartphone, PieChart, Star, ChevronDown, Lock, Server, Activity, TrendingUp, Workflow, CheckSquare, Clock, Edit3, Briefcase, FileSignature, Globe, Database, Key, Search, LayoutGrid, DollarSign, Ban, Bell } from 'lucide-react'
+import { ArrowRight, CheckCircle2, ChevronRight, ChevronLeft, Zap, Building, Play, Users, Calendar, ShieldCheck, Smartphone, PieChart, Star, ChevronDown, Lock, Server, Activity, TrendingUp, Workflow, CheckSquare, Clock, Edit3, Briefcase, FileSignature, Globe, Database, Key, Search, LayoutGrid, DollarSign, Ban, Bell } from 'lucide-react'
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import CountUp from 'react-countup'
 import { useInView } from 'react-intersection-observer'
@@ -364,7 +364,42 @@ function PayrollDeepDiveSection() {
   )
 }
 
+const testimonials = [
+  {
+    id: 1,
+    quote: "The intelligence built into this platform is unmatched. We effortlessly scaled our workforce while the system handled every compliance hurdle in the background. It's a total game-changer.",
+    author: "Docfyle Advisory Pvt Ltd",
+    role: "Financial & Corporate Advisory",
+    initials: "DA",
+    color: "indigo"
+  },
+  {
+    id: 2,
+    quote: "GlobalWorkSphere automated our entire payroll process. What used to take days of manual spreadsheet work is now completed with a single click, with 100% compliance across all our regions.",
+    author: "Amanda Higgins",
+    role: "VP of Global HR, TechFlow Inc.",
+    initials: "AH",
+    color: "teal"
+  }
+];
+
 function TestimonialSection() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (isHovered) return;
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+    }, 6000); // Slower interval
+    return () => clearInterval(timer);
+  }, [isHovered]);
+
+  const nextTestimonial = () => setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+  const prevTestimonial = () => setCurrentIndex((prev) => (prev === 0 ? testimonials.length - 1 : prev - 1));
+
+  const activeTestimonial = testimonials[currentIndex];
+
   return (
     <section className="py-24 bg-slate-50 dark:bg-[#0A1622] text-slate-900 dark:text-white overflow-hidden relative">
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#14B8A6]/5 dark:bg-[#14B8A6]/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3" />
@@ -391,21 +426,48 @@ function TestimonialSection() {
           </div>
         </div>
 
-        <div className="relative">
-          <div className="absolute -inset-4 bg-gradient-to-r from-teal-500/10 to-emerald-500/10 dark:from-teal-500/20 dark:to-emerald-500/20 blur-xl rounded-3xl" />
-          <div className="relative bg-white dark:bg-[#0D1B2A] border border-slate-200 dark:border-slate-800 rounded-3xl p-10 md:p-12 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-2xl">
-            <Star className="w-8 h-8 text-[#14B8A6] mb-8 fill-[#14B8A6]" />
-            <p className="text-2xl md:text-3xl font-medium leading-relaxed mb-10 text-slate-800 dark:text-slate-200">
-              "GlobalWorkSphere automated our entire payroll process. What used to take days of manual spreadsheet work is now completed with a single click, with 100% compliance across all our regions."
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full border-2 border-slate-100 dark:border-slate-700 bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center text-teal-700 dark:text-teal-400 font-bold text-xl shrink-0">AH</div>
-              <div>
-                <div className="font-bold text-lg text-slate-900 dark:text-white">Amanda Higgins</div>
-                <div className="text-slate-500 dark:text-slate-400 text-sm">VP of Global HR, TechFlow Inc.</div>
+        <div 
+          className="relative h-full flex items-center justify-center min-h-[350px]"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div 
+              key={activeTestimonial.id}
+              initial={{ opacity: 0, y: 15, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -15, filter: "blur(4px)" }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="relative w-full"
+            >
+              <div className={`absolute -inset-4 bg-gradient-to-r ${activeTestimonial.color === 'teal' ? 'from-teal-500/10 to-emerald-500/10 dark:from-teal-500/20 dark:to-emerald-500/20' : 'from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/20'} blur-xl rounded-3xl`} />
+              <div className="relative bg-white dark:bg-[#0D1B2A] border border-slate-200 dark:border-slate-800 rounded-3xl p-8 md:p-10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-2xl">
+                <Star className={`w-6 h-6 ${activeTestimonial.color === 'teal' ? 'text-[#14B8A6] fill-[#14B8A6]' : 'text-[#8B5CF6] fill-[#8B5CF6]'} mb-6`} />
+                <p className="text-base md:text-lg font-normal leading-relaxed mb-8 text-slate-700 dark:text-slate-300">
+                  "{activeTestimonial.quote}"
+                </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-full border-2 border-slate-100 dark:border-slate-700 ${activeTestimonial.color === 'teal' ? 'bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-400' : 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400'} flex items-center justify-center font-bold text-lg shrink-0`}>
+                      {activeTestimonial.initials}
+                    </div>
+                    <div>
+                      <div className="font-bold text-base text-slate-900 dark:text-white">{activeTestimonial.author}</div>
+                      <div className="text-slate-500 dark:text-slate-400 text-xs">{activeTestimonial.role}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={prevTestimonial} className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300">
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button onClick={nextTestimonial} className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300">
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </section>

@@ -118,8 +118,8 @@ export default function RequestDemoPage() {
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Global Headquarters</h3>
                   <p className="text-slate-600 dark:text-slate-400">
-                    Plot No. 60, 61, 62, Navkar Trade Center,<br />
-                    Near Mirchi Mandi, Bhilwara, Rajasthan - 311001
+                    1006, The Corporate Park, Sector 18,<br />
+                    Vashi, Navi Mumbai, Mumbai 400 703
                   </p>
                 </div>
               </motion.div>
