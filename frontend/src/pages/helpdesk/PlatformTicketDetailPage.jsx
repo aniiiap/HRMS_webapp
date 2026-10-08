@@ -169,7 +169,7 @@ export default function PlatformTicketDetailPage() {
                         </div>
                     </div>
 
-                    {isPrivileged && (
+                    {user?.is_superuser && (
                         <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
                             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Admin Actions</p>
                             <select 

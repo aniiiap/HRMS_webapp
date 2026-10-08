@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { LifeBuoy, Plus, MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, ChevronRight, Search, Trash2 } from 'lucide-react';
+import { LifeBuoy, Plus, MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, ChevronRight, Search, Trash2, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 import { helpdeskApi } from '../../api/helpdeskApi';
 import { assetsApi } from '../../api/assets';
@@ -144,13 +144,24 @@ export default function HelpdeskPage() {
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">Manage and track your support requests and queries.</p>
                 </div>
-                <button 
-                    onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm font-medium"
-                >
-                    <Plus className="w-4 h-4" />
-                    Raise a Ticket
-                </button>
+                <div className="flex gap-3">
+                    {isPrivileged && (
+                        <button
+                            onClick={() => setIsAddCategoryOpen(true)}
+                            className="flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm font-medium"
+                        >
+                            <Settings className="w-4 h-4" />
+                            Manage Categories
+                        </button>
+                    )}
+                    <button 
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm font-medium"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Raise a Ticket
+                    </button>
+                </div>
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -331,15 +342,8 @@ export default function HelpdeskPage() {
                                         value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Briefly summarize the issue" />
                                 </div>
                                 <div>
-                                    <div className="flex justify-between items-center mb-1.5">
-                                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Category</label>
-                                        {isPrivileged && (
-                                            <button type="button" onClick={() => setIsAddCategoryOpen(true)} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
-                                                Manage Categories
-                                            </button>
-                                        )}
-                                    </div>
-                                    <select required className="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Category</label>
+                                    <select required className="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all truncate"
                                         value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
                                         <option value="">-- Select Category --</option>
                                         {categories.map(c => (
@@ -349,7 +353,7 @@ export default function HelpdeskPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Priority</label>
-                                    <select className="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                    <select className="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all truncate"
                                         value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})}>
                                         <option value="low">Low - Routine request</option>
                                         <option value="medium">Medium - Needs attention</option>
@@ -358,7 +362,7 @@ export default function HelpdeskPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Related Asset (Optional)</label>
-                                    <select className="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                    <select className="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all truncate"
                                         value={formData.asset} onChange={e => setFormData({...formData, asset: e.target.value})}>
                                         <option value="">-- Select Assigned Asset --</option>
                                         {assets.map(a => (

@@ -227,7 +227,7 @@ export default function PlatformHelpdeskPage() {
                                         </div>
                                     </div>
                                     <div className="flex-shrink-0 flex items-center gap-2">
-                                        {(isPrivileged) && (
+                                        {(user?.is_superuser) && (
                                             <button 
                                                 onClick={(e) => handleDeleteTicket(e, ticket.id)}
                                                 className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all text-slate-400 hover:text-red-600"

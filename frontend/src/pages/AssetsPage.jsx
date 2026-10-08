@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Search, Laptop, Smartphone, Key, Monitor, MoreVertical, CheckCircle2, AlertCircle, XCircle, RotateCcw, Download, X } from 'lucide-react'
+import { Plus, Search, Laptop, Smartphone, Key, Monitor, MoreVertical, CheckCircle2, AlertCircle, XCircle, RotateCcw, Download, X, Edit3 } from 'lucide-react'
 import { assetsApi } from '../api/assets'
 import { api } from '../api/client'
 import { format } from 'date-fns'
@@ -16,6 +16,7 @@ export default function AssetsPage() {
   const [newCategoryName, setNewCategoryName] = useState('')
   const [categoryToDelete, setCategoryToDelete] = useState(null)
   const [assetToReturn, setAssetToReturn] = useState(null)
+  const [editingAssetId, setEditingAssetId] = useState(null)
   
   const [formData, setFormData] = useState({
     name: '', category: '', serial_number: '', purchase_date: '', warranty_expiry_date: ''
@@ -84,20 +85,41 @@ export default function AssetsPage() {
       if (!data.warranty_expiry_date) data.warranty_expiry_date = null
       if (!data.serial_number) data.serial_number = null
       
-      const res = await assetsApi.createAsset(data)
-      
-      if (manageEmployee) {
-        await assetsApi.assignAsset(res.data.id, {
-          employee: manageEmployee.id,
-          assigned_date: format(new Date(), 'yyyy-MM-dd')
-        })
+      if (editingAssetId) {
+        await assetsApi.updateAsset(editingAssetId, data)
+        setEditingAssetId(null)
+      } else {
+        const res = await assetsApi.createAsset(data)
+        
+        if (manageEmployee) {
+          await assetsApi.assignAsset(res.data.id, {
+            employee: manageEmployee.id,
+            assigned_date: format(new Date(), 'yyyy-MM-dd')
+          })
+        }
       }
       
       setFormData({ name: '', category: '', serial_number: '', purchase_date: '', warranty_expiry_date: '' })
       fetchData()
     } catch (error) {
-      console.error('Failed to add asset', error)
+      console.error('Failed to save asset', error)
     }
+  }
+
+  const handleEditAsset = (asset) => {
+    setEditingAssetId(asset.id)
+    setFormData({
+      name: asset.name || '',
+      category: asset.category || '',
+      serial_number: asset.serial_number || '',
+      purchase_date: asset.purchase_date || '',
+      warranty_expiry_date: asset.warranty_expiry_date || ''
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingAssetId(null)
+    setFormData({ name: '', category: '', serial_number: '', purchase_date: '', warranty_expiry_date: '' })
   }
 
   const handleReturnAsset = (asset) => {
@@ -190,11 +212,11 @@ export default function AssetsPage() {
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="border-b border-slate-200 bg-slate-50/50 dark:border-slate-700 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300">
               <tr>
-                <th className="px-6 py-4 font-medium sticky left-0 bg-slate-50/50 dark:bg-slate-800/50 z-10">Employee Name</th>
+                <th className="px-6 py-4 font-medium sm:sticky sm:left-0 bg-slate-50/50 dark:bg-slate-800/50 z-10">Employee Name</th>
                 {categories.map(c => (
                   <th key={c.id} className="px-6 py-4 font-medium">{c.name}</th>
                 ))}
-                <th className="px-6 py-4 font-medium text-right sticky right-0 bg-slate-50/50 dark:bg-slate-800/50 z-10">Actions</th>
+                <th className="px-6 py-4 font-medium text-right sm:sticky sm:right-0 bg-slate-50/50 dark:bg-slate-800/50 z-10">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
@@ -202,7 +224,7 @@ export default function AssetsPage() {
                 const empAssets = assets.filter(a => a.current_assignment?.employee_id === emp.id)
                 return (
                   <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="px-6 py-4 sticky left-0 bg-white dark:bg-slate-900 z-10 group-hover:bg-slate-50/50 dark:group-hover:bg-slate-800/50 border-r border-slate-100 dark:border-slate-800">
+                    <td className="px-6 py-4 sm:sticky sm:left-0 bg-white dark:bg-slate-900 sm:z-10 group-hover:bg-slate-50/50 dark:group-hover:bg-slate-800/50 border-r border-slate-100 dark:border-slate-800">
                       <div className="font-medium text-slate-900 dark:text-white">{emp.first_name} {emp.last_name}</div>
                       <div className="text-xs text-slate-500">{emp.employee_code || '-'} • {emp.department || '-'}</div>
                     </td>
@@ -221,7 +243,7 @@ export default function AssetsPage() {
                         </td>
                       )
                     })}
-                    <td className="px-6 py-4 text-right sticky right-0 bg-white dark:bg-slate-900 z-10 border-l border-slate-100 dark:border-slate-800">
+                    <td className="px-6 py-4 text-right sm:sticky sm:right-0 bg-white dark:bg-slate-900 sm:z-10 border-l border-slate-100 dark:border-slate-800">
                       <button 
                         onClick={() => {
                           setManageEmployee(emp)
@@ -255,7 +277,7 @@ export default function AssetsPage() {
                 </h3>
                 <p className="text-sm text-slate-500 mt-1">{manageEmployee.department || 'No Department'} • {manageEmployee.employee_code || 'No ID'}</p>
               </div>
-              <button onClick={() => setManageEmployee(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+              <button onClick={() => { setManageEmployee(null); handleCancelEdit(); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
@@ -269,13 +291,24 @@ export default function AssetsPage() {
                       <div className="font-medium text-slate-900 dark:text-white">{asset.category_name ? `${asset.category_name} - ` : ""}{asset.name}</div>
                       <div className="text-xs text-slate-500 font-mono mt-0.5">SN: {asset.serial_number || 'NA'}</div>
                     </div>
-                    <button 
-                      onClick={() => handleReturnAsset(asset)}
-                      className="p-2 text-amber-600 hover:bg-amber-50 dark:text-amber-500 dark:hover:bg-amber-500/10 rounded-lg transition-colors tooltip-trigger"
-                      title="Return Asset"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        type="button"
+                        onClick={() => handleEditAsset(asset)}
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-500 dark:hover:bg-indigo-500/10 rounded-lg transition-colors tooltip-trigger"
+                        title="Edit Asset"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => handleReturnAsset(asset)}
+                        className="p-2 text-amber-600 hover:bg-amber-50 dark:text-amber-500 dark:hover:bg-amber-500/10 rounded-lg transition-colors tooltip-trigger"
+                        title="Return Asset"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
                 {assets.filter(a => a.current_assignment?.employee_id === manageEmployee.id).length === 0 && (
@@ -287,7 +320,7 @@ export default function AssetsPage() {
             </div>
 
             <div>
-              <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 uppercase tracking-wider">Assign New Asset</h4>
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 uppercase tracking-wider">{editingAssetId ? 'Edit Asset' : 'Assign New Asset'}</h4>
               <form onSubmit={handleAddSubmit} className="space-y-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
@@ -318,11 +351,16 @@ export default function AssetsPage() {
                     <input type="date" value={formData.warranty_expiry_date} onChange={e => setFormData({...formData, warranty_expiry_date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none" />
                   </div>
                 </div>
-                <div className="flex justify-end pt-2">
-                  <button type="submit" className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl transition-colors font-medium w-full">
-                    Create & Assign to {manageEmployee.first_name}
-                  </button>
-                </div>
+                <div className="flex gap-3 justify-end pt-2">
+                    {editingAssetId && (
+                      <button type="button" onClick={handleCancelEdit} className="w-full px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-white rounded-xl transition-colors font-medium">
+                        Cancel
+                      </button>
+                    )}
+                    <button type="submit" className="w-full px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl transition-colors font-medium">
+                      {editingAssetId ? 'Update Asset' : `Create & Assign to ${manageEmployee.first_name}`}
+                    </button>
+                  </div>
               </form>
             </div>
           </div>
