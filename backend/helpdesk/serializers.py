@@ -1,7 +1,13 @@
 from rest_framework import serializers
-from .models import Ticket, TicketMessage
+from .models import Ticket, TicketMessage, HelpdeskCategory
 from employees.serializers import EmployeeSerializer
 from accounts.serializers import UserSerializer
+
+class HelpdeskCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HelpdeskCategory
+        fields = ['id', 'name', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 class TicketMessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField()
@@ -27,6 +33,7 @@ class TicketSerializer(serializers.ModelSerializer):
     employee_code = serializers.CharField(source='employee.employee_code', read_only=True)
     employee_avatar = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
+    asset_name = serializers.SerializerMethodField()
     messages = TicketMessageSerializer(many=True, read_only=True)
     
     class Meta:
@@ -34,6 +41,7 @@ class TicketSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'employee', 'employee_name', 'employee_code', 'employee_avatar',
             'title', 'description', 'category', 'priority', 'status',
+            'asset', 'asset_name',
             'attachment', 'assigned_to', 'assigned_to_name',
             'created_at', 'updated_at', 'messages'
         ]
@@ -51,6 +59,14 @@ class TicketSerializer(serializers.ModelSerializer):
     def get_assigned_to_name(self, obj):
         if obj.assigned_to:
             return f"{obj.assigned_to.first_name} {obj.assigned_to.last_name}".strip() or obj.assigned_to.email
+        return None
+
+    def get_asset_name(self, obj):
+        if obj.asset:
+            cat = obj.asset.category.name if obj.asset.category else ""
+            sn = f" ({obj.asset.serial_number})" if obj.asset.serial_number else ""
+            prefix = f"{cat} - " if cat else ""
+            return f"{prefix}{obj.asset.name}{sn}"
         return None
 
 from .models import PlatformTicket, PlatformTicketMessage

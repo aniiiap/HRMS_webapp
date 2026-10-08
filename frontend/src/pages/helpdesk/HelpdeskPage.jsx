@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { LifeBuoy, Plus, MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, ChevronRight, Search, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { helpdeskApi } from '../../api/helpdeskApi';
+import { assetsApi } from '../../api/assets';
 import PageHeader from '../../components/ui/PageHeader';
 import PageSkeleton from '../../components/ui/PageSkeleton';
 import SmartButton from '../../components/ui/SmartButton';
@@ -20,29 +21,40 @@ export default function HelpdeskPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [categories, setCategories] = useState([]);
+    const [assets, setAssets] = useState([]);
+    const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [isAddingCategory, setIsAddingCategory] = useState(false);
 
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        category: 'other',
+        category: '',
+        asset: '',
         priority: 'low',
         attachment: null
     });
 
-    const fetchTickets = async () => {
+        const fetchData = async () => {
         try {
-            const res = await helpdeskApi.getTickets();
-            const data = res.data?.results || res.data;
-            setTickets(Array.isArray(data) ? data : []);
+            const [ticketsRes, categoriesRes, assetsRes] = await Promise.all([
+                helpdeskApi.getTickets(),
+                helpdeskApi.getCategories().catch(() => ({ data: { results: [] } })),
+                assetsApi.getAssets().catch(() => ({ data: { results: [] } }))
+            ]);
+            setTickets(Array.isArray(ticketsRes.data?.results) ? ticketsRes.data.results : (Array.isArray(ticketsRes.data) ? ticketsRes.data : []));
+            setCategories(Array.isArray(categoriesRes.data?.results) ? categoriesRes.data.results : (Array.isArray(categoriesRes.data) ? categoriesRes.data : []));
+            setAssets(Array.isArray(assetsRes.data?.results) ? assetsRes.data.results : (Array.isArray(assetsRes.data) ? assetsRes.data : []));
         } catch (error) {
-            console.error("Failed to load tickets", error);
+            console.error("Failed to load data", error);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchTickets();
+        fetchData();
     }, []);
 
     const handleDeleteTicket = async (e, id) => {
@@ -73,6 +85,7 @@ export default function HelpdeskPage() {
         data.append('title', formData.title);
         data.append('description', formData.description);
         data.append('category', formData.category);
+        if (formData.asset) data.append('asset', formData.asset);
         data.append('priority', formData.priority);
         if (formData.attachment) {
             data.append('attachment', formData.attachment);
@@ -81,8 +94,9 @@ export default function HelpdeskPage() {
         try {
             await helpdeskApi.createTicket(data);
             setIsModalOpen(false);
-            setFormData({ title: '', description: '', category: 'other', priority: 'low', attachment: null });
-            fetchTickets();
+            setFormData({ title: '', description: '', category: '',
+        asset: '', priority: 'low', attachment: null });
+            fetchData();
         } catch (error) {
             console.error('Submit error:', error);
             alert('Failed to submit ticket.');
@@ -213,6 +227,11 @@ export default function HelpdeskPage() {
                                                 <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></div>
                                                 <span className="capitalize">{ticket.category}</span>
                                             </div>
+                                            {ticket.asset_name && (
+                                                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-xs">
+                                                    Asset: {ticket.asset_name}
+                                                </div>
+                                            )}
                                             {ticket.messages?.length > 0 && (
                                                 <div className="flex items-center gap-1.5 text-indigo-500">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></div>
@@ -241,6 +260,58 @@ export default function HelpdeskPage() {
                 )}
             </div>
 
+
+            {isAddCategoryOpen && createPortal(
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col max-h-[80vh]">
+                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                            <h3 className="font-bold text-slate-900 dark:text-slate-100">Manage Categories</h3>
+                            <button onClick={() => setIsAddCategoryOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1">
+                            <div className="flex gap-2 mb-6">
+                                <input type="text" className="flex-1 border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2 border focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    placeholder="Add new category..." value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
+                                <SmartButton loading={isAddingCategory} onClick={async () => {
+                                    if(!newCategoryName.trim()) return;
+                                    setIsAddingCategory(true);
+                                    try {
+                                        await helpdeskApi.createCategory(newCategoryName);
+                                        setNewCategoryName('');
+                                        fetchData();
+                                    } catch(e) {
+                                        alert('Failed to add category');
+                                    } finally { setIsAddingCategory(false); }
+                                }} className="px-4 py-2 rounded-xl text-sm font-medium">Add</SmartButton>
+                            </div>
+                            <div className="space-y-2">
+                                {categories.map(c => (
+                                    <div key={c.id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{c.name}</span>
+                                        <button onClick={async () => {
+                                            if(!window.confirm('Delete this category?')) return;
+                                            try {
+                                                await helpdeskApi.deleteCategory(c.id);
+                                                fetchData();
+                                            } catch(e) {
+                                                alert('Failed to delete category');
+                                            }
+                                        }} className="text-slate-400 hover:text-red-500 transition-colors">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                {categories.length === 0 && (
+                                    <p className="text-center text-sm text-slate-500">No categories found.</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>, document.body
+            )}
+
             {isModalOpen && createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
                     <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-2xl shadow-2xl flex flex-col overflow-hidden max-h-full border border-slate-200 dark:border-slate-700">
@@ -260,13 +331,20 @@ export default function HelpdeskPage() {
                                         value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Briefly summarize the issue" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Category</label>
-                                    <select className="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                    <div className="flex justify-between items-center mb-1.5">
+                                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Category</label>
+                                        {isPrivileged && (
+                                            <button type="button" onClick={() => setIsAddCategoryOpen(true)} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
+                                                Manage Categories
+                                            </button>
+                                        )}
+                                    </div>
+                                    <select required className="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                                         value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                                        <option value="hr">HR Query</option>
-                                        <option value="it">IT Support</option>
-                                        <option value="payroll">Payroll & Compensation</option>
-                                        <option value="other">Other</option>
+                                        <option value="">-- Select Category --</option>
+                                        {categories.map(c => (
+                                            <option key={c.id} value={c.name}>{c.name}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div>
@@ -276,6 +354,16 @@ export default function HelpdeskPage() {
                                         <option value="low">Low - Routine request</option>
                                         <option value="medium">Medium - Needs attention</option>
                                         <option value="high">High - Blocking my work</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Related Asset (Optional)</label>
+                                    <select className="w-full border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        value={formData.asset} onChange={e => setFormData({...formData, asset: e.target.value})}>
+                                        <option value="">-- Select Assigned Asset --</option>
+                                        {assets.map(a => (
+                                            <option key={a.id} value={a.id}>{a.category_name ? `${a.category_name} - ` : ''}{a.name} {a.serial_number ? `(${a.serial_number})` : ''}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="col-span-1 md:col-span-2">

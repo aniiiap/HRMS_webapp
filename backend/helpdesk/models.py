@@ -2,11 +2,17 @@ from django.db import models
 from employees.models import Employee
 from accounts.models import User
 
-class TicketCategory(models.TextChoices):
-    HR = 'hr', 'HR'
-    IT = 'it', 'IT'
-    PAYROLL = 'payroll', 'Payroll'
-    OTHER = 'other', 'Other'
+class HelpdeskCategory(models.Model):
+    organization = models.ForeignKey('employees.Organization', on_delete=models.CASCADE, related_name='helpdesk_categories', null=True, blank=True)
+    name = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        unique_together = ['organization', 'name']
+
+    def __str__(self):
+        return self.name
 
 class TicketPriority(models.TextChoices):
     LOW = 'low', 'Low'
@@ -24,7 +30,8 @@ class Ticket(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='tickets')
     title = models.CharField(max_length=255)
     description = models.TextField()
-    category = models.CharField(max_length=20, choices=TicketCategory.choices, default=TicketCategory.OTHER)
+    category = models.CharField(max_length=100, default='other')
+    asset = models.ForeignKey('assets.Asset', on_delete=models.SET_NULL, null=True, blank=True, related_name='helpdesk_tickets')
     priority = models.CharField(max_length=20, choices=TicketPriority.choices, default=TicketPriority.LOW)
     status = models.CharField(max_length=20, choices=TicketStatus.choices, default=TicketStatus.OPEN)
     attachment = models.FileField(upload_to='helpdesk/tickets/', blank=True, null=True)

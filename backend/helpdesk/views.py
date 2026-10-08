@@ -4,10 +4,36 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q
 from accounts.async_tasks import send_html_email_async
-from .models import Ticket, TicketMessage, TicketStatus, PlatformTicket, PlatformTicketMessage
-from .serializers import TicketSerializer, TicketMessageSerializer, PlatformTicketSerializer, PlatformTicketMessageSerializer
+from .models import Ticket, TicketMessage, TicketStatus, PlatformTicket, PlatformTicketMessage, HelpdeskCategory
+from .serializers import TicketSerializer, TicketMessageSerializer, PlatformTicketSerializer, PlatformTicketMessageSerializer, HelpdeskCategorySerializer
 from employees.models import Employee
 from accounts.models import AppNotification, User, UserRole
+from employees.org_scope import organization_id_from_request
+
+class HelpdeskCategoryViewSet(viewsets.ModelViewSet):
+    serializer_class = HelpdeskCategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        org_id = organization_id_from_request(self.request)
+        if not org_id:
+            return HelpdeskCategory.objects.none()
+        return HelpdeskCategory.objects.filter(organization_id=org_id)
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.role not in ["admin", "hr", "owner"] and not user.is_superuser:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only Admin or HR can create categories.")
+        org_id = organization_id_from_request(self.request)
+        serializer.save(organization_id=org_id)
+
+    def destroy(self, request, *args, **kwargs):
+        user = self.request.user
+        if user.role not in ["admin", "hr", "owner"] and not user.is_superuser:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only Admin or HR can delete categories.")
+        return super().destroy(request, *args, **kwargs)
 
 def notify_user(user, title, message, notif_type="helpdesk"):
     AppNotification.objects.create(
@@ -48,7 +74,7 @@ class TicketViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = Ticket.objects.select_related('employee', 'employee__user', 'assigned_to').prefetch_related('messages', 'messages__sender')
+        qs = Ticket.objects.select_related('employee', 'employee__user', 'assigned_to', 'asset', 'asset__category').prefetch_related('messages', 'messages__sender')
         
         if user.is_superuser:
             return qs.all().order_by('-created_at')

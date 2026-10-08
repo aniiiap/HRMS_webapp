@@ -37,10 +37,6 @@ export default function AssetsPage() {
       
       const cats = Array.isArray(catRes.data) ? catRes.data : catRes.data.results || []
       setCategories(cats)
-      
-      if (cats.length > 0 && !formData.category) {
-        setFormData(prev => ({...prev, category: cats[0].id}))
-      }
     } catch (error) {
       console.error('Failed to fetch assets data:', error)
     } finally {
@@ -97,7 +93,7 @@ export default function AssetsPage() {
         })
       }
       
-      setFormData({ name: '', category: categories.length > 0 ? categories[0].id : '', serial_number: '', purchase_date: '', warranty_expiry_date: '' })
+      setFormData({ name: '', category: '', serial_number: '', purchase_date: '', warranty_expiry_date: '' })
       fetchData()
     } catch (error) {
       console.error('Failed to add asset', error)
@@ -270,7 +266,7 @@ export default function AssetsPage() {
                 {assets.filter(a => a.current_assignment?.employee_id === manageEmployee.id).map(asset => (
                   <div key={asset.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
                     <div>
-                      <div className="font-medium text-slate-900 dark:text-white">{asset.name}</div>
+                      <div className="font-medium text-slate-900 dark:text-white">{asset.category_name ? `${asset.category_name} - ` : ""}{asset.name}</div>
                       <div className="text-xs text-slate-500 font-mono mt-0.5">SN: {asset.serial_number || 'NA'}</div>
                     </div>
                     <button 
@@ -294,18 +290,19 @@ export default function AssetsPage() {
               <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 uppercase tracking-wider">Assign New Asset</h4>
               <form onSubmit={handleAddSubmit} className="space-y-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Asset Name</label>
-                  <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none" placeholder="e.g. MacBook Pro M2" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
                     <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none">
+                      <option value="">-- Select Category --</option>
                       {categories.map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-1">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Brand / Model</label>
+                  <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none" placeholder="e.g. MacBook Pro M2" />
+                </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Serial Number</label>
                     <input type="text" value={formData.serial_number} onChange={e => setFormData({...formData, serial_number: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none" />

@@ -1,6 +1,9 @@
 import { api } from './client';
 
 export const helpdeskApi = {
+    getCategories: () => api.get('/api/helpdesk/categories/'),
+    createCategory: (name) => api.post('/api/helpdesk/categories/', { name }),
+    deleteCategory: (id) => api.delete(`/api/helpdesk/categories/${id}/`),
     getTickets: () => api.get('/api/helpdesk/tickets/'),
     getTicket: (id) => api.get(`/api/helpdesk/tickets/${id}/`),
     createTicket: (formData) => api.post('/api/helpdesk/tickets/', formData, {
