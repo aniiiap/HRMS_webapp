@@ -79,6 +79,8 @@ export default function EmployeesPage() {
   const [allEmployees, setAllEmployees] = useState([])
   const [isCustomDept, setIsCustomDept] = useState(false)
   const [isCustomDesig, setIsCustomDesig] = useState(false)
+  const [addedDepartments, setAddedDepartments] = useState([])
+  const [addedDesignations, setAddedDesignations] = useState([])
   const [form, setForm] = useState({
     email: '',
     first_name: '',
@@ -169,8 +171,8 @@ export default function EmployeesPage() {
 
   useEffect(() => { void load() }, [page, pageSize, searchParams, activeTab])
 
-  const uniqueDepartments = useMemo(() => Array.from(new Set(allEmployees.map(e => e.department).filter(Boolean))), [allEmployees])
-  const uniqueDesignations = useMemo(() => Array.from(new Set(allEmployees.map(e => e.designation).filter(Boolean))), [allEmployees])
+  const uniqueDepartments = useMemo(() => Array.from(new Set([...allEmployees.map(e => e.department).filter(Boolean), ...addedDepartments])), [allEmployees, addedDepartments])
+  const uniqueDesignations = useMemo(() => Array.from(new Set([...allEmployees.map(e => e.designation).filter(Boolean), ...addedDesignations])), [allEmployees, addedDesignations])
 
 
   // Removed client-side search since we now do server-side pagination and search
@@ -237,6 +239,8 @@ export default function EmployeesPage() {
     is_attendance_tracked: true,
     custom_fields_data: {},
       })
+      setIsCustomDept(false)
+      setIsCustomDesig(false)
       let msg = `Created ${data.employee_code} (${data.email}).`
       if (data.invite_sent) msg += ' Invite email sent for password setup.'
       else msg += ` Invite email failed: ${data.email_status || 'unknown error'}`
@@ -535,15 +539,29 @@ export default function EmployeesPage() {
                   onChange={(e) => setForm({ ...form, department: e.target.value })}
                 />
                 <button
-                  type="button"
-                  onClick={() => {
-                    setIsCustomDept(false)
-                    setForm({ ...form, department: '' })
-                  }}
-                  className="px-3 py-2 flex-shrink-0 rounded-xl border border-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium"
-                >
-                  Cancel
-                </button>
+                    type="button"
+                    onClick={() => {
+                      if (form.department.trim()) {
+                        setAddedDepartments(prev => [...prev, form.department.trim()])
+                        setIsCustomDept(false)
+                      }
+                    }}
+                    className="flex-shrink-0 rounded-xl border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700 transition-colors hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-300 dark:hover:bg-brand-900/50"
+                    title="Save new department"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomDept(false)
+                      setForm({ ...form, department: '' })
+                    }}
+                    className="px-3 py-2 flex-shrink-0 rounded-xl border border-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium transition-colors"
+                    title="Cancel"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
               </div>
             ) : (
               <select
@@ -578,15 +596,29 @@ export default function EmployeesPage() {
                   onChange={(e) => setForm({ ...form, designation: e.target.value })}
                 />
                 <button
-                  type="button"
-                  onClick={() => {
-                    setIsCustomDesig(false)
-                    setForm({ ...form, designation: '' })
-                  }}
-                  className="px-3 py-2 flex-shrink-0 rounded-xl border border-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium"
-                >
-                  Cancel
-                </button>
+                    type="button"
+                    onClick={() => {
+                      if (form.designation.trim()) {
+                        setAddedDesignations(prev => [...prev, form.designation.trim()])
+                        setIsCustomDesig(false)
+                      }
+                    }}
+                    className="flex-shrink-0 rounded-xl border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700 transition-colors hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-300 dark:hover:bg-brand-900/50"
+                    title="Save new designation"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomDesig(false)
+                      setForm({ ...form, designation: '' })
+                    }}
+                    className="px-3 py-2 flex-shrink-0 rounded-xl border border-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium transition-colors"
+                    title="Cancel"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
               </div>
             ) : (
               <select
