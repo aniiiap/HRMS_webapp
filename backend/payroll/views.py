@@ -475,7 +475,7 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
             organization_id=run.organization_id,
             user__is_active=True,
             user__onboarding_pending=False,
-        )
+        ).exclude(user__role="admin").exclude(user__is_superuser=True)
         for emp in employees:
             res, _ = PayrollEmployeeResult.objects.get_or_create(
                 run=run,
@@ -575,7 +575,7 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
             organization_id=run.organization_id,
             user__is_active=True,
             user__onboarding_pending=False,
-        ):
+        ).exclude(user__role="admin").exclude(user__is_superuser=True):
             if emp.id not in existing:
                 res = PayrollEmployeeResult.objects.create(
                     run=run,

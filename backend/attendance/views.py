@@ -173,7 +173,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             
         search_query = request.query_params.get("search")
         if not search_query:
-            emp_qs = emp_qs.filter(user__is_active=True)
+            emp_qs = emp_qs.filter(user__is_active=True, is_attendance_tracked=True).exclude(user__role=UserRole.ADMIN).exclude(user__is_superuser=True)
 
         employees = list(emp_qs)
         employee_ids = [e.id for e in employees]
@@ -333,7 +333,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             emp_qs = emp_qs.filter(manager_id=manager_id)
 
         if not search:
-            emp_qs = emp_qs.filter(user__is_active=True)
+            emp_qs = emp_qs.filter(user__is_active=True, is_attendance_tracked=True).exclude(user__role=UserRole.ADMIN).exclude(user__is_superuser=True)
 
         employees = list(emp_qs.order_by("employee_code"))
         employee_ids = [e.id for e in employees]

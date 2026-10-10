@@ -212,6 +212,10 @@ def compute_paid_days_for_employee(
                 # It's a weekend / non-scheduled day, so it counts as paid in a calendar-days model
                 present_days += remaining
                 credit_for_remaining = remaining
+            elif not employee.is_attendance_tracked:
+                # Untracked employees (executives, founders) are assumed present by default
+                present_days += remaining
+                credit_for_remaining = remaining
             else:
                 att = attendances.get(d)
                 if not att or not att.check_in:

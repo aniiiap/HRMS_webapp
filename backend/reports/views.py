@@ -46,7 +46,7 @@ def _next_birthday_date(dob: date, today: date) -> date:
 def _upcoming_birthdays(limit: int = 8, org_id: int | None = None) -> list[dict]:
     today = timezone.localdate()
     rows = []
-    emp_qs = Employee.objects.select_related("user").filter(date_of_birth__isnull=False)
+    emp_qs = Employee.objects.select_related("user").filter(date_of_birth__isnull=False).exclude(user__role="admin").exclude(user__is_superuser=True)
     emp_qs = filter_employees_by_org(emp_qs, org_id)
     for emp in emp_qs:
         dob = emp.date_of_birth
@@ -72,7 +72,7 @@ def _upcoming_birthdays(limit: int = 8, org_id: int | None = None) -> list[dict]
 def _work_anniversaries(limit: int = 8, org_id: int | None = None) -> list[dict]:
     today = timezone.localdate()
     rows = []
-    emp_qs = Employee.objects.select_related("user").filter(date_of_joining__isnull=False)
+    emp_qs = Employee.objects.select_related("user").filter(date_of_joining__isnull=False).exclude(user__role="admin").exclude(user__is_superuser=True)
     emp_qs = filter_employees_by_org(emp_qs, org_id)
     for emp in emp_qs:
         doj = emp.date_of_joining
@@ -174,7 +174,7 @@ def _build_action_queue(
     onboarding_qs = Employee.objects.filter(
         user__is_active=True,
         user__onboarding_pending=True,
-    )
+    ).exclude(user__role="admin").exclude(user__is_superuser=True)
     onboarding_qs = filter_employees_by_org(onboarding_qs, org_id)
     onboarding_pending_count = onboarding_qs.count()
 
@@ -270,7 +270,9 @@ def _build_attendance_health(
     from employees.week_schedule import is_weekend_day
 
     month_start = today.replace(day=1)
-    headcount = len(active_employee_ids)
+    tracked_employees = active_employees.filter(is_attendance_tracked=True)
+    tracked_ids = set(tracked_employees.values_list("id", flat=True))
+    headcount = len(tracked_ids)
     empty = {
         "month_label": month_start.strftime("%B %Y"),
         "headcount": headcount,
@@ -288,7 +290,7 @@ def _build_attendance_health(
     if headcount == 0:
         return empty
 
-    employees = list(active_employees.select_related("shift_template"))
+    employees = list(tracked_employees.select_related("shift_template"))
     month_att = att_qs_org.filter(date__gte=month_start, date__lte=today).select_related("employee")
     att_map = {(a.employee_id, a.date): a for a in month_att}
 
@@ -426,7 +428,9 @@ def _build_payroll_snapshot(
 def _build_headcount_snapshot(active_employees, org_id: int | None, today: date, *, limit: int = 5) -> dict:
     """Active headcount, new joiners this month, and onboarding invites."""
     month_start = today.replace(day=1)
-    all_employees = filter_employees_by_org(Employee.objects.select_related("user"), org_id)
+    all_employees = filter_employees_by_org(
+        Employee.objects.select_related("user").exclude(user__role="admin").exclude(user__is_superuser=True), org_id
+    )
 
     active_count = active_employees.count()
     onboarding_qs = all_employees.filter(user__onboarding_pending=True)
@@ -678,12 +682,16 @@ class DashboardSummaryView(APIView):
         cached = cache.get(cache_key)
         if cached:
             return Response(cached)
-        active_employees = Employee.objects.filter(user__is_active=True, user__onboarding_pending=False)
+        active_employees = Employee.objects.filter(
+            user__is_active=True, user__onboarding_pending=False
+        ).exclude(user__role="admin").exclude(user__is_superuser=True)
         active_employees = filter_employees_by_org(active_employees, org_id)
         active_employee_ids = list(active_employees.values_list("id", flat=True))
 
-        att_today = Attendance.objects.filter(date=today, employee_id__in=active_employee_ids)
-        att_qs_org = Attendance.objects.filter(employee_id__in=active_employee_ids)
+        tracked_employee_ids = list(active_employees.filter(is_attendance_tracked=True).values_list("id", flat=True))
+
+        att_today = Attendance.objects.filter(date=today, employee_id__in=tracked_employee_ids)
+        att_qs_org = Attendance.objects.filter(employee_id__in=tracked_employee_ids)
         present_today = att_today.filter(check_in__isnull=False).values("employee_id").distinct().count()
         leave_qs = LeaveRequest.objects.filter(employee_id__in=active_employee_ids)
         on_leave_today = leave_qs.filter(
@@ -711,7 +719,7 @@ class DashboardSummaryView(APIView):
             )
 
         dept_rows = (
-            filter_employees_by_org(Employee.objects.exclude(department=""), org_id)
+            filter_employees_by_org(Employee.objects.exclude(department="").exclude(user__role="admin").exclude(user__is_superuser=True), org_id)
             .values("department")
             .annotate(count=Count("id"))
             .order_by("-count")[:8]

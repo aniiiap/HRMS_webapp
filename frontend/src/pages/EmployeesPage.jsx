@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, LocateFixed, MailPlus, MapPin, Pencil, Power, Trash2, X, Download, ChevronRight, Link as LinkIcon } from 'lucide-react'
+import { Check, LocateFixed, MailPlus, MapPin, Pencil, Power, Trash2, X, Download, ChevronRight, Link as LinkIcon, Info } from 'lucide-react'
 import { createPortal } from 'react-dom'
+import FieldHint from '../components/leaves/FieldHint'
 import toast from 'react-hot-toast'
 import { api, messageFromError } from '../api/client'
 import PageHeader from '../components/ui/PageHeader'
@@ -90,6 +91,7 @@ export default function EmployeesPage() {
     shift_template: '',
     manager: '',
     location_restriction_enabled: true,
+    is_attendance_tracked: true,
     custom_fields_data: {},
   })
   const [editingId, setEditingId] = useState(null)
@@ -101,6 +103,7 @@ export default function EmployeesPage() {
     shift_template: '',
     role: 'employee',
     location_restriction_enabled: true,
+    is_attendance_tracked: true,
     custom_fields_data: {},
   })
   const [busyId, setBusyId] = useState(null)
@@ -231,6 +234,7 @@ export default function EmployeesPage() {
         date_of_joining: '',
         shift_template: '',
         location_restriction_enabled: true,
+    is_attendance_tracked: true,
     custom_fields_data: {},
       })
       let msg = `Created ${data.employee_code} (${data.email}).`
@@ -255,6 +259,7 @@ export default function EmployeesPage() {
       shift_template: row.shift_template || '',
       role: row.role || 'employee',
       location_restriction_enabled: row.location_restriction_enabled !== false,
+      is_attendance_tracked: row.is_attendance_tracked !== false,
     })
     setError('')
   }
@@ -366,6 +371,19 @@ export default function EmployeesPage() {
       const next = !(row.location_restriction_enabled !== false)
       await api.patch(`/api/employees/${row.id}/`, { location_restriction_enabled: next })
       toast.success(next ? 'Location restriction enabled.' : 'Location restriction disabled.')
+      await load()
+    } catch (err) {
+      toast.error(messageFromError(err))
+    } finally {
+      setBusyId(null)
+    }
+  }
+  async function toggleAttendanceTracking(row) {
+    setBusyId(row.id)
+    try {
+      const next = !(row.is_attendance_tracked !== false)
+      await api.patch(`/api/employees/${row.id}/`, { is_attendance_tracked: next })
+      toast.success(next ? 'Attendance tracking enabled.' : 'Attendance tracking disabled.')
       await load()
     } catch (err) {
       toast.error(messageFromError(err))
@@ -609,6 +627,10 @@ export default function EmployeesPage() {
           </select>
           
           <label className="col-span-full inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700">
+            <input type="checkbox" checked={form.is_attendance_tracked} onChange={(e) => setForm({ ...form, is_attendance_tracked: e.target.checked })} />
+            Track daily attendance
+          </label>
+          <label className="col-span-full inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700">
             <input type="checkbox" checked={form.location_restriction_enabled} onChange={(e) => setForm({ ...form, location_restriction_enabled: e.target.checked })} />
             Restrict attendance to office location
           </label>
@@ -793,6 +815,12 @@ export default function EmployeesPage() {
               <th className="w-[120px] min-w-[120px] px-4 py-3">Shift</th>
               <th className="w-[120px] px-4 py-3">Status</th>
               <th className="w-[130px] px-4 py-3">Role</th>
+              <th className="w-[130px] px-4 py-3">
+                <div className="flex items-center gap-1.5">
+                  Track
+                  <FieldHint text="Turn off for executives or contractors to exclude them from daily attendance tracking. They will still receive their full salary without absent penalties." />
+                </div>
+              </th>
               <th className="w-[130px] px-4 py-3">Location</th>
               {isPrivileged && <th className="px-4 py-3">Actions</th>}
             </tr>
@@ -878,6 +906,23 @@ export default function EmployeesPage() {
                     </select>
                   ) : (
                     <span className="capitalize">{r.role}</span>
+                  )}
+                </td>
+                <td className="w-[130px] px-4 py-3">
+                  {r.role !== 'admin' ? (
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => void toggleAttendanceTracking(r)}
+                      className={`inline-flex h-6 w-12 items-center rounded-full px-1 transition ${
+                        r.is_attendance_tracked !== false ? 'bg-blue-500 justify-end' : 'bg-slate-300 justify-start'
+                      }`}
+                      title="Toggle attendance tracking"
+                    >
+                      <span className="h-4 w-4 rounded-full bg-white shadow" />
+                    </button>
+                  ) : (
+                    <span className="text-xs text-slate-400">N/A</span>
                   )}
                 </td>
                 <td className="w-[130px] px-4 py-3">

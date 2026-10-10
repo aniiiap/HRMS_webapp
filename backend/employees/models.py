@@ -140,6 +140,11 @@ class Employee(models.Model):
     emergency_contact = models.CharField(max_length=32, blank=True)
     custom_fields_data = models.JSONField(default=dict, blank=True, help_text="Key-value pairs matching custom_employee_fields in Organization")
 
+    is_attendance_tracked = models.BooleanField(
+        default=True,
+        help_text="If False, employee is excluded from the daily attendance grid and missing days won't be flagged."
+    )
+
     class Meta:
         ordering = ["employee_code"]
         constraints = [

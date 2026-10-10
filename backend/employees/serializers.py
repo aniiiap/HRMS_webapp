@@ -109,6 +109,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "shift_end_time",
             "grace_minutes",
             "early_checkout_grace_minutes",
+            "is_attendance_tracked",
             "location_restriction_enabled",
             "office_latitude",
             "office_longitude",
@@ -165,6 +166,7 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
             "shift_end_time",
             "grace_minutes",
             "early_checkout_grace_minutes",
+            "is_attendance_tracked",
             "location_restriction_enabled",
             "office_latitude",
             "office_longitude",
@@ -260,6 +262,7 @@ class EmployeeOnboardSerializer(serializers.Serializer):
     date_of_joining = serializers.DateField(required=False, allow_null=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
     shift_template = serializers.PrimaryKeyRelatedField(queryset=ShiftTemplate.objects.filter(is_active=True), required=False, allow_null=True)
+    is_attendance_tracked = serializers.BooleanField(required=False, default=True)
     location_restriction_enabled = serializers.BooleanField(required=False, default=True)
     office_latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
     office_longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
