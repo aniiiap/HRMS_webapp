@@ -46,7 +46,7 @@ def _next_birthday_date(dob: date, today: date) -> date:
 def _upcoming_birthdays(limit: int = 8, org_id: int | None = None) -> list[dict]:
     today = timezone.localdate()
     rows = []
-    emp_qs = Employee.objects.select_related("user").filter(date_of_birth__isnull=False).exclude(user__role="admin").exclude(user__is_superuser=True)
+    emp_qs = Employee.objects.select_related("user").filter(user__is_active=True, date_of_birth__isnull=False).exclude(user__role="admin").exclude(user__is_superuser=True)
     emp_qs = filter_employees_by_org(emp_qs, org_id)
     for emp in emp_qs:
         dob = emp.date_of_birth
@@ -72,7 +72,7 @@ def _upcoming_birthdays(limit: int = 8, org_id: int | None = None) -> list[dict]
 def _work_anniversaries(limit: int = 8, org_id: int | None = None) -> list[dict]:
     today = timezone.localdate()
     rows = []
-    emp_qs = Employee.objects.select_related("user").filter(date_of_joining__isnull=False).exclude(user__role="admin").exclude(user__is_superuser=True)
+    emp_qs = Employee.objects.select_related("user").filter(user__is_active=True, date_of_joining__isnull=False).exclude(user__role="admin").exclude(user__is_superuser=True)
     emp_qs = filter_employees_by_org(emp_qs, org_id)
     for emp in emp_qs:
         doj = emp.date_of_joining
