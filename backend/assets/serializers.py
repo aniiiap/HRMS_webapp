@@ -9,7 +9,7 @@ class AssetCategorySerializer(serializers.ModelSerializer):
 
 class AssetAssignmentSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.user.get_full_name', read_only=True)
-    employee_department = serializers.CharField(source='employee.department.name', read_only=True)
+    employee_department = serializers.CharField(source='employee.department', read_only=True)
 
     class Meta:
         model = AssetAssignment
@@ -17,6 +17,7 @@ class AssetAssignmentSerializer(serializers.ModelSerializer):
 
 class AssetSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
+    serial_number = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     current_assignment = serializers.SerializerMethodField()
     assignments = AssetAssignmentSerializer(many=True, read_only=True)
 
@@ -24,6 +25,11 @@ class AssetSerializer(serializers.ModelSerializer):
         model = Asset
         fields = ['id', 'name', 'category', 'category_name', 'serial_number', 'purchase_date', 'warranty_expiry_date', 'status', 'current_assignment', 'assignments', 'created_at', 'updated_at']
         read_only_fields = ['organization']
+
+    def validate_serial_number(self, value):
+        if not value or not str(value).strip():
+            return None
+        return str(value).strip()
 
     def get_current_assignment(self, obj):
         assignment = obj.assignments.filter(returned_date__isnull=True).order_by('-assigned_date').first()

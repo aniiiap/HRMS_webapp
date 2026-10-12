@@ -21,6 +21,11 @@ class AssetCategoryViewSet(viewsets.ModelViewSet):
         org_id = organization_id_from_request(self.request)
         serializer.save(organization_id=org_id)
 
+    def paginate_queryset(self, queryset):
+        if "page" in self.request.query_params and self.request.query_params.get("nopaginate") != "true":
+            return super().paginate_queryset(queryset)
+        return None
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         
@@ -62,7 +67,14 @@ class AssetViewSet(viewsets.ModelViewSet):
             if employee_id:
                 queryset = queryset.filter(assignments__employee_id=employee_id, assignments__returned_date__isnull=True).distinct()
                 
-        return queryset
+        return queryset.select_related('category').prefetch_related(
+            'assignments', 'assignments__employee', 'assignments__employee__user'
+        )
+
+    def paginate_queryset(self, queryset):
+        if "page" in self.request.query_params and self.request.query_params.get("nopaginate") != "true":
+            return super().paginate_queryset(queryset)
+        return None
 
     def perform_create(self, serializer):
         org_id = organization_id_from_request(self.request)
@@ -74,8 +86,20 @@ class AssetViewSet(viewsets.ModelViewSet):
              return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
              
         asset = self.get_object()
-        if asset.status != AssetStatus.AVAILABLE:
-            return Response({'detail': 'Asset is not available for assignment.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check for any active assignment regardless of status field (handles data inconsistency)
+        active_assignment = asset.assignments.filter(returned_date__isnull=True).order_by('-assigned_date').first()
+        if active_assignment:
+            from employees.serializers import EmployeeSerializer
+            emp_name = active_assignment.employee.user.get_full_name()
+            return Response(
+                {'detail': f'Asset is already assigned to {emp_name}. Please return it first.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Also check status field for non-assignable statuses (Under Repair, Retired, etc.)
+        if asset.status not in (AssetStatus.AVAILABLE, AssetStatus.ASSIGNED):
+            return Response({'detail': f'Asset cannot be assigned (current status: {asset.status}).'}, status=status.HTTP_400_BAD_REQUEST)
         
         employee_id = request.data.get('employee')
         assigned_date = request.data.get('assigned_date', timezone.now().date())
@@ -108,12 +132,10 @@ class AssetViewSet(viewsets.ModelViewSet):
              return Response({'detail': 'Not permitted.'}, status=status.HTTP_403_FORBIDDEN)
              
         asset = self.get_object()
-        if asset.status != AssetStatus.ASSIGNED:
-            return Response({'detail': 'Asset is not currently assigned.'}, status=status.HTTP_400_BAD_REQUEST)
         
         assignment = asset.assignments.filter(returned_date__isnull=True).order_by('-assigned_date').first()
         if not assignment:
-            return Response({'detail': 'No active assignment found.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'No active assignment found for this asset.'}, status=status.HTTP_400_BAD_REQUEST)
             
         assignment.returned_date = request.data.get('returned_date', timezone.now().date())
         assignment.condition_notes = request.data.get('condition_notes', assignment.condition_notes)
@@ -167,6 +189,11 @@ class AssetViewSet(viewsets.ModelViewSet):
 class AssetAssignmentViewSet(viewsets.ModelViewSet):
     serializer_class = AssetAssignmentSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def paginate_queryset(self, queryset):
+        if "page" in self.request.query_params and self.request.query_params.get("nopaginate") != "true":
+            return super().paginate_queryset(queryset)
+        return None
 
     def get_queryset(self):
         org_id = organization_id_from_request(self.request)

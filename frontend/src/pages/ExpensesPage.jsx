@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, Receipt, Clock, CheckCircle, XCircle } from 'lucide-react';
 import PageSkeleton from '../components/ui/PageSkeleton';
 import SmartButton from '../components/ui/SmartButton';
 import DragDropUpload from '../components/ui/DragDropUpload';
+import Pagination from '../components/Pagination';
 import { format } from 'date-fns';
 import { expensesApi } from '../api/expensesApi';
 import toast from 'react-hot-toast';
@@ -17,6 +18,8 @@ export default function ExpensesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -47,7 +50,7 @@ export default function ExpensesPage() {
 
     const fetchData = async () => {
         try {
-            const claimsRes = await expensesApi.getClaims({ own: 'true' });
+            const claimsRes = await expensesApi.getClaims({ own: 'true', page_size: 1000 });
             const cData = claimsRes.data?.results || claimsRes.data;
             setClaims(Array.isArray(cData) ? cData : []);
         } catch (error) {
@@ -66,6 +69,12 @@ export default function ExpensesPage() {
             setLoading(false);
         }
     };
+
+    const totalPages = Math.max(1, Math.ceil(claims.length / pageSize));
+    const paginatedClaims = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return claims.slice(start, start + pageSize);
+    }, [claims, page, pageSize]);
 
     const handleFileChange = (e) => {
         if (e.target.files.length > 0) {
@@ -145,39 +154,65 @@ export default function ExpensesPage() {
                             <PageSkeleton rows={4} />
                         </div>
                     ) : claims.length === 0 ? (
-                        <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-                            <Receipt className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-                            <p>You haven't submitted any expense claims yet.</p>
-                        </div>
+                        <>
+                            <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+                                <Receipt className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
+                                <p>You haven't submitted any expense claims yet.</p>
+                            </div>
+                            <Pagination
+                                page={1}
+                                totalPages={1}
+                                total={0}
+                                pageSize={pageSize}
+                                onPageChange={setPage}
+                                onPageSizeChange={(newSize) => {
+                                    setPageSize(newSize);
+                                    setPage(1);
+                                }}
+                            />
+                        </>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm whitespace-nowrap sm:whitespace-normal">
-                                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
-                                    <tr>
-                                        <th className="px-6 py-4 font-medium">Date</th>
-                                        <th className="px-6 py-4 font-medium">Title</th>
-                                        <th className="px-6 py-4 font-medium">Category</th>
-                                        <th className="px-6 py-4 font-medium">Amount</th>
-                                        <th className="px-6 py-4 font-medium">Status</th>
-                                        <th className="px-6 py-4 font-medium">Reimbursed?</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                                    {claims.map(claim => (
-                                        <tr key={claim.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                            <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{format(new Date(claim.date_incurred), 'MMM dd, yyyy')}</td>
-                                            <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-200">{claim.title}</td>
-                                            <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{claim.category_name || '-'}</td>
-                                            <td className="px-6 py-4 text-slate-900 dark:text-slate-200 font-medium">₹ {claim.amount}</td>
-                                            <td className="px-6 py-4">{getStatusBadge(claim.status)}</td>
-                                            <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
-                                                {claim.is_reimbursed ? <span className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold">Yes, via Payroll</span> : '-'}
-                                            </td>
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap sm:whitespace-normal">
+                                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                                        <tr>
+                                            <th className="px-6 py-4 font-medium">Date</th>
+                                            <th className="px-6 py-4 font-medium">Title</th>
+                                            <th className="px-6 py-4 font-medium">Category</th>
+                                            <th className="px-6 py-4 font-medium">Amount</th>
+                                            <th className="px-6 py-4 font-medium">Status</th>
+                                            <th className="px-6 py-4 font-medium">Reimbursed?</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                                        {paginatedClaims.map(claim => (
+                                            <tr key={claim.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{format(new Date(claim.date_incurred), 'MMM dd, yyyy')}</td>
+                                                <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-200">{claim.title}</td>
+                                                <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{claim.category_name || '-'}</td>
+                                                <td className="px-6 py-4 text-slate-900 dark:text-slate-200 font-medium">₹ {claim.amount}</td>
+                                                <td className="px-6 py-4">{getStatusBadge(claim.status)}</td>
+                                                <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
+                                                    {claim.is_reimbursed ? <span className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold">Yes, via Payroll</span> : '-'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <Pagination
+                                page={page}
+                                totalPages={totalPages}
+                                total={claims.length}
+                                pageSize={pageSize}
+                                onPageChange={setPage}
+                                onPageSizeChange={(newSize) => {
+                                    setPageSize(newSize);
+                                    setPage(1);
+                                }}
+                            />
+                        </>
                     )}
                 </div>
             </div>

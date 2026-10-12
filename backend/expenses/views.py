@@ -5,6 +5,7 @@ from .models import ExpenseCategory, ExpenseClaim, ExpenseClaimStatus
 from .serializers import ExpenseCategorySerializer, ExpenseClaimSerializer
 from employees.models import Employee
 from accounts.models import UserRole
+from employees.org_scope import user_organization_id
 
 class ExpenseCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = ExpenseCategorySerializer
@@ -12,17 +13,20 @@ class ExpenseCategoryViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        org = getattr(user, 'organization', None)
-        if user.is_superuser and not org:
+        if not user.is_authenticated:
+            return ExpenseCategory.objects.none()
+        org_id = user_organization_id(user)
+        if user.is_superuser and not org_id:
             return ExpenseCategory.objects.all()
-        if org:
-            return ExpenseCategory.objects.filter(organization=org)
+        if org_id:
+            return ExpenseCategory.objects.filter(organization_id=org_id)
         return ExpenseCategory.objects.none()
 
     def perform_create(self, serializer):
         user = self.request.user
-        if user.organization:
-            serializer.save(organization=user.organization)
+        org_id = user_organization_id(user)
+        if org_id:
+            serializer.save(organization_id=org_id)
         else:
             from employees.models import Organization
             serializer.save(organization=Organization.objects.first())
@@ -33,14 +37,17 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        org = getattr(user, 'organization', None)
+        if not user.is_authenticated:
+            return ExpenseClaim.objects.none()
+
+        org_id = user_organization_id(user)
         
-        if user.is_superuser and not org:
+        if user.is_superuser and not org_id:
             qs = ExpenseClaim.objects.all()
-        elif org:
+        elif org_id:
             from django.db.models import Q
             qs = ExpenseClaim.objects.filter(
-                Q(employee__organization=org) | Q(employee__user__organization=org)
+                Q(employee__organization_id=org_id) | Q(employee__user__organization_id=org_id)
             )
         else:
             qs = ExpenseClaim.objects.none()
@@ -77,9 +84,10 @@ class ExpenseClaimViewSet(viewsets.ModelViewSet):
             employee = Employee.objects.get(user=user)
         except Employee.DoesNotExist:
             if user.is_superuser or user.role in ["admin", "hr", "manager", "hr_admin", "org_admin", "owner"]:
+                org_id = user_organization_id(user)
                 employee = Employee.objects.create(
                     user=user,
-                    organization=getattr(user, 'organization', None),
+                    organization_id=org_id,
                     employee_code=f"ADMIN-{user.id}"
                 )
             else:

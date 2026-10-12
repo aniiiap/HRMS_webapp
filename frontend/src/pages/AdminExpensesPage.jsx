@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { expensesApi } from '../api/expensesApi';
 import { CheckCircle, XCircle, Search, ExternalLink, Download } from 'lucide-react';
 import ReceiptViewerModal from '../components/ui/ReceiptViewerModal';
 import PageSkeleton from '../components/ui/PageSkeleton';
+import Pagination from '../components/Pagination';
 
 export default function AdminExpensesPage() {
     const [claims, setClaims] = useState([]);
@@ -15,6 +16,8 @@ export default function AdminExpensesPage() {
     const [newCategoryName, setNewCategoryName] = useState('');
     const [selectedClaimIds, setSelectedClaimIds] = useState([]);
     const [previewReceiptUrl, setPreviewReceiptUrl] = useState(null);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
 
     // Organization Settings State
     const [org, setOrg] = useState(null);
@@ -28,7 +31,7 @@ export default function AdminExpensesPage() {
     const fetchData = async () => {
         try {
             const [claimsRes, catRes, orgRes] = await Promise.all([
-                expensesApi.getClaims(),
+                expensesApi.getClaims({ page_size: 1000 }),
                 expensesApi.getCategories(),
                 import('../api/client').then(m => m.api.get('/api/organizations/'))
             ]);
@@ -149,6 +152,16 @@ export default function AdminExpensesPage() {
 
         return true;
     });
+
+    useEffect(() => {
+        setPage(1);
+    }, [activeTab, filterMonth, searchTerm]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredClaims.length / pageSize));
+    const paginatedClaims = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return filteredClaims.slice(start, start + pageSize);
+    }, [filteredClaims, page, pageSize]);
 
     const handleExportCSV = () => {
         import('../utils/csvExport').then(({ downloadCSV }) => {
@@ -314,129 +327,157 @@ export default function AdminExpensesPage() {
                                 <PageSkeleton rows={4} />
                             </div>
                         ) : filteredClaims.length === 0 ? (
-                            <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-                                No {activeTab} claims to show.
-                            </div>
+                            <>
+                                <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+                                    No {activeTab} claims to show.
+                                </div>
+                                <Pagination
+                                    page={1}
+                                    totalPages={1}
+                                    total={0}
+                                    pageSize={pageSize}
+                                    onPageChange={setPage}
+                                    onPageSizeChange={(newSize) => {
+                                        setPageSize(newSize);
+                                        setPage(1);
+                                    }}
+                                />
+                            </>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm whitespace-nowrap sm:whitespace-normal">
-                                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
-                                    <tr>
-                                        {activeTab === 'pending' && (
-                                            <th className="px-6 py-4 w-12">
-                                                <input 
-                                                    type="checkbox" 
-                                                    className="rounded border-slate-300 w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-                                                    checked={filteredClaims.length > 0 && selectedClaimIds.length === filteredClaims.length}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setSelectedClaimIds(filteredClaims.map(c => c.id));
-                                                        } else {
-                                                            setSelectedClaimIds([]);
-                                                        }
-                                                    }}
-                                                />
-                                            </th>
-                                        )}
-                                        <th className="px-6 py-4 font-medium">Employee</th>
-                                        <th className="px-6 py-4 font-medium">Date</th>
-                                        <th className="px-6 py-4 font-medium">Title & Category</th>
-                                        <th className="px-6 py-4 font-medium">Amount</th>
-                                        <th className="px-6 py-4 font-medium">Receipt</th>
-                                        <th className="px-6 py-4 font-medium text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                                    {filteredClaims.map(claim => (
-                                        <tr key={claim.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedClaimIds.includes(claim.id) ? 'bg-indigo-50/30 dark:bg-indigo-900/20' : ''}`}>
+                            <>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-sm whitespace-nowrap sm:whitespace-normal">
+                                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                                        <tr>
                                             {activeTab === 'pending' && (
-                                                <td className="px-6 py-4">
+                                                <th className="px-6 py-4 w-12">
                                                     <input 
                                                         type="checkbox" 
                                                         className="rounded border-slate-300 w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-                                                        checked={selectedClaimIds.includes(claim.id)}
+                                                        checked={paginatedClaims.length > 0 && paginatedClaims.every(c => selectedClaimIds.includes(c.id))}
                                                         onChange={(e) => {
                                                             if (e.target.checked) {
-                                                                setSelectedClaimIds([...selectedClaimIds, claim.id]);
+                                                                const idsToAdd = paginatedClaims.map(c => c.id).filter(id => !selectedClaimIds.includes(id));
+                                                                setSelectedClaimIds([...selectedClaimIds, ...idsToAdd]);
                                                             } else {
-                                                                setSelectedClaimIds(selectedClaimIds.filter(id => id !== claim.id));
+                                                                const pageIds = new Set(paginatedClaims.map(c => c.id));
+                                                                setSelectedClaimIds(selectedClaimIds.filter(id => !pageIds.has(id)));
                                                             }
                                                         }}
                                                     />
-                                                </td>
+                                                </th>
                                             )}
-                                            <td className="px-6 py-4">
-                                                <div className="font-medium text-slate-900 dark:text-slate-100">{claim.employee_name}</div>
-                                                <div className="text-slate-500 dark:text-slate-400 text-xs">{claim.employee_code}</div>
-                                            </td>
-                                            <td className="px-6 py-4 text-slate-600">
-                                                {format(new Date(claim.date_incurred), 'MMM dd, yyyy')}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="font-medium text-slate-900 dark:text-slate-100">{claim.title}</div>
-                                                <div className="text-slate-500 dark:text-slate-400 text-xs">{claim.category_name || '-'}</div>
-                                            </td>
-                                            <td className="px-6 py-4 font-bold text-slate-900 dark:text-slate-100">
-                                                ₹{claim.amount}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {claim.receipt ? (
-                                                    <button onClick={() => setPreviewReceiptUrl(claim.receipt)} className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 text-xs font-medium cursor-pointer">
-                                                        <ExternalLink className="w-3 h-3" /> View
-                                                    </button>
-                                                ) : (
-                                                    <span className="text-slate-400 text-xs">No receipt</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 text-right space-x-2">
-                                                {activeTab === 'pending' && (
-                                                    <>
-                                                        <button onClick={() => handleAction(claim.id, 'reject')} className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg text-xs font-medium transition-colors">
-                                                            Reject
-                                                        </button>
-                                                        <button onClick={() => handleAction(claim.id, 'approve')} className="px-3 py-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-xs font-medium transition-colors">
-                                                            Approve
-                                                        </button>
-                                                    </>
-                                                )}
-                                                {activeTab === 'approved' && (
-                                                    <div className="flex flex-col items-end gap-2">
-                                                        {claim.is_reimbursed ? (
-                                                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">Reimbursed</span>
-                                                        ) : (
-                                                            <>
-                                                                <button onClick={() => handleAction(claim.id, 'reimburse')} className="px-3 py-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-medium transition-colors w-full">
-                                                                    Mark Reimbursed
-                                                                </button>
-                                                                <label className="text-[10px] text-slate-500 dark:text-slate-400 cursor-pointer flex items-center gap-1 justify-end">
-                                                                    <input 
-                                                                        type="checkbox" 
-                                                                        checked={!claim.skip_payroll}
-                                                                        onChange={(e) => {
-                                                                            const newVal = !e.target.checked;
-                                                                            setClaims(claims.map(c => c.id === claim.id ? { ...c, skip_payroll: newVal } : c));
-                                                                            handleAction(claim.id, 'toggle_payroll');
-                                                                        }}
-                                                                        className="rounded border-slate-300 w-3 h-3"
-                                                                    />
-                                                                    Include in next payroll
-                                                                </label>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                )}
-                                                {activeTab === 'rejected' && (
-                                                    <span className="text-red-500 text-xs font-medium mr-2">Rejected</span>
-                                                )}
-                                                <button onClick={() => handleAction(claim.id, 'delete')} className="px-3 py-1.5 text-slate-600 bg-slate-100 hover:bg-red-100 hover:text-red-600 rounded-lg text-xs font-medium transition-colors">
-                                                    Delete
-                                                </button>
-                                            </td>
+                                            <th className="px-6 py-4 font-medium">Employee</th>
+                                            <th className="px-6 py-4 font-medium">Date</th>
+                                            <th className="px-6 py-4 font-medium">Title & Category</th>
+                                            <th className="px-6 py-4 font-medium">Amount</th>
+                                            <th className="px-6 py-4 font-medium">Receipt</th>
+                                            <th className="px-6 py-4 font-medium text-right">Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                                        {paginatedClaims.map(claim => (
+                                            <tr key={claim.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedClaimIds.includes(claim.id) ? 'bg-indigo-50/30 dark:bg-indigo-900/20' : ''}`}>
+                                                {activeTab === 'pending' && (
+                                                    <td className="px-6 py-4">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            className="rounded border-slate-300 w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                                                            checked={selectedClaimIds.includes(claim.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setSelectedClaimIds([...selectedClaimIds, claim.id]);
+                                                                } else {
+                                                                    setSelectedClaimIds(selectedClaimIds.filter(id => id !== claim.id));
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                )}
+                                                <td className="px-6 py-4">
+                                                    <div className="font-medium text-slate-900 dark:text-slate-100">{claim.employee_name}</div>
+                                                    <div className="text-slate-500 dark:text-slate-400 text-xs">{claim.employee_code}</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-600">
+                                                    {format(new Date(claim.date_incurred), 'MMM dd, yyyy')}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-medium text-slate-900 dark:text-slate-100">{claim.title}</div>
+                                                    <div className="text-slate-500 dark:text-slate-400 text-xs">{claim.category_name || '-'}</div>
+                                                </td>
+                                                <td className="px-6 py-4 font-bold text-slate-900 dark:text-slate-100">
+                                                    ₹{claim.amount}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {claim.receipt ? (
+                                                        <button onClick={() => setPreviewReceiptUrl(claim.receipt)} className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 text-xs font-medium cursor-pointer">
+                                                            <ExternalLink className="w-3 h-3" /> View
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-slate-400 text-xs">No receipt</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-right space-x-2">
+                                                    {activeTab === 'pending' && (
+                                                        <>
+                                                            <button onClick={() => handleAction(claim.id, 'reject')} className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg text-xs font-medium transition-colors">
+                                                                Reject
+                                                            </button>
+                                                            <button onClick={() => handleAction(claim.id, 'approve')} className="px-3 py-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-xs font-medium transition-colors">
+                                                                Approve
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {activeTab === 'approved' && (
+                                                        <div className="flex flex-col items-end gap-2">
+                                                            {claim.is_reimbursed ? (
+                                                                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">Reimbursed</span>
+                                                            ) : (
+                                                                <>
+                                                                    <button onClick={() => handleAction(claim.id, 'reimburse')} className="px-3 py-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-medium transition-colors w-full">
+                                                                        Mark Reimbursed
+                                                                    </button>
+                                                                    <label className="text-[10px] text-slate-500 dark:text-slate-400 cursor-pointer flex items-center gap-1 justify-end">
+                                                                        <input 
+                                                                            type="checkbox" 
+                                                                            checked={!claim.skip_payroll}
+                                                                            onChange={(e) => {
+                                                                                const newVal = !e.target.checked;
+                                                                                setClaims(claims.map(c => c.id === claim.id ? { ...c, skip_payroll: newVal } : c));
+                                                                                handleAction(claim.id, 'toggle_payroll');
+                                                                            }}
+                                                                            className="rounded border-slate-300 w-3 h-3"
+                                                                        />
+                                                                        Include in next payroll
+                                                                    </label>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {activeTab === 'rejected' && (
+                                                        <span className="text-red-500 text-xs font-medium mr-2">Rejected</span>
+                                                    )}
+                                                    <button onClick={() => handleAction(claim.id, 'delete')} className="px-3 py-1.5 text-slate-600 bg-slate-100 hover:bg-red-100 hover:text-red-600 rounded-lg text-xs font-medium transition-colors">
+                                                        Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                </div>
+                                <Pagination
+                                    page={page}
+                                    totalPages={totalPages}
+                                    total={filteredClaims.length}
+                                    pageSize={pageSize}
+                                    onPageChange={setPage}
+                                    onPageSizeChange={(newSize) => {
+                                        setPageSize(newSize);
+                                        setPage(1);
+                                    }}
+                                />
+                            </>
                         )}
                     </div>
                 )}

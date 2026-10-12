@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Search, Laptop, Smartphone, Key, Monitor, MoreVertical, CheckCircle2, AlertCircle, XCircle, RotateCcw, Download, X, Edit3 } from 'lucide-react'
 import { assetsApi } from '../api/assets'
-import { api } from '../api/client'
+import { api, messageFromError } from '../api/client'
 import { format } from 'date-fns'
+import toast from 'react-hot-toast'
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState([])
@@ -29,9 +30,9 @@ export default function AssetsPage() {
   const fetchData = async () => {
     try {
       const [assetsRes, empRes, catRes] = await Promise.all([
-        assetsApi.getAssets(),
-        api.get('/api/employees/'),
-        assetsApi.getCategories()
+        assetsApi.getAssets({ nopaginate: 'true' }),
+        api.get('/api/employees/', { params: { nopaginate: 'true', is_active: 'true' } }),
+        assetsApi.getCategories({ nopaginate: 'true' })
       ])
       setAssets(Array.isArray(assetsRes.data) ? assetsRes.data : assetsRes.data.results || [])
       setEmployees(Array.isArray(empRes.data) ? empRes.data : empRes.data.results || [])
@@ -40,6 +41,7 @@ export default function AssetsPage() {
       setCategories(cats)
     } catch (error) {
       console.error('Failed to fetch assets data:', error)
+      toast.error('Failed to load assets data.')
     } finally {
       setLoading(false)
     }
@@ -48,14 +50,16 @@ export default function AssetsPage() {
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return
     try {
-       const res = await assetsApi.createCategory({ name: newCategoryName })
+       const res = await assetsApi.createCategory({ name: newCategoryName.trim() })
        const newCat = res.data
        setCategories([...categories, newCat])
        setFormData({...formData, category: newCat.id})
        setIsCategoryModalOpen(false)
        setNewCategoryName('')
+       toast.success('Category created successfully!')
     } catch (e) {
        console.error('Failed to create category', e)
+       toast.error(messageFromError(e))
     }
   }
 
@@ -69,10 +73,11 @@ export default function AssetsPage() {
       await assetsApi.deleteCategory(categoryToDelete.id)
       setCategories(categories.filter(c => c.id !== categoryToDelete.id))
       setCategoryToDelete(null)
+      toast.success('Category deleted successfully!')
       fetchData()
     } catch (e) {
       console.error('Failed to delete category', e)
-      alert('Failed to delete category. It might be in use by existing assets.')
+      toast.error(messageFromError(e) || 'Failed to delete category. It might be in use by existing assets.')
       setCategoryToDelete(null)
     }
   }
@@ -83,19 +88,42 @@ export default function AssetsPage() {
       const data = { ...formData }
       if (!data.purchase_date) data.purchase_date = null
       if (!data.warranty_expiry_date) data.warranty_expiry_date = null
-      if (!data.serial_number) data.serial_number = null
+      const cleanSerial = data.serial_number?.trim() || null
+      data.serial_number = cleanSerial
       
       if (editingAssetId) {
         await assetsApi.updateAsset(editingAssetId, data)
+        toast.success('Asset updated successfully!')
         setEditingAssetId(null)
       } else {
-        const res = await assetsApi.createAsset(data)
+        // If an asset with this serial number already exists in this org
+        const existingAsset = cleanSerial
+          ? assets.find(a => a.serial_number && a.serial_number.toLowerCase() === cleanSerial.toLowerCase())
+          : null
+
+        let assetId = null
+
+        if (existingAsset) {
+          if (existingAsset.current_assignment) {
+            toast.error(`Asset with serial number "${cleanSerial}" is already assigned to ${existingAsset.current_assignment.employee_name}. Please return it first.`)
+            return
+          }
+          // The asset already exists and is available, update it (PATCH to preserve status) and assign it
+          await assetsApi.patchAsset(existingAsset.id, data)
+          assetId = existingAsset.id
+        } else {
+          const res = await assetsApi.createAsset(data)
+          assetId = res.data.id
+        }
         
-        if (manageEmployee) {
-          await assetsApi.assignAsset(res.data.id, {
+        if (manageEmployee && assetId) {
+          await assetsApi.assignAsset(assetId, {
             employee: manageEmployee.id,
             assigned_date: format(new Date(), 'yyyy-MM-dd')
           })
+          toast.success(`Asset assigned to ${manageEmployee.first_name} successfully!`)
+        } else {
+          toast.success('Asset created successfully!')
         }
       }
       
@@ -103,6 +131,7 @@ export default function AssetsPage() {
       fetchData()
     } catch (error) {
       console.error('Failed to save asset', error)
+      toast.error(messageFromError(error))
     }
   }
 
@@ -130,10 +159,12 @@ export default function AssetsPage() {
     if (!assetToReturn) return
     try {
       await assetsApi.returnAsset(assetToReturn.id, { returned_date: format(new Date(), 'yyyy-MM-dd') })
+      toast.success('Asset returned successfully!')
       setAssetToReturn(null)
       fetchData()
     } catch (error) {
       console.error('Failed to return asset', error)
+      toast.error(messageFromError(error))
       setAssetToReturn(null)
     }
   }
@@ -147,7 +178,7 @@ export default function AssetsPage() {
         emp.employee_code || 'NA',
         emp.department || 'NA',
         ...categories.map(c => {
-          const asset = empAssets.find(a => a.category === c.id || a.category_name === c.name)
+          const asset = empAssets.find(a => Number(a.category) === Number(c.id) || a.category_name === c.name)
           return asset ? `${asset.name} (${asset.serial_number || 'NA'})` : 'NA'
         })
       ]
@@ -229,7 +260,7 @@ export default function AssetsPage() {
                       <div className="text-xs text-slate-500">{emp.employee_code || '-'} • {emp.department || '-'}</div>
                     </td>
                     {categories.map(c => {
-                      const asset = empAssets.find(a => a.category === c.id || a.category_name === c.name)
+                      const asset = empAssets.find(a => Number(a.category) === Number(c.id) || a.category_name === c.name)
                       return (
                         <td key={c.id} className="px-6 py-4">
                           {asset ? (

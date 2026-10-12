@@ -45,7 +45,10 @@ class ExpenseClaimSerializer(serializers.ModelSerializer):
             request = self.context.get('request')
             if request and hasattr(request, 'user'):
                 user = request.user
-                org = getattr(user, 'organization', None)
+                from employees.org_scope import user_organization_id
+                from employees.models import Organization
+                org_id = user_organization_id(user)
+                org = Organization.objects.filter(id=org_id).first() if org_id else getattr(user, 'organization', None)
                 if org and org.expense_backdate_limit_days is not None:
                     from datetime import date
                     delta = date.today() - date_incurred

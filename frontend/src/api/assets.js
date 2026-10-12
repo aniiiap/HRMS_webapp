@@ -11,6 +11,7 @@ export const assetsApi = {
   getAsset: (id) => api.get(`/api/assets/${id}/`),
   createAsset: (data) => api.post('/api/assets/', data),
   updateAsset: (id, data) => api.put(`/api/assets/${id}/`, data),
+  patchAsset: (id, data) => api.patch(`/api/assets/${id}/`, data),
   deleteAsset: (id) => api.delete(`/api/assets/${id}/`),
   
   // Assignments

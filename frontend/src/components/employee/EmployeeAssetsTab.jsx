@@ -9,7 +9,7 @@ export default function EmployeeAssetsTab({ employee, isPrivileged }) {
 
   const fetchAssets = async () => {
     try {
-      const res = await assetsApi.getAssets({ employee: employee.id })
+      const res = await assetsApi.getAssets({ employee: employee.id, nopaginate: 'true' })
       setAssets(Array.isArray(res.data) ? res.data : res.data.results || [])
     } catch (error) {
       console.error('Failed to fetch assigned assets:', error)
