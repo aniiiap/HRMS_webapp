@@ -314,13 +314,22 @@ class PayrollRunSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Only draft payroll runs can change period or working days.")
         if not self.instance:
             org = attrs.get("organization")
+            if not org and self.context.get("request"):
+                from employees.org_scope import organization_id_from_request
+                from employees.models import Organization
+                req = self.context["request"]
+                req_data = getattr(req, "data", getattr(req, "POST", {}))
+                oid = req_data.get("organization") if getattr(req.user, "is_superuser", False) else None
+                oid = oid or organization_id_from_request(req)
+                if oid:
+                    org = Organization.objects.filter(pk=int(oid)).first()
             y = attrs.get("period_year")
             m = attrs.get("period_month")
             if org and y and m:
                 exists = PayrollRun.objects.filter(organization=org, period_year=y, period_month=m).exists()
                 if exists:
                     raise serializers.ValidationError(
-                        {"period_month": "A payroll run already exists for this organization and period."}
+                        f"A payroll run for {y}-{int(m):02d} already exists for this organization."
                     )
         return attrs
 

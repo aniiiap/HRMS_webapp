@@ -256,6 +256,13 @@ export default function PayrollPage() {
 
   async function createRun(e) {
     e?.preventDefault?.()
+    const match = runs.find(
+      (r) => String(r.period_year) === String(periodYear) && String(r.period_month) === String(periodMonth)
+    )
+    if (match) {
+      toast.error(`A payroll run for ${periodYear}-${String(periodMonth).padStart(2, '0')} already exists.`)
+      return
+    }
     try {
       await api.post('/api/payroll/runs/', {
         organization: Number(orgId),
@@ -677,7 +684,7 @@ export default function PayrollPage() {
                     const firstBlocker = data.readiness.blockers[0]
                     toast.error(`Cannot mark ready: ${firstBlocker.employee_name} - ${firstBlocker.issues[0]}`)
                   } else {
-                    toast.error(data?.error || err.message)
+                    toast.error(messageFromError(err))
                   }
                 }
               }}

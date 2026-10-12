@@ -469,8 +469,16 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
         org = Organization.objects.filter(pk=int(oid)).first()
         if not org:
             raise ValidationError({"organization": "Invalid organization."})
-            
-        run = serializer.save(status=PayrollRunStatus.DRAFT, organization=org)
+
+        # Explicit uniqueness check before save to prevent duplicate run crash
+        if PayrollRun.objects.filter(organization=org, period_year=year, period_month=month).exists():
+            raise ValidationError(f"A payroll run for {year}-{int(month):02d} already exists for this organization.")
+
+        from django.db import IntegrityError
+        try:
+            run = serializer.save(status=PayrollRunStatus.DRAFT, organization=org)
+        except IntegrityError:
+            raise ValidationError(f"A payroll run for {year}-{int(month):02d} already exists for this organization.")
         employees = Employee.objects.filter(
             organization_id=run.organization_id,
             user__is_active=True,
