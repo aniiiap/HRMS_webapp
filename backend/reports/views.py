@@ -223,14 +223,14 @@ def _build_action_queue(
                 "key": f"correction-{corr.id}",
                 "type": "attendance",
                 "title": name,
-                "subtitle": f"{req_label} · {att_date:%b %d, %Y}",
+                "subtitle": f"{req_label} · {att_date.strftime('%d-%m-%Y')}",
                 "href": "/attendance?tab=approvals",
                 "created_at": corr.created_at.isoformat(),
             }
         )
 
     for run in pending_payroll_runs.order_by("-updated_at", "-created_at")[:2]:
-        period = date(run.period_year, run.period_month, 1).strftime("%B %Y")
+        period = f"{run.period_month:02d}-{run.period_year}"
         items.append(
             {
                 "key": f"payroll-{run.id}",
@@ -402,7 +402,7 @@ def _build_payroll_snapshot(
     draft_runs = [
         {
             "id": run.id,
-            "period_label": date(run.period_year, run.period_month, 1).strftime("%b %Y"),
+            "period_label": f"{run.period_month:02d}-{run.period_year}",
             "status": run.status,
         }
         for run in pending_payroll_runs.order_by("-period_year", "-period_month")[:4]
@@ -451,7 +451,7 @@ def _build_headcount_snapshot(active_employees, org_id: int | None, today: date,
         d = emp.date_of_joining
         if not d and emp.user.date_joined:
             d = timezone.localtime(emp.user.date_joined).date()
-        return d.strftime("%b %d, %Y") if d else "—"
+        return d.strftime("%d-%m-%Y") if d else "—"
 
     recent_joiners = []
     for emp in new_this_month_qs.order_by("-date_of_joining", "-user__date_joined")[:limit]:
@@ -587,7 +587,7 @@ def _build_out_today(
                 "name": _employee_display_name(emp),
                 "designation": emp.designation or "",
                 "department": emp.department or "",
-                "detail": f"{leave_label} · until {lr.end_date:%b %d}",
+                "detail": f"{leave_label} · until {lr.end_date.strftime('%d-%m-%Y')}",
             }
         )
 

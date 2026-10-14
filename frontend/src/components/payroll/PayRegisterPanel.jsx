@@ -104,7 +104,7 @@ export default function PayRegisterPanel({
       const res = await api.get(`/api/payroll/results/${row.id}/payslip-pdf/`, { responseType: 'blob' })
       if (preview.url) URL.revokeObjectURL(preview.url)
       const period = selectedRun
-        ? `${selectedRun.period_year}-${String(selectedRun.period_month).padStart(2, '0')}`
+        ? `${String(selectedRun.period_month).padStart(2, '0')}-${selectedRun.period_year}`
         : ''
       setPreview({
         url: URL.createObjectURL(res.data),
@@ -172,7 +172,7 @@ export default function PayRegisterPanel({
 
         return rowData
       })
-      const period = selectedRun ? `${selectedRun.period_year}-${String(selectedRun.period_month).padStart(2, '0')}` : 'Payroll'
+      const period = selectedRun ? `${String(selectedRun.period_month).padStart(2, '0')}-${selectedRun.period_year}` : 'Payroll'
       downloadCSV(exportData, `Pay_Register_${period}.csv`)
     })
   }

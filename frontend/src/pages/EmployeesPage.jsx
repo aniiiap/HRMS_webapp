@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import dayjs from 'dayjs'
 import { Link } from 'react-router-dom'
 import { Check, LocateFixed, MailPlus, MapPin, Pencil, Power, Trash2, X, Download, ChevronRight, Link as LinkIcon, Info } from 'lucide-react'
 import { createPortal } from 'react-dom'
@@ -909,7 +910,7 @@ export default function EmployeesPage() {
                       value={editForm.date_of_birth || ''}
                       onChange={(e) => setEditForm({ ...editForm, date_of_birth: e.target.value })}
                     />
-                  ) : (r.date_of_birth || '-')}
+                  ) : (r.date_of_birth ? dayjs(r.date_of_birth).format('DD-MM-YYYY') : '-')}
                 </td>
                 <td className={`${editingId === r.id ? 'min-w-[150px]' : 'w-[120px]'} px-4 py-3`}>
                   {editingId === r.id ? (

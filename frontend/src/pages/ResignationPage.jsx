@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import dayjs from 'dayjs'
 import ReactQuill from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
 import { api, messageFromError } from '../api/client'
@@ -284,11 +285,11 @@ export default function ResignationPage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-slate-900 dark:text-white">Resignation Under Review</h2>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">You submitted a resignation on {new Date(pendingResignation.submitted_at).toLocaleDateString()}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">You submitted a resignation on {dayjs(pendingResignation.submitted_at).format('DD-MM-YYYY')}</p>
                   </div>
                 </div>
                 <div className="mt-4 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <p className="text-sm font-semibold mb-2">Intended Last Working Day: <span className="font-normal">{pendingResignation.intended_last_day || 'Not specified'}</span></p>
+                  <p className="text-sm font-semibold mb-2">Intended Last Working Day: <span className="font-normal">{pendingResignation.intended_last_day ? dayjs(pendingResignation.intended_last_day).format('DD-MM-YYYY') : 'Not specified'}</span></p>
                   <div className="prose prose-sm max-w-none text-slate-700 dark:text-slate-300 overflow-hidden break-words" dangerouslySetInnerHTML={{ __html: pendingResignation.reason }} />
                 </div>
               </div>
@@ -309,7 +310,7 @@ export default function ResignationPage() {
                   />
                   {orgSettings?.resignation_notice_period_days > 0 && (
                     <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
-                      Notice period is {orgSettings.resignation_notice_period_days} days. You cannot select a date before {new Date(minDateStr).toLocaleDateString()}.
+                      Notice period is {orgSettings.resignation_notice_period_days} days. You cannot select a date before {dayjs(minDateStr).format('DD-MM-YYYY')}.
                     </p>
                   )}
                 </div>
@@ -358,7 +359,7 @@ export default function ResignationPage() {
                         {r.status === 'accepted' ? <CheckCircle className="text-green-500" size={18} /> : <XCircle className="text-red-500" size={18} />}
                         <span className="font-semibold capitalize">{r.status}</span>
                       </div>
-                      <span className="text-sm text-slate-500">{new Date(r.submitted_at).toLocaleDateString()}</span>
+                      <span className="text-sm text-slate-500">{dayjs(r.submitted_at).format('DD-MM-YYYY')}</span>
                     </div>
                     {r.reviewer_notes && (
                       <p className="text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg mt-2">
@@ -386,7 +387,7 @@ export default function ResignationPage() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-bold">{r.employee_name} <span className="text-sm font-normal text-slate-500">({r.employee_code})</span></h3>
-                    <p className="text-sm text-slate-500">Submitted: {new Date(r.submitted_at).toLocaleDateString()} | Last Day: {r.intended_last_day || 'N/A'}</p>
+                    <p className="text-sm text-slate-500">Submitted: {dayjs(r.submitted_at).format('DD-MM-YYYY')} | Last Day: {r.intended_last_day ? dayjs(r.intended_last_day).format('DD-MM-YYYY') : 'N/A'}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {r.status === 'pending' ? (
@@ -422,7 +423,7 @@ export default function ResignationPage() {
                 )}
                 
                 {r.status !== 'pending' && r.status !== 'draft' && r.reviewer_name && (
-                  <p className="text-xs text-slate-400 text-right">Reviewed by {r.reviewer_name} on {new Date(r.reviewed_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-400 text-right">Reviewed by {r.reviewer_name} on {dayjs(r.reviewed_at).format('DD-MM-YYYY')}</p>
                 )}
               </div>
             ))

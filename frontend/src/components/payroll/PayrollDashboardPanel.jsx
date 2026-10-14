@@ -122,7 +122,7 @@ export default function PayrollDashboardPanel({
                         title={`Net ${fmtInr(t.net)}`}
                       />
                     </div>
-                    <span className="text-[10px] font-medium text-slate-500">{t.period?.slice(5) || t.period}</span>
+                    <span className="text-[10px] font-medium text-slate-500">{t.month ? String(t.month).padStart(2, '0') : t.period}</span>
                   </div>
                 )
               })

@@ -399,7 +399,7 @@ export default function AdminExpensesPage() {
                                                     <div className="text-slate-500 dark:text-slate-400 text-xs">{claim.employee_code}</div>
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-600">
-                                                    {format(new Date(claim.date_incurred), 'MMM dd, yyyy')}
+                                                    {format(new Date(claim.date_incurred), 'dd-MM-yyyy')}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="font-medium text-slate-900 dark:text-slate-100">{claim.title}</div>

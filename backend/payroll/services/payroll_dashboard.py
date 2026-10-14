@@ -57,7 +57,7 @@ def build_dashboard(organization_id: int, *, year: int | None = None) -> dict:
         )
         trend.append(
             {
-                "period": f"{run.period_year}-{run.period_month:02d}",
+                "period": f"{run.period_month:02d}-{run.period_year}",
                 "year": run.period_year,
                 "month": run.period_month,
                 "status": run.status,
@@ -85,7 +85,7 @@ def build_dashboard(organization_id: int, *, year: int | None = None) -> dict:
         "latest_run": (
             {
                 "id": latest.id,
-                "period": f"{latest.period_year}-{latest.period_month:02d}",
+                "period": f"{latest.period_month:02d}-{latest.period_year}",
                 "status": latest.status,
                 "working_days": latest.working_days,
             }

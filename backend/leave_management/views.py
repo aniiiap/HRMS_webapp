@@ -124,7 +124,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
                 </tr>
                 <tr>
                     <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Dates</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{leave.start_date} to {leave.end_date}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{leave.start_date.strftime('%d-%m-%Y')} to {leave.end_date.strftime('%d-%m-%Y')}</td>
                 </tr>
                 <tr>
                     <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Reason</td>
@@ -138,7 +138,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         target_roles = (UserRole.ADMIN,) if user.role in [UserRole.HR, UserRole.MANAGER] else (UserRole.ADMIN, UserRole.HR)
         notify_roles(
             title="New leave request",
-            message=f"{emp_name} applied for leave ({leave.start_date} to {leave.end_date}).",
+            message=f"{emp_name} applied for leave ({leave.start_date.strftime('%d-%m-%Y')} to {leave.end_date.strftime('%d-%m-%Y')}).",
             type_value="leave_applied",
             roles=target_roles,
             organization_id=leave.employee.organization_id if leave.employee else None,
@@ -151,7 +151,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             notify_user(
                 user=manager.user,
                 title="New leave request",
-                message=f"{emp_name} applied for leave ({leave.start_date} to {leave.end_date}).",
+                message=f"{emp_name} applied for leave ({leave.start_date.strftime('%d-%m-%Y')} to {leave.end_date.strftime('%d-%m-%Y')}).",
                 type_value="leave_applied"
             )
             send_html_email_async(
@@ -396,7 +396,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         notify_user(
             user=emp_user,
             title=f"Leave request {decision_label}",
-            message=f"Your leave request for {leave.start_date} to {leave.end_date} was {decision_label}.",
+            message=f"Your leave request for {leave.start_date.strftime('%d-%m-%Y')} to {leave.end_date.strftime('%d-%m-%Y')} was {decision_label}.",
             type_value="leave_reviewed",
         )
         send_html_email_async(
@@ -407,7 +407,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
               <p>Dear {(emp_user.first_name or emp_user.email)},</p>
               <p>Your leave request has been <b>{decision_label}</b>.</p>
               <p>
-                <b>Leave dates:</b> {leave.start_date} to {leave.end_date}<br/>
+                <b>Leave dates:</b> {leave.start_date.strftime('%d-%m-%Y')} to {leave.end_date.strftime('%d-%m-%Y')}<br/>
                 <b>No. of days:</b> {days_count}<br/>
                 <b>Reason:</b> {leave.reason or "-"}<br/>
                 <b>Review note:</b> {leave.review_note or "-"}

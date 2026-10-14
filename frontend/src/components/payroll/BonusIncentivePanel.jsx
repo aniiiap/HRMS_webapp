@@ -98,7 +98,7 @@ export default function BonusIncentivePanel({ run, employees, onRecalculate }) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Bonuses & Incentives</h3>
-          <p className="text-sm text-slate-500">Manage one-time payments for {run.period_year}-{String(run.period_month).padStart(2, '0')}. (Taxable, included in gross)</p>
+          <p className="text-sm text-slate-500">Manage one-time payments for {String(run.period_month).padStart(2, '0')}-{run.period_year}. (Taxable, included in gross)</p>
         </div>
         {!showForm && (
           <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">

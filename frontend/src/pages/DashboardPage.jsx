@@ -573,7 +573,7 @@ export default function DashboardPage() {
           <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white md:text-2xl">Dashboard</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Attendance, people, leave, and celebrations at a glance.</p>
         </div>
-        <div className="hidden text-xs font-medium text-slate-400 sm:block dark:text-slate-500">{dayjs().format('dddd, MMMM D, YYYY')}</div>
+        <div className="hidden text-xs font-medium text-slate-400 sm:block dark:text-slate-500">{dayjs().format('dddd, DD-MM-YYYY')}</div>
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-8">
@@ -643,7 +643,7 @@ export default function DashboardPage() {
                   <p className="mt-1 text-xs font-semibold text-brand-600 dark:text-brand-400">
                     {w.days_until === 0
                       ? `${w.years_completed} year${w.years_completed === 1 ? '' : 's'} milestone today!`
-                      : `${w.years_completed} year${w.years_completed === 1 ? '' : 's'} on ${dayjs(w.next_anniversary).format('MMM D')}`}
+                      : `${w.years_completed} year${w.years_completed === 1 ? '' : 's'} on ${dayjs(w.next_anniversary).format('DD-MM-YYYY')}`}
                   </p>
                 </div>
               </li>
@@ -735,7 +735,7 @@ export default function DashboardPage() {
                           <p className="text-xs capitalize text-slate-500 dark:text-slate-400">
                             {row.leave_type_name || String(row.leave_type || '').replace(/_/g, ' ')} ·{' '}
                             {row.start_date && row.end_date
-                              ? `${dayjs(row.start_date).format('MMM D')} – ${dayjs(row.end_date).format('MMM D')}`
+                              ? `${dayjs(row.start_date).format('DD-MM-YYYY')} – ${dayjs(row.end_date).format('DD-MM-YYYY')}`
                               : '—'}
                           </p>
                           <div className="mt-1.5">{leaveStatusBadge(row.status)}</div>
@@ -784,7 +784,7 @@ export default function DashboardPage() {
                           <p className="mt-1 text-xs font-semibold text-brand-600 dark:text-brand-400">
                             {b.days_until === 0
                               ? 'Today!'
-                              : `In ${b.days_until} day${b.days_until === 1 ? '' : 's'} · ${dayjs(b.next_birthday).format('MMM D')}`}
+                              : `In ${b.days_until} day${b.days_until === 1 ? '' : 's'} · ${dayjs(b.next_birthday).format('DD-MM-YYYY')}`}
                           </p>
                         </div>
                       </li>

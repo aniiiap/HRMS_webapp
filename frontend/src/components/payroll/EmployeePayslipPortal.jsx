@@ -55,7 +55,7 @@ export default function EmployeePayslipPortal({ employeeId: filterEmployeeId }) 
       const url = URL.createObjectURL(res.data)
       const a = document.createElement('a')
       a.href = url
-      a.download = `payslip_${run?.period_year || ''}_${String(run?.period_month || '').padStart(2, '0')}.pdf`
+      a.download = `payslip_${String(run?.period_month || '').padStart(2, '0')}_${run?.period_year || ''}.pdf`
       a.click()
       URL.revokeObjectURL(url)
       toast.success('Payslip downloaded.')

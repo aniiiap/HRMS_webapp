@@ -260,7 +260,7 @@ export default function PayrollPage() {
       (r) => String(r.period_year) === String(periodYear) && String(r.period_month) === String(periodMonth)
     )
     if (match) {
-      toast.error(`A payroll run for ${periodYear}-${String(periodMonth).padStart(2, '0')} already exists.`)
+      toast.error(`A payroll run for ${String(periodMonth).padStart(2, '0')}-${periodYear} already exists.`)
       return
     }
     try {

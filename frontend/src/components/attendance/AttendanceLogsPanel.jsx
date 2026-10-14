@@ -634,7 +634,7 @@ export default function AttendanceLogsPanel({
               <button type="button" onClick={() => setDetailRow(null)}><X className="h-5 w-5 text-slate-500" /></button>
             </div>
             <dl className="space-y-2 text-sm">
-              <div className="flex justify-between"><dt className="text-slate-500">Date</dt><dd>{logDate}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-500">Date</dt><dd>{logDate ? dayjs(logDate).format('DD-MM-YYYY') : '-'}</dd></div>
               <div className="flex justify-between"><dt className="text-slate-500">Status</dt><dd><StatusBadge code={detailRow.status_code} /></dd></div>
               <div className="flex justify-between"><dt className="text-slate-500">In time</dt><dd>{formatTime(detailRow.check_in)}</dd></div>
               <div className="flex justify-between"><dt className="text-slate-500">Out time</dt><dd>{formatTime(detailRow.check_out)}</dd></div>

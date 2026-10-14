@@ -761,7 +761,7 @@ export default function AttendancePage() {
                           <td className="px-3 py-3">
                             {c.request_type === 'mark_leave' ? (
                               <span className="text-xs font-medium text-brand-600">
-                                {c.leave_start_date} → {c.leave_end_date}
+                                {c.leave_start_date ? dayjs(c.leave_start_date).format('DD-MM-YYYY') : ''} → {c.leave_end_date ? dayjs(c.leave_end_date).format('DD-MM-YYYY') : ''}
                               </span>
                             ) : (
                               <DualTimeCell
@@ -774,7 +774,7 @@ export default function AttendancePage() {
                           <td className="px-3 py-3 text-slate-700 dark:text-slate-200">
                             {c.requested_work_duration || c.actual_work_duration || '—'}
                           </td>
-                          <td className="px-3 py-3 text-slate-600 dark:text-slate-300">{c.attendance_date}</td>
+                          <td className="px-3 py-3 text-slate-600 dark:text-slate-300">{c.attendance_date ? dayjs(c.attendance_date).format('DD-MM-YYYY') : '—'}</td>
                           <td className="px-3 py-3">
                             <span className="capitalize text-xs text-slate-500">{(c.request_type || '').replaceAll('_', ' ')}</span>
                             {!isPending && (
@@ -921,7 +921,7 @@ export default function AttendancePage() {
               return (
                 <Fragment key={r.id}>
                   <tr className="border-t border-slate-100">
-                    <td className="px-4 py-3">{r.date}</td>
+                    <td className="px-4 py-3">{r.date ? dayjs(r.date).format('DD-MM-YYYY') : '-'}</td>
                     <td className="px-4 py-3 text-xs">{r.shift_template_name || `${r.shift_start_time || '--:--'} to ${r.shift_end_time || '--:--'}`}</td>
                     <td className="px-4 py-3">{r.check_in ? dayjs(r.check_in).format('HH:mm') : '-'}</td>
                     <td className="px-4 py-3">{r.check_out ? dayjs(r.check_out).format('HH:mm') : '-'}</td>
@@ -970,7 +970,7 @@ export default function AttendancePage() {
                       <td colSpan={7} className="px-4 py-4">
                         <div className="mx-auto max-w-2xl space-y-3">
                           <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                            Request approval for {r.date}
+                            Request approval for {dayjs(r.date).format('DD-MM-YYYY')}
                           </p>
 
                           {!selectedType && (

@@ -82,7 +82,7 @@ export default function PayRunsPanel({
                     className="font-medium text-brand-600 hover:underline"
                     onClick={() => onSelectRun?.(r)}
                   >
-                    {r.period_year}-{String(r.period_month).padStart(2, '0')}
+                    {String(r.period_month).padStart(2, '0')}-{r.period_year}
                   </button>
                 </td>
                 <td className="px-4 py-3">

@@ -329,7 +329,7 @@ class PayrollRunSerializer(serializers.ModelSerializer):
                 exists = PayrollRun.objects.filter(organization=org, period_year=y, period_month=m).exists()
                 if exists:
                     raise serializers.ValidationError(
-                        f"A payroll run for {y}-{int(m):02d} already exists for this organization."
+                        f"A payroll run for {int(m):02d}-{y} already exists for this organization."
                     )
         return attrs
 

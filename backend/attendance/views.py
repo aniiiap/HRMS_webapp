@@ -570,7 +570,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         email_html = f"""
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <h2 style="color: #2563eb;">New Attendance Correction Request</h2>
-            <p><strong>{emp_name}</strong> requested {correction.request_type.replace('_', ' ')} for {attendance.date.isoformat()}.</p>
+            <p><strong>{emp_name}</strong> requested {correction.request_type.replace('_', ' ')} for {attendance.date.strftime('%d-%m-%Y')}.</p>
             <p style="margin-top: 20px;">Please log in to the Worksphere dashboard to review and approve/reject this request.</p>
         </div>
         """
@@ -578,7 +578,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         target_roles = (UserRole.ADMIN,) if request.user.role in [UserRole.HR, UserRole.MANAGER] else (UserRole.ADMIN, UserRole.HR)
         notify_roles(
             title="Attendance correction request",
-            message=f"{emp_name} requested {correction.request_type.replace('_', ' ')} for {attendance.date.isoformat()}.",
+            message=f"{emp_name} requested {correction.request_type.replace('_', ' ')} for {attendance.date.strftime('%d-%m-%Y')}.",
             type_value="attendance_correction",
             roles=target_roles,
             organization_id=attendance.employee.organization_id,
@@ -591,7 +591,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             notify_user(
                 user=manager.user,
                 title="Attendance correction request",
-                message=f"{emp_name} requested {correction.request_type.replace('_', ' ')} for {attendance.date.isoformat()}.",
+                message=f"{emp_name} requested {correction.request_type.replace('_', ' ')} for {attendance.date.strftime('%d-%m-%Y')}.",
                 type_value="attendance_correction"
             )
             send_html_email_async(
@@ -698,7 +698,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         notify_user(
             user=employee_user,
             title=f"Attendance correction {decision}",
-            message=f"Your attendance correction for {attendance.date.isoformat()} was {decision}.",
+            message=f"Your attendance correction for {attendance.date.strftime('%d-%m-%Y')} was {decision}.",
             type_value="attendance_correction_review",
         )
         send_html_email_async(
@@ -708,7 +708,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             <div style="font-family: Arial, sans-serif; line-height:1.6;">
               <p>Dear {(employee_user.first_name or employee_user.email)},</p>
               <p>Your attendance correction request has been <b>{decision}</b>.</p>
-              <p><b>Date:</b> {attendance.date.isoformat()}<br/>
+              <p><b>Date:</b> {attendance.date.strftime('%d-%m-%Y')}<br/>
               <b>Review note:</b> {note or "-"}</p>
               <p>Regards,<br/>Worksphere Team</p>
             </div>

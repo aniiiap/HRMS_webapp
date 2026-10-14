@@ -188,7 +188,7 @@ export default function ExpensesPage() {
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
                                         {paginatedClaims.map(claim => (
                                             <tr key={claim.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{format(new Date(claim.date_incurred), 'MMM dd, yyyy')}</td>
+                                                <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{format(new Date(claim.date_incurred), 'dd-MM-yyyy')}</td>
                                                 <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-200">{claim.title}</td>
                                                 <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{claim.category_name || '-'}</td>
                                                 <td className="px-6 py-4 text-slate-900 dark:text-slate-200 font-medium">₹ {claim.amount}</td>

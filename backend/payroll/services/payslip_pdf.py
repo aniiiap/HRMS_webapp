@@ -31,7 +31,7 @@ def build_payslip_pdf(result: PayrollEmployeeResult) -> bytes:
     title_style = ParagraphStyle("Title", parent=styles["Heading1"], fontSize=16, spaceAfter=6)
     sub_style = ParagraphStyle("Sub", parent=styles["Normal"], fontSize=10, textColor=colors.grey)
 
-    period = f"{run.period_year}-{run.period_month:02d}"
+    period = f"{run.period_month:02d}-{run.period_year}"
     emp_name = f"{user.first_name} {user.last_name}".strip() or user.email
 
     from reportlab.platypus import Image as ReportLabImage

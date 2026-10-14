@@ -472,13 +472,13 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
 
         # Explicit uniqueness check before save to prevent duplicate run crash
         if PayrollRun.objects.filter(organization=org, period_year=year, period_month=month).exists():
-            raise ValidationError(f"A payroll run for {year}-{int(month):02d} already exists for this organization.")
+            raise ValidationError(f"A payroll run for {int(month):02d}-{year} already exists for this organization.")
 
         from django.db import IntegrityError
         try:
             run = serializer.save(status=PayrollRunStatus.DRAFT, organization=org)
         except IntegrityError:
-            raise ValidationError(f"A payroll run for {year}-{int(month):02d} already exists for this organization.")
+            raise ValidationError(f"A payroll run for {int(month):02d}-{year} already exists for this organization.")
         employees = Employee.objects.filter(
             organization_id=run.organization_id,
             user__is_active=True,
@@ -633,7 +633,7 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
         return Response(
             {
                 "run_id": run.id,
-                "period": f"{run.period_year}-{run.period_month:02d}",
+                "period": f"{run.period_month:02d}-{run.period_year}",
                 "employees_with_warnings": blocking,
                 "can_finalize": finalize_check["can_finalize"],
                 "blocker_count": finalize_check["blocker_count"],
@@ -774,7 +774,7 @@ class PayrollEmployeeResultViewSet(viewsets.ModelViewSet):
             raise ValidationError("Payslip PDF is available after payroll is generated.")
         pdf = build_payslip_pdf(result)
         code = result.employee.employee_code
-        period = f"{result.run.period_year}_{result.run.period_month:02d}"
+        period = f"{result.run.period_month:02d}_{result.run.period_year}"
         response = HttpResponse(pdf, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="payslip_{code}_{period}.pdf"'
         return response
