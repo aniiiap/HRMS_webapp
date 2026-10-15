@@ -33,8 +33,8 @@ import { useTheme } from '../context/ThemeContext'
 import WorkAnniversaryModal from '../components/leaves/WorkAnniversaryModal'
 import BirthdayModal from '../components/leaves/BirthdayModal'
 
-const LAST_LOCATION_KEY = 'hrms_last_location'
-const MAX_LOCATION_AGE_MS = 5 * 60 * 1000
+import { captureLocation } from '../utils/geolocation'
+
 const PIE_COLORS = ['#0d9488', '#14b8a6', '#2dd4bf', '#5eead4', '#f59e0b', '#78716c', '#a8a29e']
 
 /** Work anniversary sidebar card — compact height below Hello. */
@@ -360,41 +360,6 @@ export default function DashboardPage() {
   const attTrend = data?.attendance_trend || []
   const notifications = data?.notifications || []
 
-  function captureLocation() {
-    const cachedRaw = localStorage.getItem(LAST_LOCATION_KEY)
-    if (cachedRaw) {
-      try {
-        const cached = JSON.parse(cachedRaw)
-        if (
-          typeof cached.latitude === 'number' &&
-          typeof cached.longitude === 'number' &&
-          Date.now() - Number(cached.ts || 0) <= MAX_LOCATION_AGE_MS
-        ) {
-          return Promise.resolve({ latitude: cached.latitude, longitude: cached.longitude })
-        }
-      } catch {
-        // Ignore invalid cached value.
-      }
-    }
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('Geolocation is not supported on this device/browser.'))
-        return
-      }
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const coords = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          }
-          localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ ...coords, ts: Date.now() }))
-          resolve(coords)
-        },
-        () => reject(new Error('Location permission is required for attendance punch.')),
-        { enableHighAccuracy: false, timeout: 4000, maximumAge: 120000 },
-      )
-    })
-  }
 
   async function punch(type) {
     setPunchLoading(type)

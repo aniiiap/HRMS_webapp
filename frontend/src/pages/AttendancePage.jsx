@@ -11,8 +11,7 @@ import AuditLogPanel from '../components/AuditLogPanel'
 import Pagination from '../components/Pagination'
 import { useAuth } from '../context/AuthContext'
 
-const LAST_LOCATION_KEY = 'hrms_last_location'
-const MAX_LOCATION_AGE_MS = 5 * 60 * 1000
+import { captureLocation } from '../utils/geolocation'
 
 function anomalyBadge(anomaly) {
   if (anomaly === 'late_checkin') return <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Late</span>
@@ -85,41 +84,6 @@ export default function AttendancePage() {
     if (tab && valid.includes(tab)) setActiveTab(tab)
   }, [searchParams, isPrivileged])
 
-  function captureLocation() {
-    const cachedRaw = localStorage.getItem(LAST_LOCATION_KEY)
-    if (cachedRaw) {
-      try {
-        const cached = JSON.parse(cachedRaw)
-        if (
-          typeof cached.latitude === 'number' &&
-          typeof cached.longitude === 'number' &&
-          Date.now() - Number(cached.ts || 0) <= MAX_LOCATION_AGE_MS
-        ) {
-          return Promise.resolve({ latitude: cached.latitude, longitude: cached.longitude })
-        }
-      } catch {
-        // Ignore invalid cached value.
-      }
-    }
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('Geolocation is not supported on this device/browser.'))
-        return
-      }
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const coords = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          }
-          localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ ...coords, ts: Date.now() }))
-          resolve(coords)
-        },
-        () => reject(new Error('Location permission is required or location request timed out.')),
-        { enableHighAccuracy: false, timeout: 4000, maximumAge: 120000 },
-      )
-    })
-  }
 
   const [orgConfig, setOrgConfig] = useState(null)
 
