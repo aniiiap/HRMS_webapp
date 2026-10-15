@@ -51,7 +51,7 @@ def _format_csv_datetime(dt):
 
 
 class AttendanceViewSet(viewsets.ModelViewSet):
-    queryset = Attendance.objects.select_related("employee", "employee__user").prefetch_related(
+    queryset = Attendance.objects.select_related("employee", "employee__user", "employee__shift_template").prefetch_related(
         Prefetch(
             "correction_requests",
             queryset=AttendanceCorrectionRequest.objects.filter(

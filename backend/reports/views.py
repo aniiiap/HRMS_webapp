@@ -291,7 +291,7 @@ def _build_attendance_health(
         return empty
 
     employees = list(tracked_employees.select_related("shift_template"))
-    month_att = att_qs_org.filter(date__gte=month_start, date__lte=today).select_related("employee")
+    month_att = att_qs_org.filter(date__gte=month_start, date__lte=today).select_related("employee", "employee__shift_template").prefetch_related("correction_requests")
     att_map = {(a.employee_id, a.date): a for a in month_att}
 
     month_leaves = list(
@@ -323,7 +323,7 @@ def _build_attendance_health(
             att = att_map.get((emp.id, d))
             if att and att.check_in:
                 present_days += 1
-                if attendance_anomaly(att) == "late_checkin":
+                if attendance_anomaly(att, has_approved_leave=False) == "late_checkin":
                     late_days += 1
             else:
                 absent_days += 1
@@ -494,9 +494,9 @@ def _build_team_pulse(att_today, leave_qs, today: date, *, limit: int = 14) -> d
     """Chronological feed of today's check-ins, check-outs, and leave requests."""
     events: list[dict] = []
 
-    for att in att_today.filter(check_in__isnull=False).select_related("employee", "employee__user"):
+    for att in att_today.filter(check_in__isnull=False).select_related("employee", "employee__user", "employee__shift_template"):
         emp = att.employee
-        late = attendance_anomaly(att) == "late_checkin"
+        late = attendance_anomaly(att, has_approved_leave=False) == "late_checkin"
         events.append(
             {
                 "id": f"check-in-{att.id}",
@@ -596,8 +596,8 @@ def _build_out_today(
     )
 
     late_rows: list[dict] = []
-    for att in att_today.filter(check_in__isnull=False).select_related("employee", "employee__user"):
-        if attendance_anomaly(att) != "late_checkin":
+    for att in att_today.filter(check_in__isnull=False).select_related("employee", "employee__user", "employee__shift_template"):
+        if attendance_anomaly(att, has_approved_leave=False) != "late_checkin":
             continue
         emp = att.employee
         check_in_label = timezone.localtime(att.check_in).strftime("%I:%M %p").lstrip("0") if att.check_in else ""
@@ -702,19 +702,25 @@ class DashboardSummaryView(APIView):
         absent_today = max(active_employees.count() - present_today - on_leave_today, 0)
 
         late_arrivals_today = 0
-        for att in att_today.filter(check_in__isnull=False).select_related("employee"):
-            if attendance_anomaly(att) == "late_checkin":
+        for att in att_today.filter(check_in__isnull=False).select_related("employee", "employee__shift_template"):
+            if attendance_anomaly(att, has_approved_leave=False) == "late_checkin":
                 late_arrivals_today += 1
 
+        start_7 = today - timedelta(days=6)
+        seven_days_counts = dict(
+            att_qs_org.filter(date__gte=start_7, date__lte=today, check_in__isnull=False, check_out__isnull=False)
+            .values("date")
+            .annotate(present=Count("employee_id", distinct=True))
+            .values_list("date", "present")
+        )
         attendance_weekly_trend = []
         for offset in range(6, -1, -1):
             d = today - timedelta(days=offset)
-            day_att = att_qs_org.filter(date=d, check_in__isnull=False, check_out__isnull=False)
             attendance_weekly_trend.append(
                 {
                     "date": d.isoformat(),
                     "label": d.strftime("%a"),
-                    "present": day_att.values("employee_id").distinct().count(),
+                    "present": seven_days_counts.get(d, 0),
                 }
             )
 
@@ -740,21 +746,24 @@ class DashboardSummaryView(APIView):
                 mo -= 1
         month_pairs.reverse()
 
+        first_y, first_m = month_pairs[0]
+        start_12 = date(first_y, first_m, 1)
+        twelve_month_qs = att_qs_org.filter(
+            date__gte=start_12,
+            date__lte=today,
+            check_in__isnull=False,
+            check_out__isnull=False,
+            employee__user__is_active=True,
+        ).values("date__year", "date__month").annotate(
+            eng=Count("id", filter=Q(employee__department__icontains="engineering")),
+            other=Count("id", filter=~Q(employee__department__icontains="engineering")),
+        )
+        perf_map = {(row["date__year"], row["date__month"]): (row["eng"], row["other"]) for row in twelve_month_qs}
+
         team_performance = []
         for y, m in month_pairs:
-            month_start = date(y, m, 1)
-            _, last = monthrange(y, m)
-            month_end = date(y, m, last)
-            month_attendance = att_qs_org.filter(
-                date__gte=month_start,
-                date__lte=month_end,
-                check_in__isnull=False,
-                check_out__isnull=False,
-                employee__user__is_active=True,
-            )
-            eng = month_attendance.filter(employee__department__icontains="engineering").count()
-            other = month_attendance.exclude(employee__department__icontains="engineering").count()
-            label = month_start.strftime("%b %y")
+            eng, other = perf_map.get((y, m), (0, 0))
+            label = date(y, m, 1).strftime("%b %y")
             team_performance.append(
                 {"month": label, "engineering": eng, "other_departments": other}
             )

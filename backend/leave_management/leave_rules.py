@@ -231,13 +231,17 @@ def employee_on_probation(employee):
     return False
 
 
+def clear_leave_rule_cache():
+    """No-op kept for call-site compatibility."""
+    pass
+
+
 def resolve_leave_rule(employee, leave_type_code):
     code = normalize_leave_type_code(leave_type_code)
-    org_id = employee.organization_id
+    org_id = getattr(employee, "organization_id", None)
     if not org_id:
         return None
-    rule = LeaveTypeRule.objects.filter(organization_id=org_id, code=code, is_active=True).first()
-    return rule
+    return LeaveTypeRule.objects.filter(organization_id=org_id, code=code, is_active=True).first()
 
 
 def employee_has_rule(employee, rule):

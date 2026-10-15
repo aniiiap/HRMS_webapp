@@ -19,6 +19,7 @@ from employees.org_scope import (
 )
 
 from .leave_rules import (
+    clear_leave_rule_cache,
     employee_has_rule,
     employee_on_probation,
     leave_days_in_year,
@@ -216,7 +217,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
     def balances(self, request):
         user = request.user
-        emp_qs = Employee.objects.select_related("user", "leave_profile").prefetch_related("leave_rule_assignments", "leave_rule_assignments__rule").all()
+        emp_qs = Employee.objects.select_related("user", "leave_profile", "shift_template").prefetch_related("leave_rule_assignments", "leave_rule_assignments__rule").all()
         org_id = organization_id_from_request(request)
         
         if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
@@ -298,14 +299,17 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
                 "carry_forward": float(o.carry_forward or 0)
             }
 
+        rules_by_org = {}
         rows = []
         for emp in emp_qs:
             org_id = emp.organization_id
             if not org_id:
                 continue
-            if not LeaveTypeRule.objects.filter(organization_id=org_id).exists():
-                seed_org_leave_rules(org_id)
-            rules = LeaveTypeRule.objects.filter(organization_id=org_id, is_active=True).order_by("sort_order")
+            if org_id not in rules_by_org:
+                if not LeaveTypeRule.objects.filter(organization_id=org_id).exists():
+                    seed_org_leave_rules(org_id)
+                rules_by_org[org_id] = list(LeaveTypeRule.objects.filter(organization_id=org_id, is_active=True).order_by("sort_order"))
+            rules = rules_by_org[org_id]
             on_probation = employee_on_probation(emp)
             balances = {}
             assigned_names = []
@@ -616,12 +620,14 @@ class LeaveTypeRuleViewSet(viewsets.ModelViewSet):
         if not org_id:
             raise ValidationError({"organization": "Organization context required."})
         serializer.save()
+        clear_leave_rule_cache()
 
     def perform_destroy(self, instance):
         if instance.is_system or instance.code in SYSTEM_LEAVE_RULE_CODES:
             raise ValidationError({"detail": "System leave rules cannot be deleted."})
         LeaveTypeRuleAssignment.objects.filter(rule=instance).delete()
         instance.delete()
+        clear_leave_rule_cache()
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -629,7 +635,9 @@ class LeaveTypeRuleViewSet(viewsets.ModelViewSet):
             for field in ("code", "is_system", "organization"):
                 if field in request.data:
                     raise ValidationError({field: "Cannot change on system leave rules."})
-        return super().update(request, *args, **kwargs)
+        res = super().update(request, *args, **kwargs)
+        clear_leave_rule_cache()
+        return res
 
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated, IsManagerOrAbove])
     def assignments(self, request):

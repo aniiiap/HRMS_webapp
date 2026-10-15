@@ -5,7 +5,7 @@ from datetime import date
 from django.utils import timezone
 
 from employees.week_schedule import is_weekend_day
-from leave_management.leave_rules import normalize_leave_type_code
+from leave_management.leave_rules import normalize_leave_type_code, resolve_leave_rule
 
 from .utils import attendance_anomaly
 
@@ -39,7 +39,7 @@ def day_status_for_employee(
         if is_weekend_day(employee, day_date):
             return "present", "P"
             
-        anomaly = attendance_anomaly(attendance)
+        anomaly = attendance_anomaly(attendance, has_approved_leave=bool(leave_type_code))
         if anomaly == "in_progress":
             return "in_progress", "IP"
         if anomaly == "anomaly_approved":
@@ -54,13 +54,10 @@ def day_status_for_employee(
         
         sandwich_weekends = False
         sandwich_holidays = False
-        from leave_management.models import LeaveTypeRuleAssignment
-        rule_assignment = LeaveTypeRuleAssignment.objects.filter(
-            employee=employee, rule__code=code
-        ).select_related("rule").first()
-        if rule_assignment:
-            sandwich_weekends = rule_assignment.rule.count_weekends
-            sandwich_holidays = rule_assignment.rule.count_holidays
+        rule = resolve_leave_rule(employee, code)
+        if rule:
+            sandwich_weekends = rule.count_weekends
+            sandwich_holidays = rule.count_holidays
             
         if is_holiday and not sandwich_holidays:
             return "holiday", "H"
