@@ -290,6 +290,38 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null
 }
 
+function AttendanceTrendTooltip({ active, payload }) {
+  if (active && payload && payload.length) {
+    const d = payload[0]?.payload
+    if (!d) return null
+    const colorMap = {
+      present: '#10b981',
+      late: '#f59e0b',
+      leave: '#3b82f6',
+      weekend: '#94a3b8',
+      absent: '#f43f5e',
+    }
+    const color = colorMap[d.status] || '#94a3b8'
+    return (
+      <div className="glass-panel overflow-hidden rounded-xl border border-white/60 bg-white/95 px-3 py-2 text-xs shadow-xl backdrop-blur-md dark:border-stone-700/50 dark:bg-stone-900/95 dark:shadow-black/50">
+        <p className="font-semibold text-slate-900 dark:text-white">{d.fullDate || `Day ${d.day}`}</p>
+        <div className="mt-1 flex items-center gap-1.5 font-medium" style={{ color }}>
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+          <span>{d.statusLabel}</span>
+        </div>
+        {(d.check_in || d.check_out) && (
+          <div className="mt-1.5 border-t border-slate-100 pt-1 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <span>In: {d.check_in ? dayjs(d.check_in).format('hh:mm A') : '—'}</span>
+            <span className="mx-1.5">|</span>
+            <span>Out: {d.check_out ? dayjs(d.check_out).format('hh:mm A') : '—'}</span>
+          </div>
+        )}
+      </div>
+    )
+  }
+  return null
+}
+
 export default function DashboardPage() {
   const { user, isPrivileged } = useAuth()
   const { theme } = useTheme()
@@ -377,14 +409,34 @@ export default function DashboardPage() {
   }
 
   if (!isPrivileged) {
-    const trendChart = attTrend
-      .filter((d) => d.status !== 'weekend')
-      .map((d) => ({
+    const trendChart = attTrend.map((d) => {
+      const isPresent = d.status === 'present'
+      const isLate = d.status === 'late' || d.status === 'anomaly' || d.status === 'incomplete'
+      const isLeave = d.status === 'leave' || d.status === 'holiday'
+      const isWeekend = d.status === 'weekend'
+      const isAbsent = !isPresent && !isLate && !isLeave && !isWeekend
+
+      let statusLabel = 'Absent'
+      if (isPresent) statusLabel = 'Present'
+      else if (isLate) statusLabel = d.status_key === 'in_progress' ? 'In Progress' : 'Late / Anomaly'
+      else if (isLeave) statusLabel = d.status === 'holiday' ? 'Holiday' : 'Approved Leave'
+      else if (isWeekend) statusLabel = 'Weekly Off'
+
+      return {
+        date: d.date,
         day: dayjs(d.date).format('D'),
-        present: d.status === 'present' ? 1 : 0,
-        late: d.status === 'late' ? 1 : 0,
-        absent: d.status === 'absent' ? 1 : 0,
-      }))
+        fullDate: dayjs(d.date).format('ddd, DD MMM YYYY'),
+        status: isPresent ? 'present' : isLate ? 'late' : isLeave ? 'leave' : isWeekend ? 'weekend' : 'absent',
+        statusLabel,
+        present: isPresent ? 1 : 0,
+        late: isLate ? 1 : 0,
+        leave: isLeave ? 1 : 0,
+        weekend: isWeekend ? 1 : 0,
+        absent: isAbsent ? 1 : 0,
+        check_in: d.check_in,
+        check_out: d.check_out,
+      }
+    })
 
     return (
       <div className="space-y-5">
@@ -487,15 +539,34 @@ export default function DashboardPage() {
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={trendChart} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                        <XAxis dataKey="day" tick={{ fontSize: 10, fill: axisColor }} />
+                        <XAxis dataKey="day" tick={{ fontSize: 10, fill: axisColor }} stroke={axisColor} />
                         <YAxis hide allowDecimals={false} />
-                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
+                        <Tooltip content={<AttendanceTrendTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
                         <Bar dataKey="present" stackId="a" fill="#10b981" name="Present" />
-                        <Bar dataKey="late" stackId="a" fill="#f59e0b" name="Late / short" />
+                        <Bar dataKey="late" stackId="a" fill="#f59e0b" name="Late / Anomaly" />
+                        <Bar dataKey="leave" stackId="a" fill="#3b82f6" name="Leave / Holiday" />
+                        <Bar dataKey="weekend" stackId="a" fill={isDark ? '#475569' : '#cbd5e1'} name="Weekly off" />
                         <Bar dataKey="absent" stackId="a" fill="#f43f5e" name="Absent" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5 border-t border-slate-100 pt-3 text-[11px] text-slate-600 dark:border-slate-800 dark:text-slate-400">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-[#10b981]" /> Present
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-[#f59e0b]" /> Late / Anomaly
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-[#3b82f6]" /> Leave
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" /> Weekly off
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-[#f43f5e]" /> Absent
+                  </span>
                 </div>
               </div>
             </div>

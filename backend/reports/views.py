@@ -110,7 +110,9 @@ def _leave_balances_for_employee(employee) -> list[dict]:
 
 
 def _employee_attendance_trend(employee, days: int = 14) -> list[dict]:
-    from employees.week_schedule import is_weekend_day
+    from collections import defaultdict
+    from attendance.log_status import day_status_for_employee
+    from leave_management.models import Holiday, LeaveRequest, LeaveStatus
 
     today = timezone.localdate()
     start = today - timedelta(days=days - 1)
@@ -118,23 +120,78 @@ def _employee_attendance_trend(employee, days: int = 14) -> list[dict]:
         a.date: a
         for a in Attendance.objects.filter(employee=employee, date__gte=start, date__lte=today)
     }
+
+    leave_qs = LeaveRequest.objects.filter(
+        employee=employee,
+        status=LeaveStatus.APPROVED,
+        start_date__lte=today,
+        end_date__gte=start,
+    ).values("start_date", "end_date", "leave_type", "half_day")
+
+    leave_by_date = {}
+    for row in leave_qs:
+        cur = max(row["start_date"], start)
+        lim = min(row["end_date"], today)
+        while cur <= lim:
+            leave_by_date[cur] = {
+                "type": row["leave_type"],
+                "half_day": row["half_day"],
+            }
+            cur += timedelta(days=1)
+
+    holidays_qs = Holiday.objects.filter(
+        organization_id=employee.organization_id,
+        date__gte=start,
+        date__lte=today,
+        is_optional=False,
+        is_active=True,
+    ).prefetch_related("applicable_shifts")
+
+    holidays_by_date = defaultdict(list)
+    for h in holidays_qs:
+        shifts = [s.id for s in h.applicable_shifts.all()]
+        holidays_by_date[h.date].append(shifts)
+
     trend = []
     d = start
     while d <= today:
         att = attendances.get(d)
-        status = "weekend"
-        if not is_weekend_day(employee, d):
-            if not att or not att.check_in:
-                status = "absent"
-            else:
-                anomaly = attendance_anomaly(att)
-                if anomaly in ("late_checkin", "early_checkout", "short_hours"):
-                    status = "late"
-                elif anomaly == "missing_checkout":
-                    status = "incomplete"
-                else:
-                    status = "present"
-        trend.append({"date": d.isoformat(), "status": status})
+        leave_data = leave_by_date.get(d)
+        leave_type = leave_data["type"] if leave_data else None
+        leave_half_day = leave_data["half_day"] if leave_data else None
+
+        is_holiday = False
+        if d in holidays_by_date:
+            for shifts in holidays_by_date[d]:
+                if not shifts or (employee.shift_template_id and employee.shift_template_id in shifts):
+                    is_holiday = True
+                    break
+
+        status_key, status_code = day_status_for_employee(
+            employee, d, att, leave_type, leave_half_day, is_holiday
+        )
+
+        if status_key in ("present", "anomaly_approved", "holiday_worked"):
+            status = "present"
+        elif status_key in ("anomaly", "in_progress"):
+            status = "late"
+        elif status_key in ("leave", "half_day", "wfh", "lop"):
+            status = "leave"
+        elif status_key == "holiday":
+            status = "holiday"
+        elif status_key == "weekend":
+            status = "weekend"
+        else:
+            status = "absent"
+
+        trend.append({
+            "date": d.isoformat(),
+            "status": status,
+            "status_key": status_key,
+            "status_code": status_code,
+            "check_in": att.check_in.isoformat() if att and att.check_in else None,
+            "check_out": att.check_out.isoformat() if att and att.check_out else None,
+        })
         d += timedelta(days=1)
     return trend
 
