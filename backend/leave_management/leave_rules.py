@@ -345,13 +345,19 @@ def quota_for_rule(rule, is_on_probation=False, employee=None, as_of=None, prese
     """
     Leave balance available as of `as_of`, respecting accrual and present-day rules.
     """
+    as_of = as_of or timezone.localdate()
+
+    if rule.code == "comp_off" and employee is not None:
+        from .comp_off import get_earned_comp_off_for_employee
+        earned = get_earned_comp_off_for_employee(employee, as_of.year)
+        if earned > Decimal("0.0"):
+            return float(earned)
+
     annual = _base_annual_quota(rule, is_on_probation)
     if annual is None:
         return None
     if annual == 0:
         return 0.0
-
-    as_of = as_of or timezone.localdate()
 
     fraction = 1.0
     if rule.accrual_basis:
@@ -410,7 +416,8 @@ def employee_leave_balance_rows(employee, year=None):
     overrides = {
         o.leave_type: {
             "quota": o.quota,
-            "used_adjustment": o.used_adjustment
+            "used_adjustment": o.used_adjustment,
+            "carry_forward": o.carry_forward,
         }
         for o in LeaveBalanceOverride.objects.filter(employee=employee, year=year)
     }
@@ -429,9 +436,12 @@ def employee_leave_balance_rows(employee, year=None):
             else:
                 quota = quota_for_rule(rule, on_probation, employee=employee, as_of=tz.localdate())
             adjustment = float(overrides[rule.code]["used_adjustment"] or 0)
+            carry_forward = float(overrides[rule.code].get("carry_forward") or 0)
+            quota = quota + carry_forward
         else:
             quota = quota_for_rule(rule, on_probation, employee=employee, as_of=tz.localdate())
             adjustment = 0
+            carry_forward = 0
             
         if quota is None:
             continue
@@ -443,6 +453,7 @@ def employee_leave_balance_rows(employee, year=None):
                 "quota": quota,
                 "used": used,
                 "remaining": max(quota - used, 0),
+                "carry_forward": carry_forward,
             }
         )
     return rows

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.conf import settings
 from django.db import models
 
@@ -26,6 +27,12 @@ class AccrualFrequency(models.TextChoices):
 class AccrualPeriod(models.TextChoices):
     START = "start", "Start"
     END = "end", "End"
+
+
+class CarryForwardCycle(models.TextChoices):
+    CALENDAR_YEAR = "calendar_year", "Calendar Year (1st Jan)"
+    FINANCIAL_YEAR = "financial_year", "Financial Year (1st Apr)"
+    ANNIVERSARY = "anniversary", "Work Anniversary (Joining Date)"
 
 
 class LeaveStatus(models.TextChoices):
@@ -170,6 +177,11 @@ class LeaveTypeRule(models.Model):
     probation_quota = models.DecimalField(max_digits=6, decimal_places=1, null=True, blank=True)
     encash_enabled = models.BooleanField(default=False)
     carry_forward_enabled = models.BooleanField(default=False)
+    carry_forward_cycle = models.CharField(
+        max_length=20,
+        choices=CarryForwardCycle.choices,
+        default=CarryForwardCycle.CALENDAR_YEAR,
+    )
     max_per_month = models.DecimalField(max_digits=6, decimal_places=1, null=True, blank=True)
     continuous_allowed = models.PositiveSmallIntegerField(null=True, blank=True)
     negative_allowed = models.BooleanField(default=False)
@@ -263,4 +275,26 @@ class Holiday(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.date})"
+
+
+class CompOffGrant(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="comp_off_grants")
+    attendance = models.OneToOneField("attendance.Attendance", on_delete=models.SET_NULL, null=True, blank=True, related_name="comp_off_grant")
+    date = models.DateField()
+    credit_days = models.DecimalField(max_digits=4, decimal_places=1, default=Decimal("1.0"))
+    worked_minutes = models.PositiveIntegerField(default=0)
+    reason = models.CharField(max_length=255, blank=True)
+    is_holiday = models.BooleanField(default=False)
+    is_weekend = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-date"]
+        constraints = [
+            models.UniqueConstraint(fields=["employee", "date"], name="uniq_comp_off_grant_emp_date"),
+        ]
+
+    def __str__(self):
+        return f"{self.employee.employee_code} comp-off on {self.date} (+{self.credit_days}d)"
 

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 from django.conf import settings
 
@@ -9,6 +11,7 @@ class Attendance(models.Model):
     date = models.DateField()
     check_in = models.DateTimeField(null=True, blank=True)
     check_out = models.DateTimeField(null=True, blank=True)
+    overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
     notes = models.CharField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

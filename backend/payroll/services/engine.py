@@ -402,6 +402,60 @@ def compute_employee_payroll(
                 }
             )
 
+    # Overtime Calculation (if enabled on employee's shift template)
+    from attendance.rule_settings import resolve_shift_rule
+    from attendance.models import Attendance
+    shift_settings = resolve_shift_rule(employee)
+    if shift_settings.enable_overtime:
+        month_start_date = date(run.period_year, run.period_month, 1)
+        month_end_date = date(run.period_year, run.period_month, monthrange(run.period_year, run.period_month)[1])
+        ot_attendances = Attendance.objects.filter(
+            employee=employee,
+            date__gte=month_start_date,
+            date__lte=month_end_date,
+            overtime_hours__gt=Decimal("0.00"),
+        )
+        total_ot_hours = sum((a.overtime_hours for a in ot_attendances), Decimal("0.00"))
+        if total_ot_hours > Decimal("0.00"):
+            basic_line_amount = Decimal("0")
+            for b in breakdown:
+                if b["component"].code in ("BASIC", "BASIC_SALARY") or b["component"].category == PayrollComponentCategory.BASIC:
+                    basic_line_amount = b["full"]
+                    break
+            base_for_ot = basic_line_amount if basic_line_amount > Decimal("0") else gross_full
+            work_days = Decimal(str(run.working_days or 26))
+            daily_hours = Decimal(str((shift_settings.full_day_minutes or 480) / 60))
+            if work_days > 0 and daily_hours > 0 and base_for_ot > 0:
+                hourly_rate = base_for_ot / (work_days * daily_hours)
+                ot_rate_multiplier = Decimal("1.5")
+                ot_pay = _q(total_ot_hours * hourly_rate * ot_rate_multiplier)
+            else:
+                ot_pay = Decimal("0.00")
+
+            if ot_pay > Decimal("0.00"):
+                ot_comp, _ = PayrollComponent.objects.get_or_create(
+                    organization=run.organization,
+                    code="OVERTIME",
+                    defaults={
+                        "name": "Overtime",
+                        "category": PayrollComponentCategory.VARIABLE,
+                        "kind": PayrollComponentKind.EARNING,
+                        "taxable": True,
+                        "prorate_with_attendance": False,
+                        "is_system": True,
+                    },
+                )
+                taxable_full += ot_pay
+                esi_gross_full += ot_pay
+                breakdown.append(
+                    {
+                        "component": ot_comp,
+                        "kind": PayrollComponentKind.EARNING,
+                        "full": ot_pay,
+                        "prorated": ot_pay,
+                    }
+                )
+
     gross_prorated = _q(sum((b["prorated"] for b in breakdown if b["component"].code not in ("REIMBURSEMENT", "BONUS", "INCENTIVE") and not b["component"].code.startswith("OTHER_EARN_")), Decimal("0")))
     taxable_prorated = _q(
         sum((b["prorated"] for b in breakdown if b["component"].taxable), Decimal("0"))

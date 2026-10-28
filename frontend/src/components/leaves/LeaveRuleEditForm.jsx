@@ -1,6 +1,6 @@
 import { Check, X } from 'lucide-react'
 import FieldHint from './FieldHint'
-import { ACCRUAL_FREQUENCY_OPTIONS, MONTH_OPTIONS } from './leaveRuleForm'
+import { ACCRUAL_FREQUENCY_OPTIONS, CARRY_FORWARD_CYCLE_OPTIONS, MONTH_OPTIONS } from './leaveRuleForm'
 
 function Label({ hintKey, children }) {
   return (
@@ -154,10 +154,30 @@ export default function LeaveRuleEditForm({
             </label>
 
             <SectionBar title="Carry forward" />
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={form.carry_forward_enabled} onChange={(e) => setForm({ ...form, carry_forward_enabled: e.target.checked })} />
-              Carry forward enabled
-            </label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={form.carry_forward_enabled} onChange={(e) => setForm({ ...form, carry_forward_enabled: e.target.checked })} />
+                Carry forward enabled
+              </label>
+              {form.carry_forward_enabled && (
+                <div className="pt-1 sm:max-w-xs">
+                  <label className="block">
+                    <Label hintKey="carry_forward_cycle">Carry forward cycle</Label>
+                    <select
+                      className="input-field mt-1 !py-1.5 !text-sm"
+                      value={form.carry_forward_cycle || 'calendar_year'}
+                      onChange={(e) => setForm({ ...form, carry_forward_cycle: e.target.value })}
+                    >
+                      {CARRY_FORWARD_CYCLE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

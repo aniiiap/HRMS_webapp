@@ -214,6 +214,26 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         )
         return Response({"status": "success", "quota": override.quota, "used_adjustment": override.used_adjustment, "carry_forward": override.carry_forward})
 
+    @action(detail=False, methods=["post"], url_path="balances/rollover", permission_classes=[IsManagerOrAbove])
+    def rollover(self, request):
+        org_id = organization_id_from_request(request)
+        if not org_id:
+            return Response({"error": "No organization associated."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        today = timezone.localdate()
+        from_year = int(request.data.get("from_year", today.year - 1))
+        to_year = int(request.data.get("to_year", today.year))
+        dry_run = bool(request.data.get("dry_run", True))
+        
+        from .rollover import preview_or_execute_leave_rollover
+        result = preview_or_execute_leave_rollover(
+            organization_id=org_id,
+            from_year=from_year,
+            to_year=to_year,
+            dry_run=dry_run,
+        )
+        return Response(result, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
     def balances(self, request):
         user = request.user

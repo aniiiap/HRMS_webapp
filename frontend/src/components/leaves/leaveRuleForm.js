@@ -29,6 +29,7 @@ export const EMPTY_LEAVE_RULE_FORM = {
   probation_quota: '',
   encash_enabled: false,
   carry_forward_enabled: false,
+  carry_forward_cycle: 'calendar_year',
   max_per_month: '',
   continuous_allowed: '',
   negative_allowed: false,
@@ -58,6 +59,7 @@ export function ruleToForm(rule) {
     probation_quota: rule.probation_quota ?? '',
     encash_enabled: !!rule.encash_enabled,
     carry_forward_enabled: !!rule.carry_forward_enabled,
+    carry_forward_cycle: rule.carry_forward_cycle || 'calendar_year',
     max_per_month: rule.max_per_month ?? '',
     continuous_allowed: rule.continuous_allowed ?? '',
     negative_allowed: !!rule.negative_allowed,
@@ -88,6 +90,7 @@ export function formToPayload(form) {
     probation_quota: num(form.probation_quota),
     encash_enabled: form.encash_enabled,
     carry_forward_enabled: form.carry_forward_enabled,
+    carry_forward_cycle: form.carry_forward_cycle || 'calendar_year',
     max_per_month: num(form.max_per_month),
     continuous_allowed: num(form.continuous_allowed),
     negative_allowed: form.negative_allowed,
@@ -99,6 +102,12 @@ export function formToPayload(form) {
     is_active: form.is_active,
   }
 }
+
+export const CARRY_FORWARD_CYCLE_OPTIONS = [
+  { value: 'calendar_year', label: 'Calendar Year (1st Jan)' },
+  { value: 'financial_year', label: 'Financial Year (1st Apr)' },
+  { value: 'anniversary', label: 'Work Anniversary (Joining Date)' },
+]
 
 export const ACCRUAL_FREQUENCY_OPTIONS = [
   { value: 'monthly', label: 'Monthly' },

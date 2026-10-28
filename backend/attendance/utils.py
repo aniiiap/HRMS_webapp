@@ -1,5 +1,6 @@
 """Shared attendance classification for payroll and reports."""
 
+from decimal import Decimal
 from datetime import date, timedelta
 
 from django.utils import timezone
@@ -95,5 +96,52 @@ def apply_auto_clock_out(queryset, as_of_date: date | None = None) -> int:
     for attendance in queryset:
         if attendance.check_in and not attendance.check_out and attendance.date <= cutoff:
             if try_auto_clock_out(attendance):
+                from .punch_hooks import post_process_attendance_checkout
+                post_process_attendance_checkout(attendance)
                 updated += 1
     return updated
+
+
+def calculate_overtime_hours(attendance: Attendance) -> Decimal:
+    """
+    Calculate overtime hours for an attendance record when enable_overtime is True on the shift.
+    Returns 0.00 if disabled or incomplete.
+    """
+    if not attendance or not attendance.employee:
+        return Decimal("0.00")
+    if not attendance.check_in or not attendance.check_out:
+        return Decimal("0.00")
+
+    settings = resolve_shift_rule(attendance.employee)
+    if not settings.enable_overtime:
+        return Decimal("0.00")
+
+    from employees.week_schedule import is_scheduled_working_day
+    from leave_management.comp_off import is_holiday_for_employee
+
+    worked_seconds = max((attendance.check_out - attendance.check_in).total_seconds(), 0)
+    worked_minutes = int(worked_seconds // 60)
+
+    # Regular scheduled working day:
+    if is_scheduled_working_day(attendance.employee, attendance.date) and not is_holiday_for_employee(attendance.employee, attendance.date):
+        full_shift_minutes = settings.full_day_minutes or 480
+        if worked_minutes > full_shift_minutes:
+            extra_minutes = worked_minutes - full_shift_minutes
+            if extra_minutes >= 30:  # Minimum 30 mins to qualify as OT
+                return Decimal(str(round(extra_minutes / 60.0, 2)))
+        return Decimal("0.00")
+
+    # Weekend or Holiday:
+    # If comp-off grant exists for this attendance, OT is not duplicated.
+    try:
+        from leave_management.models import CompOffGrant
+        if CompOffGrant.objects.filter(attendance=attendance).exists():
+            return Decimal("0.00")
+    except Exception:
+        pass
+
+    if worked_minutes >= 30:
+        return Decimal(str(round(worked_minutes / 60.0, 2)))
+
+    return Decimal("0.00")
+

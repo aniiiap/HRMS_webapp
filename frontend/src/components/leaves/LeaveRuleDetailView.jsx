@@ -119,6 +119,19 @@ export default function LeaveRuleDetailView({ rule, detailTab, setDetailTab, onE
 
             <Section title="Carry forward">
               <Setting label="Carry forward enabled" hintKey="carry_forward_enabled" value={yesNo(rule.carry_forward_enabled)} />
+              {rule.carry_forward_enabled && (
+                <Setting
+                  label="Carry forward cycle"
+                  hintKey="carry_forward_cycle"
+                  value={
+                    rule.carry_forward_cycle === 'financial_year'
+                      ? 'Financial Year (1st Apr)'
+                      : rule.carry_forward_cycle === 'anniversary'
+                      ? 'Work Anniversary (Joining Date)'
+                      : 'Calendar Year (1st Jan)'
+                  }
+                />
+              )}
             </Section>
           </>
         )}

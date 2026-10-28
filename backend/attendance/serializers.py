@@ -271,6 +271,8 @@ class CheckOutSerializer(serializers.Serializer):
         if self.validated_data.get("notes"):
             att.notes = (att.notes + " " + self.validated_data["notes"]).strip()
         att.save()
+        from .punch_hooks import post_process_attendance_checkout
+        post_process_attendance_checkout(att)
         return att
 
 

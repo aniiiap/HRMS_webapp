@@ -14,6 +14,7 @@ export const LEAVE_RULE_FIELD_HINTS = {
   probation_quota: 'Annual quota used while the employee is on probation.',
   encash_enabled: 'Unused balance can be encashed at year-end or on exit.',
   carry_forward_enabled: 'Unused balance can be carried forward to the next year.',
+  carry_forward_cycle: 'Cycle on which unused leaves are carried forward (Calendar Year, Financial Year, or Work Anniversary).',
   max_per_month: 'Maximum number of leave days allowed in a single month.',
   continuous_allowed: 'Maximum consecutive days allowed in one leave request.',
   negative_allowed: 'Employee can apply leave even when balance is zero (goes negative).',

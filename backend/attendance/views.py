@@ -694,6 +694,10 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     },
                 )
 
+        if decision == AttendanceCorrectionStatus.APPROVED and attendance.check_out:
+            from .punch_hooks import post_process_attendance_checkout
+            post_process_attendance_checkout(attendance)
+
         employee_user = attendance.employee.user
         notify_user(
             user=employee_user,
