@@ -181,7 +181,7 @@ export default function PayrollPage() {
   const loadCompensations = useCallback(async () => {
     if (!orgId) return
     try {
-      const { data } = await api.get('/api/payroll/compensation/', { params: { organization: orgId } })
+      const { data } = await api.get('/api/payroll/compensation/', { params: { organization: orgId, page_size: 1000, nopaginate: 'true' } })
       setCompensations(Array.isArray(data) ? data : data.results || [])
     } catch (err) {
       setError(messageFromError(err))

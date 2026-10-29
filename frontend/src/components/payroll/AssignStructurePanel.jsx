@@ -66,6 +66,7 @@ export default function AssignStructurePanel({
 
   useEffect(() => {
     void loadStructures()
+    onAssigned?.()
   }, [loadStructures])
 
   const filtered = useMemo(() => {
