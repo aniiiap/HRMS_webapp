@@ -1010,7 +1010,21 @@ class EmployeeCompensationViewSet(viewsets.ModelViewSet):
                 comp_qs = comp_qs.filter(organization_id=int(oid))
             comp = comp_qs.first()
             if not comp:
-                skipped.append(int(eid))
+                from employees.models import Employee
+                from django.utils import timezone
+                emp = Employee.objects.filter(pk=int(eid)).first()
+                if not emp or not emp.organization_id:
+                    skipped.append(int(eid))
+                    continue
+                comp = EmployeeCompensation.objects.create(
+                    employee=emp,
+                    organization=emp.organization,
+                    salary_structure=structure,
+                    effective_from=emp.date_of_joining or timezone.now().date(),
+                    annual_ctc=0,
+                    monthly_gross=0,
+                )
+                updated += 1
                 continue
             comp.salary_structure = structure
             comp.save(update_fields=["salary_structure", "updated_at"])

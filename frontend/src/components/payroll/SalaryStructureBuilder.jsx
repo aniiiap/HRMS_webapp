@@ -16,6 +16,7 @@ export default function SalaryStructureBuilder({
   employeeId: fixedEmployeeId,
   organizationId = '',
   canEdit = true,
+  onSaved,
 }) {
   const [employeeId, setEmployeeId] = useState(fixedEmployeeId || '')
   const [ctcType, setCtcType] = useState('gross')
@@ -221,6 +222,7 @@ export default function SalaryStructureBuilder({
       }
       toast.success('Salary structure saved.')
       await loadAll()
+      onSaved?.()
     } catch (err) {
       toast.error(messageFromError(err))
     } finally {

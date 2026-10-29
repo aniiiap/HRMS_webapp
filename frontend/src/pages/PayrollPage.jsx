@@ -816,7 +816,10 @@ export default function PayrollPage() {
               <button
                 type="button"
                 className="text-sm font-semibold text-brand-600 hover:underline"
-                onClick={() => setSalaryEmployeeId('')}
+                onClick={() => {
+                  setSalaryEmployeeId('')
+                  void loadCompensations()
+                }}
               >
                 ← Back to assign structure
               </button>
@@ -826,6 +829,7 @@ export default function PayrollPage() {
                 employeeId={salaryEmployeeId}
                 organizationId={orgId}
                 canEdit={isPrivileged}
+                onSaved={() => void loadCompensations()}
               />
             </div>
           )}

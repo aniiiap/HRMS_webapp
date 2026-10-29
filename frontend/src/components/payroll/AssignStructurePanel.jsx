@@ -42,7 +42,13 @@ export default function AssignStructurePanel({
   const [assignBusy, setAssignBusy] = useState(false)
 
   const compByEmp = useMemo(
-    () => Object.fromEntries(compensations.map((c) => [String(c.employee), c])),
+    () =>
+      Object.fromEntries(
+        compensations.map((c) => {
+          const empId = typeof c.employee === 'object' && c.employee !== null ? c.employee.id : c.employee
+          return [String(empId), c]
+        })
+      ),
     [compensations]
   )
 
