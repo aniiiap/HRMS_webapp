@@ -666,17 +666,17 @@ export default function DashboardPage() {
                 No work anniversaries coming up.
               </div>
             ) : (
-          <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin">
+          <ul className="max-h-[168px] min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-0.5 sm:max-h-[180px]">
             {workAnniversaries.map((w) => (
               <li
                 key={`${w.employee_code}-${w.next_anniversary}`}
-                className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/90 p-2.5 dark:border-slate-700/80 dark:bg-slate-800/40"
+                className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/90 p-2.5 dark:border-slate-700/80 dark:bg-slate-800/40"
               >
                 {profilePill(w.name, w.profile_image)}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{w.name}</p>
                   <p className="truncate text-xs text-slate-500 dark:text-slate-400">{w.designation || 'Team member'}</p>
-                  <p className="mt-0.5 text-xs font-semibold text-brand-600 dark:text-brand-400">
+                  <p className="mt-1 text-xs font-semibold text-brand-600 dark:text-brand-400">
                     {w.days_until === 0
                       ? `${w.years_completed} year${w.years_completed === 1 ? '' : 's'} milestone today!`
                       : `${w.years_completed} year${w.years_completed === 1 ? '' : 's'} on ${dayjs(w.next_anniversary).format('DD-MM-YYYY')}`}
