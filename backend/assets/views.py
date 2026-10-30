@@ -90,8 +90,7 @@ class AssetViewSet(viewsets.ModelViewSet):
         # Check for any active assignment regardless of status field (handles data inconsistency)
         active_assignment = asset.assignments.filter(returned_date__isnull=True).order_by('-assigned_date').first()
         if active_assignment:
-            from employees.serializers import EmployeeSerializer
-            emp_name = active_assignment.employee.user.get_full_name()
+            emp_name = (active_assignment.employee.user.get_full_name() if (active_assignment.employee and active_assignment.employee.user) else active_assignment.holder_name) or "another user"
             return Response(
                 {'detail': f'Asset is already assigned to {emp_name}. Please return it first.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -102,21 +101,27 @@ class AssetViewSet(viewsets.ModelViewSet):
             return Response({'detail': f'Asset cannot be assigned (current status: {asset.status}).'}, status=status.HTTP_400_BAD_REQUEST)
         
         employee_id = request.data.get('employee')
+        holder_name = request.data.get('holder_name', '').strip()
+        holder_role = request.data.get('holder_role', '').strip()
         assigned_date = request.data.get('assigned_date', timezone.now().date())
         
-        if not employee_id:
-            return Response({'employee': 'This field is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not employee_id and not holder_name:
+            return Response({'detail': 'Either an employee or holder name is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         org_id = organization_id_from_request(request)
-        from employees.models import Employee
-        try:
-            employee = Employee.objects.get(id=employee_id, organization_id=org_id)
-        except Employee.DoesNotExist:
-            return Response({'detail': 'Employee not found.'}, status=status.HTTP_404_NOT_FOUND)
+        employee = None
+        if employee_id:
+            from employees.models import Employee
+            try:
+                employee = Employee.objects.get(id=employee_id, organization_id=org_id)
+            except Employee.DoesNotExist:
+                return Response({'detail': 'Employee not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         assignment = AssetAssignment.objects.create(
             asset=asset,
             employee=employee,
+            holder_name=holder_name if not employee else None,
+            holder_role=holder_role if not employee else None,
             assigned_date=assigned_date,
             condition_notes=request.data.get('condition_notes', '')
         )

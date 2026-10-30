@@ -41,7 +41,9 @@ class Asset(models.Model):
 
 class AssetAssignment(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='assignments')
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='asset_assignments')
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='asset_assignments', null=True, blank=True)
+    holder_name = models.CharField(max_length=255, blank=True, null=True, help_text="Direct holder name if non-account user (e.g. CEO, Director)")
+    holder_role = models.CharField(max_length=120, blank=True, null=True, help_text="Role or designation of non-account user")
     assigned_date = models.DateField()
     returned_date = models.DateField(blank=True, null=True)
     condition_notes = models.TextField(blank=True)
@@ -53,6 +55,10 @@ class AssetAssignment(models.Model):
 
     def __str__(self):
         try:
-            return f"{self.asset.name} assigned to {self.employee.user.get_full_name()}"
+            if self.employee and self.employee.user:
+                return f"{self.asset.name} assigned to {self.employee.user.get_full_name()}"
+            elif self.holder_name:
+                return f"{self.asset.name} assigned to {self.holder_name} ({self.holder_role or 'External'})"
+            return f"{self.asset.name} assignment"
         except Exception:
             return f"{self.asset.name} assignment"
