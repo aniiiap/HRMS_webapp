@@ -666,7 +666,7 @@ export default function DashboardPage() {
                 No work anniversaries coming up.
               </div>
             ) : (
-          <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+          <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin">
             {workAnniversaries.map((w) => (
               <li
                 key={`${w.employee_code}-${w.next_anniversary}`}
