@@ -36,21 +36,54 @@ class ShiftRuleSettings:
     allowed_ip_addresses: str
 
 
-def resolve_shift_rule(employee) -> ShiftRuleSettings:
+def resolve_shift_rule(employee, on_date=None) -> ShiftRuleSettings:
     template = getattr(employee, "shift_template", None)
 
-    # When a template is assigned, always use its values — the template IS the rule.
+    # When a template is assigned, use its values (or the historical revision valid on on_date)
     # Employee-level overrides only apply when there is no template.
     if template:
-        shift_start = template.start_time
-        shift_end = template.end_time
-        grace = template.grace_minutes
-        early_grace = template.early_checkout_grace_minutes
+        revision = None
+        if on_date:
+            try:
+                from employees.models import ShiftTemplateHistory
+                from django.db.models import Q
+                revision = (
+                    ShiftTemplateHistory.objects.filter(shift_template=template)
+                    .filter(Q(effective_from__isnull=True) | Q(effective_from__lte=on_date))
+                    .filter(Q(effective_to__isnull=True) | Q(effective_to__gte=on_date))
+                    .order_by("-effective_to", "-id")
+                    .first()
+                )
+            except Exception:
+                revision = None
+
+        if revision:
+            shift_start = revision.start_time
+            shift_end = revision.end_time
+            grace = revision.grace_minutes
+            early_grace = revision.early_checkout_grace_minutes
+            saturday_end = revision.saturday_end_time
+            is_night = revision.is_night_shift
+            full_min = revision.full_day_minutes
+            half_min = revision.half_day_minutes
+        else:
+            shift_start = template.start_time
+            shift_end = template.end_time
+            grace = template.grace_minutes
+            early_grace = template.early_checkout_grace_minutes
+            saturday_end = getattr(template, "saturday_end_time", None)
+            is_night = getattr(template, "is_night_shift", False)
+            full_min = getattr(template, "full_day_minutes", 480)
+            half_min = getattr(template, "half_day_minutes", 240)
     else:
         shift_start = employee.shift_start_time
         shift_end = employee.shift_end_time
         grace = employee.grace_minutes
         early_grace = employee.early_checkout_grace_minutes
+        saturday_end = None
+        is_night = False
+        full_min = 480
+        half_min = 240
 
     def tpl(attr, default):
         if template is None:
@@ -60,16 +93,16 @@ def resolve_shift_rule(employee) -> ShiftRuleSettings:
     return ShiftRuleSettings(
         shift_start=shift_start,
         shift_end=shift_end,
-        saturday_end_time=tpl("saturday_end_time", None),
+        saturday_end_time=saturday_end,
         grace_minutes=int(grace or 0),
         early_checkout_grace_minutes=int(early_grace or 0),
-        is_night_shift=bool(tpl("is_night_shift", False)),
+        is_night_shift=bool(is_night),
         enable_anomaly_tracking=bool(tpl("enable_anomaly_tracking", True)),
         track_in_time=bool(tpl("track_in_time", True)),
         track_out_time=bool(tpl("track_out_time", True)),
         track_work_duration=bool(tpl("track_work_duration", True)),
-        full_day_minutes=int(tpl("full_day_minutes", 480)),
-        half_day_minutes=int(tpl("half_day_minutes", 240)),
+        full_day_minutes=int(full_min),
+        half_day_minutes=int(half_min),
         track_max_break_duration=bool(tpl("track_max_break_duration", False)),
         max_break_duration_minutes=int(tpl("max_break_duration_minutes", 60)),
         track_max_break_count=bool(tpl("track_max_break_count", False)),
@@ -116,7 +149,7 @@ def try_auto_clock_out(attendance) -> bool:
     """Auto clock-out when shift end + grace has passed and rule allows it."""
     if attendance.check_out or not attendance.check_in:
         return False
-    settings = resolve_shift_rule(attendance.employee)
+    settings = resolve_shift_rule(attendance.employee, on_date=attendance.date)
     if not settings.enable_auto_clock_out:
         return False
     end_dt = shift_end_datetime(attendance.date, settings)

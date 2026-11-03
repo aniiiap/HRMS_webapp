@@ -22,14 +22,14 @@ def attendance_anomaly(attendance: Attendance, has_approved_leave: bool | None =
         if attendance.date < today:
             return "missing_checkout"
         elif attendance.date == today:
-            settings = resolve_shift_rule(attendance.employee)
+            settings = resolve_shift_rule(attendance.employee, on_date=attendance.date)
             if settings and settings.shift_end:
                 end_dt = shift_end_datetime(attendance.date, settings)
                 if end_dt and timezone.localtime() > end_dt:
                     return "missing_checkout"
             return "in_progress"
 
-    settings = resolve_shift_rule(attendance.employee)
+    settings = resolve_shift_rule(attendance.employee, on_date=attendance.date)
     if not settings.enable_anomaly_tracking:
         return "none"
 
@@ -112,7 +112,7 @@ def calculate_overtime_hours(attendance: Attendance) -> Decimal:
     if not attendance.check_in or not attendance.check_out:
         return Decimal("0.00")
 
-    settings = resolve_shift_rule(attendance.employee)
+    settings = resolve_shift_rule(attendance.employee, on_date=attendance.date)
     if not settings.enable_overtime:
         return Decimal("0.00")
 

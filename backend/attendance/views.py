@@ -423,7 +423,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     profile_image_url = None
 
             anomaly = attendance_anomaly(att, has_approved_leave=(leave_data is not None)) if att else "none"
-            settings = resolve_shift_rule(e)
+            settings = resolve_shift_rule(e, on_date=log_date)
             shift_start_time = settings.shift_start.strftime("%H:%M") if settings.shift_start else "09:00"
             shift_end_time = settings.shift_end.strftime("%H:%M") if settings.shift_end else "18:00"
 

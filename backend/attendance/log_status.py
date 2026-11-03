@@ -86,7 +86,7 @@ def day_status_for_employee(
         from .rule_settings import resolve_shift_rule, shift_start_datetime
         from datetime import timedelta
         
-        settings = resolve_shift_rule(employee)
+        settings = resolve_shift_rule(employee, on_date=day_date)
         if settings and settings.shift_start:
             start_dt = shift_start_datetime(day_date, settings)
             if start_dt:

@@ -123,6 +123,26 @@ export default function AttendanceRuleEditForm({
                 <input type="time" className="input-field mt-1 !py-1.5 !text-sm" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} required />
               </label>
             </div>
+            {!isNew && (
+              <div className="rounded-lg border border-teal-200/80 bg-teal-50/60 p-2.5 dark:border-teal-800/60 dark:bg-teal-950/30">
+                <label className="block">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Effective from date</span>
+                    <span className="text-[10px] font-semibold text-teal-700 dark:text-teal-400">Protects past attendance</span>
+                  </div>
+                  <input
+                    type="date"
+                    className="input-field mt-1.5 !py-1.5 !text-sm"
+                    value={form.effective_from || new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setForm({ ...form, effective_from: e.target.value })}
+                    required
+                  />
+                  <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400">
+                    New shift timings will apply from this date onwards. Historical attendance logs before this date remain protected and will not show false anomalies.
+                  </span>
+                </label>
+              </div>
+            )}
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={form.is_night_shift} onChange={(e) => setForm({ ...form, is_night_shift: e.target.checked })} />
               Evening / night shift (crosses midnight)

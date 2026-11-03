@@ -260,6 +260,11 @@ class ShiftTemplate(models.Model):
         help_text="Require employees on this rule to punch within office geofence.",
     )
     is_active = models.BooleanField(default=True)
+    effective_from = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date from which the current shift parameters are effective.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -274,6 +279,41 @@ class ShiftTemplate(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ShiftTemplateHistory(models.Model):
+    shift_template = models.ForeignKey(
+        ShiftTemplate,
+        on_delete=models.CASCADE,
+        related_name="history_revisions",
+    )
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    grace_minutes = models.PositiveSmallIntegerField(default=0)
+    early_checkout_grace_minutes = models.PositiveSmallIntegerField(default=10)
+    is_night_shift = models.BooleanField(default=False)
+    saturday_working = models.BooleanField(default=False)
+    saturday_end_time = models.TimeField(null=True, blank=True)
+    sunday_working = models.BooleanField(default=False)
+    full_day_minutes = models.PositiveSmallIntegerField(default=480)
+    half_day_minutes = models.PositiveSmallIntegerField(default=240)
+    effective_from = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Start date for this timing revision (null means from the beginning of time).",
+    )
+    effective_to = models.DateField(
+        null=True,
+        blank=True,
+        help_text="End date (inclusive) for this timing revision.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-effective_to", "-effective_from", "-id"]
+
+    def __str__(self):
+        return f"{self.shift_template.name} ({self.start_time}-{self.end_time}) until {self.effective_to}"
 
 
 class ShiftTemplateAssignment(models.Model):

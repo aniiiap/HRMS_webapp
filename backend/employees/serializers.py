@@ -366,6 +366,7 @@ class EmployeeOnboardSerializer(serializers.Serializer):
 
 class ShiftTemplateSerializer(serializers.ModelSerializer):
     employee_count = serializers.SerializerMethodField()
+    effective_from = serializers.DateField(required=False, allow_null=True)
 
     class Meta:
         model = ShiftTemplate
@@ -403,6 +404,7 @@ class ShiftTemplateSerializer(serializers.ModelSerializer):
             "allowed_ip_addresses",
             "enable_geofencing",
             "is_active",
+            "effective_from",
             "created_at",
             "updated_at",
             "employee_count",
@@ -434,6 +436,72 @@ class ShiftTemplateSerializer(serializers.ModelSerializer):
         if org_id and not validated_data.get("organization_id"):
             validated_data["organization_id"] = org_id
         return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        effective_from = validated_data.pop("effective_from", None)
+
+        timing_fields = [
+            "start_time",
+            "end_time",
+            "grace_minutes",
+            "early_checkout_grace_minutes",
+            "is_night_shift",
+            "saturday_working",
+            "saturday_end_time",
+            "sunday_working",
+            "full_day_minutes",
+            "half_day_minutes",
+        ]
+        has_timing_changed = any(
+            field in validated_data and getattr(instance, field) != validated_data[field]
+            for field in timing_fields
+        )
+
+        if has_timing_changed:
+            from datetime import timedelta
+            from django.utils import timezone
+            from .models import ShiftTemplateHistory
+
+            target_effective_from = effective_from or timezone.localdate()
+            cut_off_date = target_effective_from - timedelta(days=1)
+
+            # Archive previous timing to history if it has not already been archived for this cut_off_date
+            existing_rev = ShiftTemplateHistory.objects.filter(
+                shift_template=instance,
+                effective_to=cut_off_date,
+            ).first()
+
+            if not existing_rev:
+                ShiftTemplateHistory.objects.create(
+                    shift_template=instance,
+                    start_time=instance.start_time,
+                    end_time=instance.end_time,
+                    grace_minutes=instance.grace_minutes,
+                    early_checkout_grace_minutes=instance.early_checkout_grace_minutes,
+                    is_night_shift=instance.is_night_shift,
+                    saturday_working=instance.saturday_working,
+                    saturday_end_time=instance.saturday_end_time,
+                    sunday_working=instance.sunday_working,
+                    full_day_minutes=instance.full_day_minutes,
+                    half_day_minutes=instance.half_day_minutes,
+                    effective_from=instance.effective_from,
+                    effective_to=cut_off_date,
+                )
+
+            instance.effective_from = target_effective_from
+
+        updated_instance = super().update(instance, validated_data)
+
+        if has_timing_changed:
+            from .models import Employee
+            Employee.objects.filter(shift_template=updated_instance).update(
+                shift_start_time=updated_instance.start_time,
+                shift_end_time=updated_instance.end_time,
+                grace_minutes=updated_instance.grace_minutes,
+                early_checkout_grace_minutes=updated_instance.early_checkout_grace_minutes,
+            )
+
+        return updated_instance
 
 
 class ApplyShiftTemplateSerializer(serializers.Serializer):

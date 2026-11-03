@@ -87,6 +87,7 @@ export const EMPTY_ATTENDANCE_RULE_FORM = {
   enable_ip_restriction: false,
   allowed_ip_addresses: '',
   enable_geofencing: true,
+  effective_from: new Date().toISOString().slice(0, 10),
 }
 
 export function ruleToForm(rule) {
@@ -122,6 +123,7 @@ export function ruleToForm(rule) {
     enable_ip_restriction: !!rule.enable_ip_restriction,
     allowed_ip_addresses: rule.allowed_ip_addresses || '',
     enable_geofencing: rule.enable_geofencing !== false,
+    effective_from: rule.effective_from || new Date().toISOString().slice(0, 10),
   }
 }
 
@@ -157,5 +159,6 @@ export function formToPayload(form) {
     enable_ip_restriction: form.enable_ip_restriction,
     allowed_ip_addresses: form.allowed_ip_addresses.trim(),
     enable_geofencing: form.enable_geofencing,
+    effective_from: form.effective_from || new Date().toISOString().slice(0, 10),
   }
 }
