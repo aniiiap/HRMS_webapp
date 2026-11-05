@@ -403,6 +403,9 @@ class ShiftTemplateSerializer(serializers.ModelSerializer):
             "enable_ip_restriction",
             "allowed_ip_addresses",
             "enable_geofencing",
+            "enable_monthly_anomaly_limit",
+            "max_monthly_anomaly_limit",
+            "deduct_half_day_on_excess_anomaly",
             "is_active",
             "effective_from",
             "created_at",
@@ -451,6 +454,9 @@ class ShiftTemplateSerializer(serializers.ModelSerializer):
             "sunday_working",
             "full_day_minutes",
             "half_day_minutes",
+            "enable_monthly_anomaly_limit",
+            "max_monthly_anomaly_limit",
+            "deduct_half_day_on_excess_anomaly",
         ]
         has_timing_changed = any(
             field in validated_data and getattr(instance, field) != validated_data[field]
@@ -484,6 +490,9 @@ class ShiftTemplateSerializer(serializers.ModelSerializer):
                     sunday_working=instance.sunday_working,
                     full_day_minutes=instance.full_day_minutes,
                     half_day_minutes=instance.half_day_minutes,
+                    enable_monthly_anomaly_limit=instance.enable_monthly_anomaly_limit,
+                    max_monthly_anomaly_limit=instance.max_monthly_anomaly_limit,
+                    deduct_half_day_on_excess_anomaly=instance.deduct_half_day_on_excess_anomaly,
                     effective_from=instance.effective_from,
                     effective_to=cut_off_date,
                 )

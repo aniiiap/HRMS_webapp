@@ -1,5 +1,6 @@
 import dayjs from 'dayjs'
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { Check, Download, Pencil, Save, Search, X } from 'lucide-react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
@@ -12,6 +13,124 @@ import Pagination from '../components/Pagination'
 import { useAuth } from '../context/AuthContext'
 
 import { captureLocation } from '../utils/geolocation'
+
+function AnomalyLimitBadge({ limit = 2, deductHalfDay = false }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0, placeAbove: false, width: 280 })
+  const btnRef = useRef(null)
+  const popoverRef = useRef(null)
+
+  const updatePos = useCallback(() => {
+    if (!btnRef.current) return
+    const rect = btnRef.current.getBoundingClientRect()
+    const popoverWidth = Math.min(280, window.innerWidth - 24)
+    let left = rect.left + rect.width / 2
+    const minLeft = 12 + popoverWidth / 2
+    const maxLeft = window.innerWidth - 12 - popoverWidth / 2
+    left = Math.max(minLeft, Math.min(maxLeft, left))
+
+    const spaceBelow = window.innerHeight - rect.bottom
+    const placeAbove = spaceBelow < 130 && rect.top > 130
+    const top = placeAbove ? rect.top - 8 : rect.bottom + 8
+
+    setPos({ top, left, placeAbove, width: popoverWidth })
+  }, [])
+
+  const toggle = (e) => {
+    e.stopPropagation()
+    if (!isOpen) updatePos()
+    setIsOpen((prev) => !prev)
+  }
+
+  const show = () => {
+    updatePos()
+    setIsOpen(true)
+  }
+
+  const hide = () => {
+    setIsOpen(false)
+  }
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleClickOutside = (e) => {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target) &&
+        popoverRef.current && !popoverRef.current.contains(e.target)
+      ) {
+        setIsOpen(false)
+      }
+    }
+    const handleScroll = () => {
+      setIsOpen(false)
+    }
+    window.addEventListener('scroll', handleScroll, true)
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true)
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+    }
+  }, [isOpen])
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 active:scale-95 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/60"
+        aria-label="Monthly regularization limit reached"
+      >
+        <span>Limit reached ({limit}/mo)</span>
+        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-200/80 text-[10px] font-bold text-amber-900 dark:bg-amber-800 dark:text-amber-100">
+          ℹ
+        </span>
+      </button>
+
+      {isOpen && createPortal(
+        <div
+          ref={popoverRef}
+          style={{
+            position: 'fixed',
+            top: `${pos.top}px`,
+            left: `${pos.left}px`,
+            transform: pos.placeAbove ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+            width: `${pos.width}px`,
+            zIndex: 10001,
+          }}
+          className="rounded-xl border border-amber-300/80 bg-slate-900/95 p-3 text-xs leading-relaxed text-white shadow-2xl backdrop-blur-md dark:border-amber-700 dark:bg-slate-950"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-700/60 mb-2">
+            <span className="font-semibold text-amber-300 text-[11px] uppercase tracking-wide">
+              Monthly Limit Reached
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="rounded p-0.5 text-slate-400 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+          <p className="text-slate-200 text-[11px]">
+            You have reached the monthly limit of <strong className="text-white">{limit} regularization {limit === 1 ? 'request' : 'requests'}</strong> for this month.
+          </p>
+          {deductHalfDay && (
+            <p className="mt-1.5 rounded bg-rose-950/60 border border-rose-800/50 p-1.5 text-[10px] font-medium text-rose-200">
+              ⚠️ Additional anomalies cannot be regularized and will incur a half-day salary deduction in payroll.
+            </p>
+          )}
+        </div>,
+        document.body
+      )}
+    </>
+  )
+}
 
 function anomalyBadge(anomaly) {
   if (anomaly === 'late_checkin') return <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Late</span>
@@ -906,6 +1025,8 @@ export default function AttendancePage() {
                         <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
                           Rejected
                         </span>
+                      ) : r.anomaly_limit_reached ? (
+                        <AnomalyLimitBadge limit={r.anomaly_limit_max || 2} deductHalfDay={!!r.anomaly_deduct_half_day} />
                       ) : isCorrectionExpired(r.date) ? (
                         <span
                           className="inline-flex cursor-help rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
@@ -929,7 +1050,7 @@ export default function AttendancePage() {
                     </td>
                   </tr>
 
-                  {approvalOpen[r.id] && canRequest && !['pending', 'approved', 'rejected'].includes(r.correction_request_status) && !isCorrectionExpired(r.date) && (
+                  {approvalOpen[r.id] && canRequest && !['pending', 'approved', 'rejected'].includes(r.correction_request_status) && !r.anomaly_limit_reached && !isCorrectionExpired(r.date) && (
                     <tr className="border-t border-slate-100 bg-slate-50/80 dark:bg-slate-900/40">
                       <td colSpan={7} className="px-4 py-4">
                         <div className="mx-auto max-w-2xl space-y-3">

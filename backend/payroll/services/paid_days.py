@@ -13,8 +13,9 @@ from typing import TypedDict
 
 from django.utils import timezone
 
-from attendance.models import Attendance
+from attendance.models import Attendance, AttendanceCorrectionStatus
 from attendance.utils import attendance_anomaly
+from attendance.rule_settings import resolve_shift_rule
 from employees.models import Employee
 from employees.week_schedule import is_scheduled_working_day
 from leave_management.models import LeaveRequest, LeaveStatus, LeaveType
@@ -223,12 +224,27 @@ def compute_paid_days_for_employee(
                     credit_for_remaining = Decimal("0")
                 else:
                     penalty = Decimal("0")
-                    if enable_auto_deduction:
+                    rule = resolve_shift_rule(employee, on_date=d)
+                    deduct_excess = getattr(rule, "deduct_half_day_on_excess_anomaly", False) if rule else False
+                    auto_deduct = getattr(rule, "enable_auto_deduction", False) if rule else enable_auto_deduction
+
+                    if deduct_excess or auto_deduct:
                         anom = attendance_anomaly(att)
-                        if anom in ("late_checkin", "early_checkout"):
-                            penalty = Decimal("0.5")
-                        elif anom == "late_and_early":
-                            penalty = Decimal("1.0")
+                        if anom in ("late_checkin", "early_checkout", "late_and_early"):
+                            has_valid_request = att.correction_requests.filter(
+                                status__in=[AttendanceCorrectionStatus.PENDING, AttendanceCorrectionStatus.APPROVED]
+                            ).exists()
+
+                            # If deduct_half_day_on_excess_anomaly is active:
+                            # Pending or approved requests within monthly limit are protected.
+                            # Only excess anomalies (no request allowed / limit hit) or rejected requests are penalized.
+                            if deduct_excess and has_valid_request:
+                                penalty = Decimal("0")
+                            else:
+                                if anom in ("late_checkin", "early_checkout"):
+                                    penalty = Decimal("0.5")
+                                elif anom == "late_and_early":
+                                    penalty = Decimal("1.0")
 
                     penalty_to_apply = min(remaining, penalty)
                     credit_for_remaining = remaining - penalty_to_apply

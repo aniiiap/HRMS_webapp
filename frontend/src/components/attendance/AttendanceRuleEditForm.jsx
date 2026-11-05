@@ -290,6 +290,41 @@ export default function AttendanceRuleEditForm({
               onChange={(v) => setForm({ ...form, enable_geofencing: v })}
               hint="Employees must punch within the office geofence configured under location settings."
             />
+
+            <SectionBar title="Monthly anomaly regularization & deductions" />
+            <Toggle
+              label="Limit monthly anomaly regularizations"
+              checked={form.enable_monthly_anomaly_limit}
+              onChange={(v) => setForm({ ...form, enable_monthly_anomaly_limit: v })}
+              hint="Restrict how many anomaly days an employee can request approval for in a calendar month."
+            />
+            {form.enable_monthly_anomaly_limit && (
+              <div className="mt-2 ml-2 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-3">
+                <label className="block">
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Maximum regularizations allowed per month
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    className="input-field mt-1 !w-24 !py-1.5 !text-sm"
+                    value={form.max_monthly_anomaly_limit}
+                    onChange={(e) => setForm({ ...form, max_monthly_anomaly_limit: e.target.value })}
+                  />
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Employees can apply for approval for up to this number of anomaly days each month.
+                  </p>
+                </label>
+
+                <Toggle
+                  label="Deduct half-day salary for excess / unapproved anomalies"
+                  checked={form.deduct_half_day_on_excess_anomaly}
+                  onChange={(v) => setForm({ ...form, deduct_half_day_on_excess_anomaly: v })}
+                  hint="When enabled, any anomaly days beyond the limit (or unapproved anomalies) will automatically incur a 0.5 day salary deduction in payroll."
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

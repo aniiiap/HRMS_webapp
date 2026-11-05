@@ -368,8 +368,13 @@ function RegisterBreakdown({ g, row, canEdit, onUpdateResult, onOpenManageExpens
             </div>
             {att.half_day_penalties > 0 && (
               <div>
-                <dt className="inline text-slate-500">Half-day (LOP) </dt>
-                <dd className="inline font-medium tabular-nums">{att.half_day_penalties}</dd>
+                <dt className="inline text-slate-500">Half-day LOP </dt>
+                <dd className="inline font-medium tabular-nums">
+                  {att.half_day_penalties} {Number(att.half_day_penalties) === 1 ? 'day' : 'days'}
+                  <span className="text-[11px] text-slate-400 font-normal ml-1">
+                    ({Math.round(Number(att.half_day_penalties) * 2)} {Math.round(Number(att.half_day_penalties) * 2) === 1 ? 'half-day' : 'half-days'})
+                  </span>
+                </dd>
               </div>
             )}
             <div>

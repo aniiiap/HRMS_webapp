@@ -1,5 +1,5 @@
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import math
 from rest_framework import serializers
 
@@ -88,6 +88,9 @@ class AttendanceSerializer(serializers.ModelSerializer):
     pending_request_type = serializers.SerializerMethodField()
     pending_requested_check_in = serializers.SerializerMethodField()
     pending_requested_check_out = serializers.SerializerMethodField()
+    anomaly_limit_reached = serializers.SerializerMethodField()
+    anomaly_limit_max = serializers.SerializerMethodField()
+    anomaly_deduct_half_day = serializers.SerializerMethodField()
 
     class Meta:
         model = Attendance
@@ -113,6 +116,9 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "pending_request_type",
             "pending_requested_check_in",
             "pending_requested_check_out",
+            "anomaly_limit_reached",
+            "anomaly_limit_max",
+            "anomaly_deduct_half_day",
         )
         read_only_fields = (
             "id",
@@ -131,6 +137,9 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "pending_request_type",
             "pending_requested_check_in",
             "pending_requested_check_out",
+            "anomaly_limit_reached",
+            "anomaly_limit_max",
+            "anomaly_deduct_half_day",
         )
 
     def validate(self, attrs):
@@ -205,6 +214,33 @@ class AttendanceSerializer(serializers.ModelSerializer):
         if req and req.request_type == AttendanceCorrectionType.MARK_EXACT_TIME:
             return req.requested_check_out
         return None
+
+    def get_anomaly_limit_reached(self, obj):
+        rule = resolve_shift_rule(obj.employee, on_date=obj.date)
+        if not rule or not getattr(rule, "enable_monthly_anomaly_limit", False):
+            return False
+        if obj.correction_requests.filter(status__in=[AttendanceCorrectionStatus.PENDING, AttendanceCorrectionStatus.APPROVED]).exists():
+            return False
+        month_start = obj.date.replace(day=1)
+        if month_start.month == 12:
+            next_month = date(month_start.year + 1, 1, 1)
+        else:
+            next_month = date(month_start.year, month_start.month + 1, 1)
+        used_count = AttendanceCorrectionRequest.objects.filter(
+            attendance__employee=obj.employee,
+            attendance__date__gte=month_start,
+            attendance__date__lt=next_month,
+            status__in=[AttendanceCorrectionStatus.PENDING, AttendanceCorrectionStatus.APPROVED],
+        ).exclude(attendance=obj).count()
+        return used_count >= getattr(rule, "max_monthly_anomaly_limit", 2)
+
+    def get_anomaly_limit_max(self, obj):
+        rule = resolve_shift_rule(obj.employee, on_date=obj.date)
+        return getattr(rule, "max_monthly_anomaly_limit", 2) if rule else 2
+
+    def get_anomaly_deduct_half_day(self, obj):
+        rule = resolve_shift_rule(obj.employee, on_date=obj.date)
+        return getattr(rule, "deduct_half_day_on_excess_anomaly", False) if rule else False
 
 
 class CheckInSerializer(serializers.Serializer):
@@ -420,6 +456,28 @@ class AttendanceCorrectionCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError({"detail": "Attendance without check-in cannot be regularized."})
         if AttendanceCorrectionRequest.objects.filter(attendance=attendance, status=AttendanceCorrectionStatus.PENDING).exists():
             raise serializers.ValidationError({"detail": "A pending correction request already exists."})
+
+        # Check monthly anomaly regularization limit
+        rule = resolve_shift_rule(attendance.employee, on_date=attendance.date)
+        if rule and rule.enable_monthly_anomaly_limit:
+            month_start = attendance.date.replace(day=1)
+            if month_start.month == 12:
+                next_month = date(month_start.year + 1, 1, 1)
+            else:
+                next_month = date(month_start.year, month_start.month + 1, 1)
+
+            used_count = AttendanceCorrectionRequest.objects.filter(
+                attendance__employee=attendance.employee,
+                attendance__date__gte=month_start,
+                attendance__date__lt=next_month,
+                status__in=[AttendanceCorrectionStatus.PENDING, AttendanceCorrectionStatus.APPROVED],
+            ).exclude(attendance=attendance).count()
+
+            if used_count >= rule.max_monthly_anomaly_limit:
+                deduct_msg = " Additional anomalies incur a half-day salary deduction." if rule.deduct_half_day_on_excess_anomaly else ""
+                raise serializers.ValidationError({
+                    "detail": f"Monthly anomaly regularization limit reached (maximum {rule.max_monthly_anomaly_limit} requests allowed per month).{deduct_msg}"
+                })
 
         if request_type == AttendanceCorrectionType.MARK_EXACT_TIME:
             check_in = attrs.get("requested_check_in")

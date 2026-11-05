@@ -87,6 +87,9 @@ export const EMPTY_ATTENDANCE_RULE_FORM = {
   enable_ip_restriction: false,
   allowed_ip_addresses: '',
   enable_geofencing: true,
+  enable_monthly_anomaly_limit: false,
+  max_monthly_anomaly_limit: '2',
+  deduct_half_day_on_excess_anomaly: false,
   effective_from: new Date().toISOString().slice(0, 10),
 }
 
@@ -123,6 +126,9 @@ export function ruleToForm(rule) {
     enable_ip_restriction: !!rule.enable_ip_restriction,
     allowed_ip_addresses: rule.allowed_ip_addresses || '',
     enable_geofencing: rule.enable_geofencing !== false,
+    enable_monthly_anomaly_limit: !!rule.enable_monthly_anomaly_limit,
+    max_monthly_anomaly_limit: String(rule.max_monthly_anomaly_limit ?? 2),
+    deduct_half_day_on_excess_anomaly: !!rule.deduct_half_day_on_excess_anomaly,
     effective_from: rule.effective_from || new Date().toISOString().slice(0, 10),
   }
 }
@@ -159,6 +165,9 @@ export function formToPayload(form) {
     enable_ip_restriction: form.enable_ip_restriction,
     allowed_ip_addresses: form.allowed_ip_addresses.trim(),
     enable_geofencing: form.enable_geofencing,
+    enable_monthly_anomaly_limit: form.enable_monthly_anomaly_limit,
+    max_monthly_anomaly_limit: form.max_monthly_anomaly_limit === '' ? 2 : Number(form.max_monthly_anomaly_limit),
+    deduct_half_day_on_excess_anomaly: form.deduct_half_day_on_excess_anomaly,
     effective_from: form.effective_from || new Date().toISOString().slice(0, 10),
   }
 }

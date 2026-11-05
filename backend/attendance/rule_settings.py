@@ -34,6 +34,9 @@ class ShiftRuleSettings:
     enable_24_hour_shift: bool
     enable_ip_restriction: bool
     allowed_ip_addresses: str
+    enable_monthly_anomaly_limit: bool = False
+    max_monthly_anomaly_limit: int = 2
+    deduct_half_day_on_excess_anomaly: bool = False
 
 
 def resolve_shift_rule(employee, on_date=None) -> ShiftRuleSettings:
@@ -66,6 +69,9 @@ def resolve_shift_rule(employee, on_date=None) -> ShiftRuleSettings:
             is_night = revision.is_night_shift
             full_min = revision.full_day_minutes
             half_min = revision.half_day_minutes
+            enable_limit = revision.enable_monthly_anomaly_limit
+            max_limit = revision.max_monthly_anomaly_limit
+            deduct_half = revision.deduct_half_day_on_excess_anomaly
         else:
             shift_start = template.start_time
             shift_end = template.end_time
@@ -75,6 +81,9 @@ def resolve_shift_rule(employee, on_date=None) -> ShiftRuleSettings:
             is_night = getattr(template, "is_night_shift", False)
             full_min = getattr(template, "full_day_minutes", 480)
             half_min = getattr(template, "half_day_minutes", 240)
+            enable_limit = getattr(template, "enable_monthly_anomaly_limit", False)
+            max_limit = getattr(template, "max_monthly_anomaly_limit", 2)
+            deduct_half = getattr(template, "deduct_half_day_on_excess_anomaly", False)
     else:
         shift_start = employee.shift_start_time
         shift_end = employee.shift_end_time
@@ -84,6 +93,9 @@ def resolve_shift_rule(employee, on_date=None) -> ShiftRuleSettings:
         is_night = False
         full_min = 480
         half_min = 240
+        enable_limit = False
+        max_limit = 2
+        deduct_half = False
 
     def tpl(attr, default):
         if template is None:
@@ -115,6 +127,9 @@ def resolve_shift_rule(employee, on_date=None) -> ShiftRuleSettings:
         enable_24_hour_shift=bool(tpl("enable_24_hour_shift", False)),
         enable_ip_restriction=bool(tpl("enable_ip_restriction", False)),
         allowed_ip_addresses=str(tpl("allowed_ip_addresses", "") or ""),
+        enable_monthly_anomaly_limit=bool(enable_limit),
+        max_monthly_anomaly_limit=int(max_limit or 2),
+        deduct_half_day_on_excess_anomaly=bool(deduct_half),
     )
 
 

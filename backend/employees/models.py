@@ -259,6 +259,18 @@ class ShiftTemplate(models.Model):
         default=True,
         help_text="Require employees on this rule to punch within office geofence.",
     )
+    enable_monthly_anomaly_limit = models.BooleanField(
+        default=False,
+        help_text="Limit how many times an employee can regularize anomalies in a month.",
+    )
+    max_monthly_anomaly_limit = models.PositiveSmallIntegerField(
+        default=2,
+        help_text="Max allowed anomaly regularizations per month.",
+    )
+    deduct_half_day_on_excess_anomaly = models.BooleanField(
+        default=False,
+        help_text="Automatically deduct half-day salary for anomalies exceeding the monthly limit or unregularized anomalies.",
+    )
     is_active = models.BooleanField(default=True)
     effective_from = models.DateField(
         null=True,
@@ -297,6 +309,9 @@ class ShiftTemplateHistory(models.Model):
     sunday_working = models.BooleanField(default=False)
     full_day_minutes = models.PositiveSmallIntegerField(default=480)
     half_day_minutes = models.PositiveSmallIntegerField(default=240)
+    enable_monthly_anomaly_limit = models.BooleanField(default=False)
+    max_monthly_anomaly_limit = models.PositiveSmallIntegerField(default=2)
+    deduct_half_day_on_excess_anomaly = models.BooleanField(default=False)
     effective_from = models.DateField(
         null=True,
         blank=True,
