@@ -37,6 +37,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "custom_employee_fields",
             "profile_self_service_enabled",
             "attendance_anomaly_backdate_days",
+            "auto_delete_old_audit_logs",
         )
         read_only_fields = ("id", "created_at")
 

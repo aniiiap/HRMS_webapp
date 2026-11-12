@@ -372,27 +372,84 @@ from .models import ActionLog
 from .serializers import ActionLogSerializer
 from rest_framework import viewsets, mixins
 
+def purge_old_action_logs_if_enabled(organization):
+    """Delete ActionLogs older than the 1st of the current month when auto-delete is enabled."""
+    if not organization or not getattr(organization, "auto_delete_old_audit_logs", False):
+        return 0
+    from datetime import datetime, time
+    from django.core.cache import cache
+
+    today = timezone.localdate()
+    cache_key = f"audit_autopurge:{organization.id}:{today.strftime('%Y-%m')}"
+    if cache.get(cache_key):
+        return 0
+
+    first_of_month = today.replace(day=1)
+    tz = timezone.get_current_timezone()
+    start_dt = timezone.make_aware(datetime.combine(first_of_month, time.min), tz)
+    deleted_count, _ = ActionLog.objects.filter(organization=organization, timestamp__lt=start_dt).delete()
+    cache.set(cache_key, True, 43200)
+    return deleted_count
+
+
 class ActionLogViewSet(mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ActionLogSerializer
-    
-    def get_queryset(self):
+
+    def _resolve_org(self):
+        from employees.models import Organization
+        from employees.org_scope import organization_id_from_request
+
         user = self.request.user
+        org = getattr(user, "organization", None)
+        if org is not None:
+            return org
+        profile_org = getattr(getattr(user, "employee_profile", None), "organization", None)
+        if profile_org is not None:
+            return profile_org
+        org_id = organization_id_from_request(self.request)
+        if org_id:
+            return Organization.objects.filter(id=org_id).first()
+        if user.is_superuser:
+            return Organization.objects.order_by("id").first()
+        return None
+
+    def _base_org_queryset(self):
+        user = self.request.user
+        if not (user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR)):
+            return ActionLog.objects.none()
         if user.is_superuser and not user.organization_id:
-            queryset = ActionLog.objects.all().order_by("-timestamp")
-        else:
-            queryset = ActionLog.objects.filter(organization=user.organization).order_by("-timestamp")
-        resource_type = self.request.query_params.get("resource_type")
-        date_from = self.request.query_params.get("date_from")
-        date_to = self.request.query_params.get("date_to")
-        search = self.request.query_params.get("search")
-        
+            return ActionLog.objects.all().order_by("-timestamp")
+        org = self._resolve_org()
+        if org is None:
+            return ActionLog.objects.none()
+        return ActionLog.objects.filter(organization=org).order_by("-timestamp")
+
+    def _apply_filters(self, queryset, params):
+        from datetime import datetime, time, timedelta, date as dt_date
+
+        resource_type = params.get("resource_type")
+        date_from = params.get("date_from")
+        date_to = params.get("date_to")
+        search = params.get("search")
+
         if resource_type:
             queryset = queryset.filter(resource_type__icontains=resource_type)
+        tz = timezone.get_current_timezone()
         if date_from:
-            queryset = queryset.filter(timestamp__date__gte=date_from)
+            try:
+                d_from = dt_date.fromisoformat(str(date_from))
+                start_dt = timezone.make_aware(datetime.combine(d_from, time.min), tz)
+                queryset = queryset.filter(timestamp__gte=start_dt)
+            except ValueError:
+                queryset = queryset.filter(timestamp__date__gte=date_from)
         if date_to:
-            queryset = queryset.filter(timestamp__date__lte=date_to)
+            try:
+                d_to = dt_date.fromisoformat(str(date_to))
+                end_dt = timezone.make_aware(datetime.combine(d_to + timedelta(days=1), time.min), tz)
+                queryset = queryset.filter(timestamp__lt=end_dt)
+            except ValueError:
+                queryset = queryset.filter(timestamp__date__lte=date_to)
         if search:
             queryset = queryset.filter(
                 Q(user_name__icontains=search) |
@@ -400,13 +457,86 @@ class ActionLogViewSet(mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets
                 Q(action_type__icontains=search) |
                 Q(resource_id__icontains=search)
             )
-            
-        if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
-            return queryset
-        return ActionLog.objects.none()
-        
+        return queryset
+
+    def get_queryset(self):
+        return self._apply_filters(self._base_org_queryset(), self.request.query_params)
+
+    def list(self, request, *args, **kwargs):
+        org = self._resolve_org()
+        if org:
+            purge_old_action_logs_if_enabled(org)
+        return super().list(request, *args, **kwargs)
+
     def destroy(self, request, *args, **kwargs):
         if not (request.user.is_superuser or request.user.role == UserRole.ADMIN):
             return Response({"error": "Only admins can delete logs."}, status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
+
+    @action(detail=False, methods=["post"])
+    def bulk_delete(self, request):
+        if not (request.user.is_superuser or request.user.role == UserRole.ADMIN):
+            return Response({"error": "Only admins can delete logs."}, status=status.HTTP_403_FORBIDDEN)
+        base_qs = self._base_org_queryset()
+        delete_all = bool(request.data.get("delete_all", False))
+        ids = request.data.get("ids") or []
+
+        if delete_all:
+            qs = self._apply_filters(base_qs, request.data)
+            deleted_count, _ = qs.delete()
+        elif isinstance(ids, list) and len(ids) > 0:
+            deleted_count, _ = base_qs.filter(id__in=ids).delete()
+        else:
+            return Response({"error": "Provide log IDs or set delete_all to true."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"deleted_count": deleted_count}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"])
+    def delete_range(self, request):
+        if not (request.user.is_superuser or request.user.role == UserRole.ADMIN):
+            return Response({"error": "Only admins can delete logs."}, status=status.HTTP_403_FORBIDDEN)
+        date_from = request.data.get("date_from")
+        date_to = request.data.get("date_to")
+        if not date_from or not date_to:
+            return Response({"error": "Both date_from and date_to are required."}, status=status.HTTP_400_BAD_REQUEST)
+        if str(date_from) > str(date_to):
+            return Response({"error": "From date cannot be after To date."}, status=status.HTTP_400_BAD_REQUEST)
+
+        qs = self._apply_filters(self._base_org_queryset(), request.data)
+        deleted_count, _ = qs.delete()
+        return Response({"deleted_count": deleted_count}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get", "post"])
+    def auto_delete_setting(self, request):
+        org = self._resolve_org()
+        if not org:
+            return Response({"auto_delete_old_audit_logs": False}, status=status.HTTP_200_OK)
+
+        if request.method == "GET":
+            return Response({"auto_delete_old_audit_logs": bool(org.auto_delete_old_audit_logs)}, status=status.HTTP_200_OK)
+
+        if not (request.user.is_superuser or request.user.role == UserRole.ADMIN):
+            return Response({"error": "Only admins can change auto-delete settings."}, status=status.HTTP_403_FORBIDDEN)
+
+        enabled = bool(request.data.get("enabled", False))
+        org.auto_delete_old_audit_logs = enabled
+        org.save(update_fields=["auto_delete_old_audit_logs"])
+
+        purged_count = 0
+        if enabled:
+            from datetime import datetime, time
+            from django.core.cache import cache
+
+            today = timezone.localdate()
+            first_of_month = today.replace(day=1)
+            tz = timezone.get_current_timezone()
+            start_dt = timezone.make_aware(datetime.combine(first_of_month, time.min), tz)
+            qs = ActionLog.objects.filter(organization=org, timestamp__lt=start_dt)
+            purged_count, _ = qs.delete()
+            cache.set(f"audit_autopurge:{org.id}:{today.strftime('%Y-%m')}", True, 43200)
+
+        return Response(
+            {"auto_delete_old_audit_logs": enabled, "purged_count": purged_count},
+            status=status.HTTP_200_OK,
+        )
 

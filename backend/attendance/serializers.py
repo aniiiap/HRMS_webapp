@@ -182,22 +182,24 @@ class AttendanceSerializer(serializers.ModelSerializer):
         minutes = (seconds % 3600) // 60
         return f"{hours:02d}:{minutes:02d}"
 
+    def _all_corrections(self, obj):
+        return list(obj.correction_requests.all())
+
     def _pending_correction(self, obj):
         pending = getattr(obj, "_pending_corrections", None)
         if pending is not None:
             return pending[0] if pending else None
-        return (
-            obj.correction_requests.filter(status=AttendanceCorrectionStatus.PENDING)
-            .order_by("-created_at")
-            .first()
-        )
+        for req in self._all_corrections(obj):
+            if req.status == AttendanceCorrectionStatus.PENDING:
+                return req
+        return None
 
     def get_correction_request_status(self, obj):
         req = self._pending_correction(obj)
         if req:
             return req.status
-        latest = obj.correction_requests.order_by("-created_at").first()
-        return latest.status if latest else "none"
+        all_reqs = self._all_corrections(obj)
+        return all_reqs[0].status if all_reqs else "none"
 
     def get_pending_request_type(self, obj):
         req = self._pending_correction(obj)
@@ -215,31 +217,54 @@ class AttendanceSerializer(serializers.ModelSerializer):
             return req.requested_check_out
         return None
 
-    def get_anomaly_limit_reached(self, obj):
-        rule = resolve_shift_rule(obj.employee, on_date=obj.date)
-        if not rule or not getattr(rule, "enable_monthly_anomaly_limit", False):
-            return False
-        if obj.correction_requests.filter(status__in=[AttendanceCorrectionStatus.PENDING, AttendanceCorrectionStatus.APPROVED]).exists():
-            return False
+    def _get_rule(self, obj):
+        cache = getattr(self, "_rule_cache", None)
+        if cache is None:
+            cache = {}
+            self._rule_cache = cache
+        key = (obj.employee_id, obj.date)
+        if key not in cache:
+            cache[key] = resolve_shift_rule(obj.employee, on_date=obj.date)
+        return cache[key]
+
+    def _get_monthly_used_count(self, obj):
         month_start = obj.date.replace(day=1)
+        used_map = self.context.get("monthly_used_map")
+        if used_map is not None:
+            total = used_map.get((obj.employee_id, month_start), 0)
+            has_this = any(
+                req.status in (AttendanceCorrectionStatus.PENDING, AttendanceCorrectionStatus.APPROVED)
+                for req in self._all_corrections(obj)
+            )
+            return max(0, total - (1 if has_this else 0))
         if month_start.month == 12:
             next_month = date(month_start.year + 1, 1, 1)
         else:
             next_month = date(month_start.year, month_start.month + 1, 1)
-        used_count = AttendanceCorrectionRequest.objects.filter(
+        return AttendanceCorrectionRequest.objects.filter(
             attendance__employee=obj.employee,
             attendance__date__gte=month_start,
             attendance__date__lt=next_month,
             status__in=[AttendanceCorrectionStatus.PENDING, AttendanceCorrectionStatus.APPROVED],
         ).exclude(attendance=obj).count()
-        return used_count >= getattr(rule, "max_monthly_anomaly_limit", 2)
+
+    def get_anomaly_limit_reached(self, obj):
+        rule = self._get_rule(obj)
+        if not rule or not getattr(rule, "enable_monthly_anomaly_limit", False):
+            return False
+        if any(
+            req.status in (AttendanceCorrectionStatus.PENDING, AttendanceCorrectionStatus.APPROVED)
+            for req in self._all_corrections(obj)
+        ):
+            return False
+        return self._get_monthly_used_count(obj) >= getattr(rule, "max_monthly_anomaly_limit", 2)
 
     def get_anomaly_limit_max(self, obj):
-        rule = resolve_shift_rule(obj.employee, on_date=obj.date)
+        rule = self._get_rule(obj)
         return getattr(rule, "max_monthly_anomaly_limit", 2) if rule else 2
 
     def get_anomaly_deduct_half_day(self, obj):
-        rule = resolve_shift_rule(obj.employee, on_date=obj.date)
+        rule = self._get_rule(obj)
         return getattr(rule, "deduct_half_day_on_excess_anomaly", False) if rule else False
 
 

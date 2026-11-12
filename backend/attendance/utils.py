@@ -15,8 +15,8 @@ def attendance_anomaly(attendance: Attendance, has_approved_leave: bool | None =
 
     today = timezone.localdate()
     if attendance.check_in and not attendance.check_out and attendance.date <= today:
-        try_auto_clock_out(attendance)
-        attendance.refresh_from_db(fields=["check_out", "updated_at"])
+        if try_auto_clock_out(attendance):
+            attendance.refresh_from_db(fields=["check_out", "updated_at"])
 
     if attendance.check_in and not attendance.check_out:
         if attendance.date < today:

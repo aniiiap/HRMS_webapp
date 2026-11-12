@@ -60,6 +60,10 @@ class Organization(models.Model):
         default=3, 
         help_text="Max days in the past an employee can request an attendance correction."
     )
+    auto_delete_old_audit_logs = models.BooleanField(
+        default=False,
+        help_text="When enabled, automatically deletes activity history logs older than the current month.",
+    )
     
     class Meta:
         ordering = ["name"]

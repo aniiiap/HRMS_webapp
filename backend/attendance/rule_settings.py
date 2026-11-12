@@ -47,18 +47,30 @@ def resolve_shift_rule(employee, on_date=None) -> ShiftRuleSettings:
     if template:
         revision = None
         if on_date:
-            try:
-                from employees.models import ShiftTemplateHistory
-                from django.db.models import Q
-                revision = (
-                    ShiftTemplateHistory.objects.filter(shift_template=template)
-                    .filter(Q(effective_from__isnull=True) | Q(effective_from__lte=on_date))
-                    .filter(Q(effective_to__isnull=True) | Q(effective_to__gte=on_date))
-                    .order_by("-effective_to", "-id")
-                    .first()
-                )
-            except Exception:
-                revision = None
+            prefetched_revs = getattr(template, "_prefetched_objects_cache", {}).get("history_revisions")
+            if prefetched_revs is not None:
+                from datetime import date as dt_date
+                matching = [
+                    r for r in prefetched_revs
+                    if (r.effective_from is None or r.effective_from <= on_date)
+                    and (r.effective_to is None or r.effective_to >= on_date)
+                ]
+                if matching:
+                    matching.sort(key=lambda r: (r.effective_to or dt_date.max, r.id), reverse=True)
+                    revision = matching[0]
+            else:
+                try:
+                    from employees.models import ShiftTemplateHistory
+                    from django.db.models import Q
+                    revision = (
+                        ShiftTemplateHistory.objects.filter(shift_template=template)
+                        .filter(Q(effective_from__isnull=True) | Q(effective_from__lte=on_date))
+                        .filter(Q(effective_to__isnull=True) | Q(effective_to__gte=on_date))
+                        .order_by("-effective_to", "-id")
+                        .first()
+                    )
+                except Exception:
+                    revision = None
 
         if revision:
             shift_start = revision.start_time

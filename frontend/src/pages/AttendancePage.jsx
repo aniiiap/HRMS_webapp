@@ -208,24 +208,27 @@ export default function AttendancePage() {
 
   async function load() {
     try {
-      const orgRes = await api.get('/api/organizations/')
-      const orgs = Array.isArray(orgRes.data) ? orgRes.data : orgRes.data.results || []
-      const currentOrg = orgs[0] || null
-      setOrgConfig(currentOrg)
-
       if (isManagerPlus) {
-        const [{ data: heat }, { data: logData }, { data: corrData }, { data: rulesData }] = await Promise.all([
+        const [orgRes, { data: heat }, { data: logData }, { data: corrData }, { data: rulesData }] = await Promise.all([
+          api.get('/api/organizations/'),
           api.get('/api/attendance/heatmap/', { params: { year, month } }),
           api.get('/api/attendance/', { params: { ordering: '-date', page_size: 100 } }),
           api.get('/api/attendance/correction_requests/'),
           api.get('/api/leave-rules/'),
         ])
+        const orgs = Array.isArray(orgRes.data) ? orgRes.data : orgRes.data.results || []
+        setOrgConfig(orgs[0] || null)
         setHeatmap(heat)
         setLogs(Array.isArray(logData) ? logData : logData.results || [])
         setCorrections(Array.isArray(corrData) ? corrData : corrData.results || [])
         setLeaveRules(Array.isArray(rulesData) ? rulesData : rulesData.results || [])
       } else {
-        const { data } = await api.get('/api/attendance/', { params: { ordering: '-date', page_size: 100 } })
+        const [orgRes, { data }] = await Promise.all([
+          api.get('/api/organizations/'),
+          api.get('/api/attendance/', { params: { ordering: '-date', page_size: 100 } }),
+        ])
+        const orgs = Array.isArray(orgRes.data) ? orgRes.data : orgRes.data.results || []
+        setOrgConfig(orgs[0] || null)
         setRows(Array.isArray(data) ? data : data.results || [])
       }
     } catch (err) {

@@ -78,9 +78,10 @@ class AuditMiddleware(MiddlewareMixin):
                     
                     ip_address = request.META.get('REMOTE_ADDR')
                     
+                    org = user.organization if user.is_authenticated else None
                     ActionLog.objects.create(
                         user=user,
-                        organization=user.organization if user.is_authenticated else None,
+                        organization=org,
                         user_name=f'{user.first_name} {user.last_name}'.strip() or user.email,
                         action_type=request.method,
                         resource_type=resource_type,
@@ -89,4 +90,10 @@ class AuditMiddleware(MiddlewareMixin):
                         payload=payload,
                         ip_address=ip_address
                     )
+                    if org:
+                        try:
+                            from accounts.views import purge_old_action_logs_if_enabled
+                            purge_old_action_logs_if_enabled(org)
+                        except Exception:
+                            pass
         return response

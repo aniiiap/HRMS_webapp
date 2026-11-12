@@ -51,13 +51,13 @@ def _format_csv_datetime(dt):
 
 
 class AttendanceViewSet(viewsets.ModelViewSet):
-    queryset = Attendance.objects.select_related("employee", "employee__user", "employee__shift_template").prefetch_related(
+    queryset = Attendance.objects.select_related(
+        "employee", "employee__user", "employee__shift_template"
+    ).prefetch_related(
+        "employee__shift_template__history_revisions",
         Prefetch(
             "correction_requests",
-            queryset=AttendanceCorrectionRequest.objects.filter(
-                status=AttendanceCorrectionStatus.PENDING
-            ).order_by("-created_at"),
-            to_attr="_pending_corrections",
+            queryset=AttendanceCorrectionRequest.objects.order_by("-created_at"),
         ),
     ).all()
     serializer_class = AttendanceSerializer
@@ -115,6 +115,40 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             self.throttle_scope = "attendance_read"
         return super().get_throttles()
 
+    def _build_monthly_used_map(self, items):
+        if not items:
+            return {}
+        emp_ids = {obj.employee_id for obj in items}
+        dates = [obj.date for obj in items]
+        min_month = min(dates).replace(day=1)
+        max_d = max(dates)
+        if max_d.month == 12:
+            max_next = date(max_d.year + 1, 1, 1)
+        else:
+            max_next = date(max_d.year, max_d.month + 1, 1)
+        rows = AttendanceCorrectionRequest.objects.filter(
+            attendance__employee_id__in=emp_ids,
+            attendance__date__gte=min_month,
+            attendance__date__lt=max_next,
+            status__in=[AttendanceCorrectionStatus.PENDING, AttendanceCorrectionStatus.APPROVED],
+        ).values_list("attendance__employee_id", "attendance__date")
+        used_map = {}
+        for eid, att_date in rows:
+            key = (eid, att_date.replace(day=1))
+            used_map[key] = used_map.get(key, 0) + 1
+        return used_map
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        items = list(page) if page is not None else list(queryset)
+        ctx = self.get_serializer_context()
+        ctx["monthly_used_map"] = self._build_monthly_used_map(items)
+        serializer = self.get_serializer(items, many=True, context=ctx)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
     @action(detail=False, methods=["post"])
     def check_in(self, request):
         profile = getattr(request.user, "employee_profile", None)
@@ -155,7 +189,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         # so each employee appears exactly once.
         user = request.user
         org_id = organization_id_from_request(request)
-        emp_qs = Employee.objects.select_related("user", "shift_template", "manager", "manager__user")
+        emp_qs = Employee.objects.select_related("user", "shift_template", "manager", "manager__user").prefetch_related("shift_template__history_revisions")
         profile = getattr(user, "employee_profile", None)
         
         if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
@@ -185,7 +219,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 date__lte=end,
             )
             .select_related("employee", "employee__shift_template")
-            .prefetch_related("correction_requests")
+            .prefetch_related("employee__shift_template__history_revisions", "correction_requests")
         )
         apply_auto_clock_out(att_qs, as_of_date=end)
         att_map: dict[int, dict[int, Attendance]] = {}

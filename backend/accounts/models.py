@@ -264,6 +264,10 @@ class ActionLog(models.Model):
 
     class Meta:
         ordering = ["-timestamp"]
+        indexes = [
+            models.Index(fields=["organization", "-timestamp"], name="actionlog_org_ts_idx"),
+            models.Index(fields=["organization", "resource_type", "-timestamp"], name="actionlog_org_res_ts_idx"),
+        ]
 
     def __str__(self):
         return f"{self.user_name} did {self.action_type} on {self.resource_type} at {self.timestamp}"
