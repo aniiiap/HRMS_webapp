@@ -70,7 +70,7 @@ export default function AnnouncementsPage() {
 
   const load = useCallback(async () => {
     try {
-      const { data } = await api.get('/api/announcements/')
+      const { data } = await api.get('/api/announcements/', { params: { nopaginate: 'true' } })
       setRows(Array.isArray(data) ? data : data.results || [])
       setError('')
     } catch (err) {

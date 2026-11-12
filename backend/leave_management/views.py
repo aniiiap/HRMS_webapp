@@ -67,7 +67,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         "employee", "employee__user", "reviewed_by"
     ).all()
     serializer_class = LeaveRequestSerializer
-    filterset_fields = ["employee", "status", "leave_type"]
+    filterset_fields = ["employee", "status", "leave_type", "cancel_requested"]
     ordering_fields = ["created_at", "start_date", "end_date"]
 
     def get_queryset(self):

@@ -46,7 +46,7 @@ export default function ResignationPage() {
   const loadData = async () => {
     try {
       const [resigResp, orgResp] = await Promise.all([
-        api.get('/api/resignations/'),
+        api.get('/api/resignations/', { params: { nopaginate: 'true' } }),
         api.get('/api/organizations/')
       ])
       

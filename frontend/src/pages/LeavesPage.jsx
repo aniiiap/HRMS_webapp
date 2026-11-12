@@ -26,6 +26,7 @@ export default function LeavesPage() {
   const [requestFilter, setRequestFilter] = useState('pending')
   const [requestPage, setRequestPage] = useState(1)
   const [requestPageSize, setRequestPageSize] = useState(10)
+  const [requestTotal, setRequestTotal] = useState(0)
   const [applicableRules, setApplicableRules] = useState([])
 
   useEffect(() => {
@@ -34,17 +35,43 @@ export default function LeavesPage() {
     if (tab && valid.includes(tab)) setActiveTab(tab)
   }, [searchParams, isManagerPlus])
 
-  async function load() {
+  function buildLeavesParams(page = requestPage, pageSize = requestPageSize, filter = requestFilter) {
+    const params = { page, page_size: pageSize }
+    if (isManagerPlus && activeTab === 'approvals' && filter !== 'all') {
+      if (filter === 'cancel_requested') {
+        params.cancel_requested = true
+      } else {
+        params.status = filter
+        params.cancel_requested = false
+      }
+    }
+    return params
+  }
+
+  async function fetchLeaves(page = requestPage, pageSize = requestPageSize, filter = requestFilter) {
     try {
-      const [leavesRes, balancesRes, rulesRes] = await Promise.all([
-        api.get('/api/leaves/'),
+      const leavesRes = await api.get('/api/leaves/', { params: buildLeavesParams(page, pageSize, filter) })
+      const leavesData = leavesRes.data
+      if (Array.isArray(leavesData)) {
+        setRows(leavesData)
+        setRequestTotal(leavesData.length)
+      } else {
+        setRows(leavesData.results || [])
+        setRequestTotal(leavesData.count ?? (leavesData.results || []).length)
+      }
+    } catch (err) {
+      setError(messageFromError(err))
+    }
+  }
+
+  async function loadMeta() {
+    try {
+      const [balancesRes, rulesRes] = await Promise.all([
         api.get('/api/leaves/balances/'),
         api.get('/api/leave-rules/applicable/'),
       ])
-      const leavesData = leavesRes.data
       const balancesData = balancesRes.data
       const rulesData = rulesRes.data
-      setRows(Array.isArray(leavesData) ? leavesData : leavesData.results || [])
       setBalances(Array.isArray(balancesData) ? balancesData : balancesData.results || [])
       setApplicableRules(Array.isArray(rulesData) ? rulesData : rulesData.results || [])
     } catch (err) {
@@ -52,7 +79,17 @@ export default function LeavesPage() {
     }
   }
 
-  useEffect(() => { void load() }, [])
+  async function load() {
+    await Promise.all([fetchLeaves(), loadMeta()])
+  }
+
+  useEffect(() => { void loadMeta() }, [])
+
+  useEffect(() => {
+    if (activeTab === 'approvals') {
+      void fetchLeaves(requestPage, requestPageSize, requestFilter)
+    }
+  }, [isManagerPlus, activeTab, requestFilter, requestPage, requestPageSize])
 
   async function applyLeave(e) {
     e.preventDefault()
@@ -92,25 +129,8 @@ export default function LeavesPage() {
     }
   }
 
-  const filteredRows = useMemo(() => {
-    let list = rows
-    
-    if (isManagerPlus && activeTab === 'approvals' && requestFilter !== 'all') {
-      if (requestFilter === 'cancel_requested') {
-        list = list.filter((r) => r.cancel_requested)
-      } else {
-        list = list.filter((r) => r.status === requestFilter && !r.cancel_requested)
-      }
-    }
-    return list
-  }, [isManagerPlus, requestFilter, rows, activeTab, user?.employee_id])
-
-  const requestTotalPages = Math.max(Math.ceil(filteredRows.length / requestPageSize), 1)
-
-  const visibleRows = useMemo(
-    () => filteredRows.slice((requestPage - 1) * requestPageSize, requestPage * requestPageSize),
-    [filteredRows, requestPage, requestPageSize],
-  )
+  const requestTotalPages = Math.max(Math.ceil(requestTotal / requestPageSize), 1)
+  const visibleRows = rows
 
   const getBalance = (employeeId, leaveType) => {
     const empBalance = balances.find((b) => b.employee_id === employeeId);
@@ -340,7 +360,7 @@ export default function LeavesPage() {
           <Pagination
             page={requestPage}
             totalPages={requestTotalPages}
-            total={filteredRows.length}
+            total={requestTotal}
             pageSize={requestPageSize}
             onPageChange={setRequestPage}
             onPageSizeChange={(size) => { setRequestPageSize(size); setRequestPage(1) }}

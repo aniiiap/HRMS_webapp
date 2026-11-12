@@ -119,7 +119,7 @@ export default function EmployeeProfilePage() {
 
     if (tab === 'leave') {
       const [leaveRes, balanceRes] = await Promise.all([
-        api.get('/api/leaves/', { params: { employee: id } }),
+        api.get('/api/leaves/', { params: { employee: id, nopaginate: 'true' } }),
         api.get('/api/leaves/balances/'),
       ])
       setLeaves(Array.isArray(leaveRes.data) ? leaveRes.data : leaveRes.data.results || [])

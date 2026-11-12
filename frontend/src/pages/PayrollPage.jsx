@@ -140,7 +140,7 @@ export default function PayrollPage() {
       return
     }
     try {
-      const { data } = await api.get('/api/payroll/results/', { params: { run: runId } })
+      const { data } = await api.get('/api/payroll/results/', { params: { run: runId, nopaginate: 'true' } })
       setResults(Array.isArray(data) ? data : data.results || [])
     } catch (err) {
       setError(messageFromError(err))
@@ -216,7 +216,7 @@ export default function PayrollPage() {
 
   const loadPayslips = useCallback(async () => {
     try {
-      const { data } = await api.get('/api/payroll/results/')
+      const { data } = await api.get('/api/payroll/results/', { params: { nopaginate: 'true' } })
       const list = Array.isArray(data) ? data : data.results || []
       setPayslips(list.sort((a, b) => (b.run || 0) - (a.run || 0)))
     } catch (err) {
