@@ -212,6 +212,8 @@ class PayrollEmployeeResultSerializer(serializers.ModelSerializer):
         )
 
     def get_leave_balances(self, obj):
+        if getattr(self.context.get("view"), "action", None) != "retrieve":
+            return []
         from leave_management.leave_rules import employee_leave_balance_rows
         rows = employee_leave_balance_rows(obj.employee)
         return [{
@@ -222,6 +224,17 @@ class PayrollEmployeeResultSerializer(serializers.ModelSerializer):
         } for r in rows if r["remaining"] is not None]
 
     def get_attendance_summary(self, obj):
+        if getattr(self.context.get("view"), "action", None) != "retrieve":
+            return {
+                "present_days": float(obj.paid_days or obj.auto_paid_days or 0),
+                "paid_leave_days": 0.0,
+                "unpaid_leave_days": float(obj.lop_days or obj.auto_lop_days or 0),
+                "absent_days": 0.0,
+                "half_day_penalties": 0.0,
+                "holiday_days": 0.0,
+                "computed_paid_days": float(obj.auto_paid_days or 0),
+                "computed_lop_days": float(obj.auto_lop_days or 0),
+            }
         from .services.paid_days import compute_paid_days_for_employee
 
         run = obj.run

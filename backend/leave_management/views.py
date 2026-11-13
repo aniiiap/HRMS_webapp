@@ -237,7 +237,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
     def balances(self, request):
         user = request.user
-        emp_qs = Employee.objects.select_related("user", "leave_profile", "shift_template").prefetch_related("leave_rule_assignments", "leave_rule_assignments__rule").all()
+        emp_qs = Employee.objects.select_related("user", "leave_profile", "shift_template").prefetch_related("leave_rule_assignments", "leave_rule_assignments__rule", "shift_template__history_revisions").all()
         org_id = organization_id_from_request(request)
         
         if user.is_superuser or user.role in (UserRole.ADMIN, UserRole.HR):
@@ -265,9 +265,11 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         ).only("employee_id", "leave_type", "start_date", "end_date", "half_day", "employee__organization_id", "employee__leave_policy_assignment")
         
         from .leave_rules import calculate_leave_duration, resolve_leave_rule
+        emp_map = {e.id: e for e in emp_qs}
         for req in leave_qs:
-            rule = resolve_leave_rule(req.employee, req.leave_type)
-            days = calculate_leave_duration(req.start_date, req.end_date, req.employee, rule, req.half_day)
+            emp = emp_map.get(req.employee_id, req.employee)
+            rule = resolve_leave_rule(emp, req.leave_type)
+            days = calculate_leave_duration(req.start_date, req.end_date, emp, rule, req.half_day)
             if req.employee_id not in precalculated_usages:
                 precalculated_usages[req.employee_id] = {}
             if req.leave_type not in precalculated_usages[req.employee_id]:

@@ -347,8 +347,8 @@ def _build_attendance_health(
     if headcount == 0:
         return empty
 
-    employees = list(tracked_employees.select_related("shift_template"))
-    month_att = att_qs_org.filter(date__gte=month_start, date__lte=today).select_related("employee", "employee__shift_template").prefetch_related("correction_requests")
+    employees = list(tracked_employees.select_related("shift_template").prefetch_related("shift_template__history_revisions"))
+    month_att = att_qs_org.filter(date__gte=month_start, date__lte=today).select_related("employee", "employee__shift_template").prefetch_related("employee__shift_template__history_revisions", "correction_requests")
     att_map = {(a.employee_id, a.date): a for a in month_att}
 
     month_leaves = list(
@@ -551,7 +551,7 @@ def _build_team_pulse(att_today, leave_qs, today: date, *, limit: int = 14) -> d
     """Chronological feed of today's check-ins, check-outs, and leave requests."""
     events: list[dict] = []
 
-    for att in att_today.filter(check_in__isnull=False).select_related("employee", "employee__user", "employee__shift_template"):
+    for att in att_today.filter(check_in__isnull=False).select_related("employee", "employee__user", "employee__shift_template").prefetch_related("employee__shift_template__history_revisions", "correction_requests"):
         emp = att.employee
         late = attendance_anomaly(att, has_approved_leave=False) == "late_checkin"
         events.append(
@@ -620,7 +620,7 @@ def _build_out_today(
     """Who is on approved leave, absent, or late today (scheduled workdays only)."""
     from employees.week_schedule import is_weekend_day
 
-    employees = list(active_employees.select_related("user", "shift_template"))
+    employees = list(active_employees.select_related("user", "shift_template").prefetch_related("shift_template__history_revisions"))
 
     on_leave_ids: set[int] = set()
     on_leave_rows: list[dict] = []
@@ -759,7 +759,7 @@ class DashboardSummaryView(APIView):
         absent_today = max(active_employees.count() - present_today - on_leave_today, 0)
 
         late_arrivals_today = 0
-        for att in att_today.filter(check_in__isnull=False).select_related("employee", "employee__shift_template"):
+        for att in att_today.filter(check_in__isnull=False).select_related("employee", "employee__shift_template").prefetch_related("employee__shift_template__history_revisions", "correction_requests"):
             if attendance_anomaly(att, has_approved_leave=False) == "late_checkin":
                 late_arrivals_today += 1
 
@@ -920,7 +920,7 @@ class DashboardSummaryView(APIView):
             "headcount_snapshot": headcount_snapshot,
             "payroll_snapshot": payroll_snapshot,
         }
-        cache.set(cache_key, payload, timeout=45)
+        cache.set(cache_key, payload, timeout=180)
         return Response(payload)
 
 

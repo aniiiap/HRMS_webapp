@@ -205,8 +205,10 @@ export default function AttendancePage() {
 
 
   const [orgConfig, setOrgConfig] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   async function load() {
+    setLoading(true)
     try {
       if (isManagerPlus) {
         const [orgRes, { data: heat }, { data: logData }, { data: corrData }, { data: rulesData }] = await Promise.all([
@@ -233,6 +235,8 @@ export default function AttendancePage() {
       }
     } catch (err) {
       setError(messageFromError(err))
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -657,7 +661,12 @@ export default function AttendancePage() {
                       </div>
                     ))}
                   </div>
-                  {filteredHeatmapRows.map((r, rowIdx) => (
+                  {loading && !heatmap ? (
+                    <div className="py-16 text-center text-slate-400">
+                      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent mb-2" />
+                      <p className="text-sm font-medium">Loading attendance data...</p>
+                    </div>
+                  ) : filteredHeatmapRows.map((r, rowIdx) => (
                     <div key={`row-${r.employee_id}-${r.employee_code || 'na'}-${rowIdx}`} className="grid grid-cols-[210px_repeat(31,minmax(0,1fr))] items-center gap-1">
                       <div className="flex w-fit max-w-[210px] items-center gap-2 rounded-xl border border-slate-200/70 bg-slate-50/90 p-2 dark:border-slate-700 dark:bg-slate-800/70">
                         {r.profile_image && !brokenHeatmapProfiles[r.employee_id] ? (

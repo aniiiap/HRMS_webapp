@@ -127,50 +127,65 @@ export default function EmployeesPage() {
   const [newCustomFieldRequired, setNewCustomFieldRequired] = useState(false)
   const [newCustomFieldAskUser, setNewCustomFieldAskUser] = useState(true)
 
-  async function load() {
+  async function loadMetadata() {
+    if (!isPrivileged) return
+    try {
+      const [tplRes, allEmpRes, locRes, orgRes] = await Promise.all([
+        api.get('/api/employees/shift-templates/'),
+        api.get('/api/employees/', { params: { nopaginate: 'true' } }),
+        api.get('/api/employees/location-settings/'),
+        api.get('/api/organizations/'),
+      ])
+      setTemplates(Array.isArray(tplRes.data) ? tplRes.data : tplRes.data.results || [])
+      setAllEmployees(Array.isArray(allEmpRes.data) ? allEmpRes.data : allEmpRes.data.results || [])
+      const loc = locRes.data
+      const orgs = orgRes.data
+      const orgList = Array.isArray(orgs) ? orgs : (orgs.results || [])
+      if (orgList.length > 0) {
+        setOrgId(orgList[0].id)
+        setCustomFields(orgList[0].custom_employee_fields || [])
+        setOrgSelfService(orgList[0].profile_self_service_enabled !== false)
+      }
+      setLocationForm({
+        name: loc?.name || 'Main Office',
+        address: loc?.address || '',
+        latitude: loc?.latitude ?? '',
+        longitude: loc?.longitude ?? '',
+        radius_meters: loc?.radius_meters ?? 200,
+        geofencing_enabled: loc?.geofencing_enabled !== false,
+      })
+    } catch (err) {
+      // Non-fatal metadata load
+    }
+  }
+
+  async function loadEmployees() {
     try {
       const q = searchParams.get('q') || ''
       const isActiveParam = activeTab === 'deactivated' ? 'false' : (activeTab === 'employees' ? 'true' : '')
       const params = { page, page_size: pageSize, search: q }
       if (isActiveParam) params.is_active = isActiveParam
 
-      const [{ data }, tplRes, allEmpRes] = await Promise.all([
-        api.get('/api/employees/', { params }),
-        isPrivileged ? api.get('/api/employees/shift-templates/') : Promise.resolve({ data: [] }),
-        isPrivileged ? api.get('/api/employees/', { params: { nopaginate: 'true' } }) : Promise.resolve({ data: [] }),
-      ])
+      const { data } = await api.get('/api/employees/', { params })
       setRows(Array.isArray(data) ? data : data.results || [])
       setTotalPages(Array.isArray(data) ? 1 : Math.max(Math.ceil((data.count || 0) / pageSize), 1))
       setTotalItems(Array.isArray(data) ? data.length : (data.count || 0))
-      setTemplates(Array.isArray(tplRes.data) ? tplRes.data : tplRes.data.results || [])
-      setAllEmployees(Array.isArray(allEmpRes.data) ? allEmpRes.data : allEmpRes.data.results || [])
-      if (isPrivileged) {
-        const { data: loc } = await api.get('/api/employees/location-settings/')
-          
-          const { data: orgs } = await api.get('/api/organizations/')
-          const orgList = Array.isArray(orgs) ? orgs : (orgs.results || [])
-          if (orgList.length > 0) {
-            setOrgId(orgList[0].id)
-            setCustomFields(orgList[0].custom_employee_fields || [])
-            setOrgSelfService(orgList[0].profile_self_service_enabled !== false)
-            setOrgSelfService(orgList[0].profile_self_service_enabled !== false)
-          }
-
-        setLocationForm({
-          name: loc?.name || 'Main Office',
-          address: loc?.address || '',
-          latitude: loc?.latitude ?? '',
-          longitude: loc?.longitude ?? '',
-          radius_meters: loc?.radius_meters ?? 200,
-          geofencing_enabled: loc?.geofencing_enabled !== false,
-        })
-      }
     } catch (err) {
       setError(messageFromError(err))
     }
   }
 
-  useEffect(() => { void load() }, [page, pageSize, searchParams, activeTab])
+  async function load() {
+    await Promise.all([loadEmployees(), loadMetadata()])
+  }
+
+  useEffect(() => {
+    void loadMetadata()
+  }, [isPrivileged])
+
+  useEffect(() => {
+    void loadEmployees()
+  }, [page, pageSize, searchParams, activeTab])
 
   const uniqueDepartments = useMemo(() => Array.from(new Set([...allEmployees.map(e => e.department).filter(Boolean), ...addedDepartments])), [allEmployees, addedDepartments])
   const uniqueDesignations = useMemo(() => Array.from(new Set([...allEmployees.map(e => e.designation).filter(Boolean), ...addedDesignations])), [allEmployees, addedDesignations])

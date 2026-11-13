@@ -28,6 +28,7 @@ export default function LeavesPage() {
   const [requestPageSize, setRequestPageSize] = useState(10)
   const [requestTotal, setRequestTotal] = useState(0)
   const [applicableRules, setApplicableRules] = useState([])
+  const [loadingLeaves, setLoadingLeaves] = useState(true)
 
   useEffect(() => {
     const tab = searchParams.get('tab')
@@ -49,6 +50,7 @@ export default function LeavesPage() {
   }
 
   async function fetchLeaves(page = requestPage, pageSize = requestPageSize, filter = requestFilter) {
+    setLoadingLeaves(true)
     try {
       const leavesRes = await api.get('/api/leaves/', { params: buildLeavesParams(page, pageSize, filter) })
       const leavesData = leavesRes.data
@@ -61,6 +63,8 @@ export default function LeavesPage() {
       }
     } catch (err) {
       setError(messageFromError(err))
+    } finally {
+      setLoadingLeaves(false)
     }
   }
 
@@ -262,7 +266,14 @@ export default function LeavesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                {visibleRows.map((r) => (
+                {loadingLeaves ? (
+                  <tr>
+                    <td className="px-4 py-12 text-center text-slate-500 dark:text-slate-400" colSpan="9">
+                      <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent mb-2" />
+                      <p className="text-xs font-medium">Loading leave requests...</p>
+                    </td>
+                  </tr>
+                ) : visibleRows.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                     <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-200">{r.employee_name}</td>
                     <td className="px-4 py-3">{r.leave_type_name || leaveLabel(r.leave_type)}</td>
@@ -353,7 +364,7 @@ export default function LeavesPage() {
                     </td>
                   </tr>
                 ))}
-                {visibleRows.length === 0 && <tr><td className="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colSpan="9">No leave requests.</td></tr>}
+                {!loadingLeaves && visibleRows.length === 0 && <tr><td className="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colSpan="9">No leave requests.</td></tr>}
               </tbody>
             </table>
           </div>
